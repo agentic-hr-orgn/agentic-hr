@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/agentic_hr"
     REDIS_URL: str = "redis://localhost:6379/0"
     TEMPORAL_ADDRESS: str = "localhost:7233"
+    TEMPORAL_TASK_QUEUE: str = "agentic-hr-task-queue"
 
     # ADR 003: Model Routing (Gemini 3 Free Tier - Synthetic Data Only)
     STRONG_MODEL: str = "gemini-3.8-flash"

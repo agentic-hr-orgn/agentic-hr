@@ -5,6 +5,7 @@ Uses strictly synthetic datasets (Acme Tech Solutions).
 """
 
 import logging
+
 from app.core.config import settings
 from app.services.synthetic_service import SyntheticDataService
 
@@ -50,7 +51,9 @@ def seed_synthetic_data() -> None:
     logger.info(f"- Employees: {len(employees)} verified")
     logger.info(f"- Policies: {len(policies)} verified")
     logger.info(f"- Test Accounts: {len(test_accounts)} verified")
-    logger.info(f"- Integration mode: {'Fake / In-Memory (Stage 1)' if settings.USE_FAKE_INTEGRATIONS else 'Live'}")
+    logger.info(
+        f"- Integration mode: {'Fake / In-Memory (Stage 1)' if settings.USE_FAKE_INTEGRATIONS else 'Live'}"
+    )
     logger.info("--------------------------------------------------")
 
 

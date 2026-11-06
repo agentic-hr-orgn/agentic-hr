@@ -5,6 +5,7 @@ Extracts OpenAPI definition from FastAPI directly to packages/contracts/openapi.
 
 import json
 from pathlib import Path
+
 from app.main import app
 
 
@@ -27,4 +28,3 @@ def export_openapi_schema() -> Path:
 
 if __name__ == "__main__":
     export_openapi_schema()
-

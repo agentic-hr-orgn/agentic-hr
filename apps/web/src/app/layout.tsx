@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Header } from "@/components/layout/header";
+import { QueryProvider } from "@/providers/query-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Agentic HR Core — SME Workforce Platform",
-  description: "Agentic AI Workforce for SMEs with DocuVerify, Screener, Code Tester, and Policy Brain.",
+  description:
+    "Agentic AI Workforce for SMEs featuring DocuVerify, Screener, Code Tester, and Policy Brain.",
 };
 
 export default function RootLayout({
@@ -16,21 +16,15 @@ export default function RootLayout({
 }) {
   const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
-  const content = (
-    <div className="flex min-h-screen bg-appBg">
-      <Sidebar />
-      <div className="flex-1 ml-64 flex flex-col min-h-screen">
-        <Header />
-        <main className="flex-1 p-8">{children}</main>
-      </div>
-    </div>
-  );
+  const bodyContent = <QueryProvider>{children}</QueryProvider>;
 
   if (clerkKey) {
     return (
       <ClerkProvider publishableKey={clerkKey}>
         <html lang="en">
-          <body>{content}</body>
+          <body className="min-h-screen bg-appBg font-sans antialiased text-textPrimary">
+            {bodyContent}
+          </body>
         </html>
       </ClerkProvider>
     );
@@ -38,8 +32,9 @@ export default function RootLayout({
 
   return (
     <html lang="en">
-      <body>{content}</body>
+      <body className="min-h-screen bg-appBg font-sans antialiased text-textPrimary">
+        {bodyContent}
+      </body>
     </html>
   );
 }
-

@@ -13,12 +13,14 @@
     "@agentic-hr/contracts": "workspace:*",
     "@agentic-hr/ui": "workspace:*",
     "@clerk/nextjs": "^5.7.5",
+    "@tanstack/react-query": "^5.106.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.453.0",
     "next": "14.2.15",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tailwind-merge": "^2.6.1"
+    "tailwind-merge": "^2.6.1",
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@types/node": "^20.17.0",

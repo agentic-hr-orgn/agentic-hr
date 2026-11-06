@@ -2,20 +2,21 @@
 # Agentic HR Core - Monorepo Makefile (Cross-Platform / WSL2 / Linux / macOS)
 # ==============================================================================
 
-.PHONY: help setup dev seed reset lint test check client db-up db-down api-dev web-dev worker-dev
+.PHONY: help setup dev seed reset lint test check client db-up db-down api-dev web-dev worker-dev workflow-test
 
 help:
 	@echo "Agentic HR Core - Available Commands:"
-	@echo "  make setup     - Install all workspace dependencies (pnpm, uv, pre-commit)"
-	@echo "  make dev       - Launch local infrastructure, backend API, worker, and frontend"
-	@echo "  make seed      - Safely seed synthetic data (idempotent, Acme Tech Solutions)"
-	@echo "  make reset     - Protected reset of local database and development volumes"
-	@echo "  make lint      - Lint Python (Ruff) and TypeScript (ESLint)"
-	@echo "  make test      - Run automated backend and frontend test suites"
-	@echo "  make check     - Complete quality verification gate (lint + test + typecheck)"
-	@echo "  make client    - Generate TypeScript client contracts from FastAPI OpenAPI schema"
-	@echo "  make db-up     - Start local Docker infrastructure (Postgres, Redis, Temporal)"
-	@echo "  make db-down   - Stop local Docker infrastructure"
+	@echo "  make setup         - Install all workspace dependencies (pnpm, uv, pre-commit)"
+	@echo "  make dev           - Launch local infrastructure, backend API, worker, and frontend"
+	@echo "  make seed          - Safely seed synthetic data (idempotent, Acme Tech Solutions)"
+	@echo "  make reset         - Protected reset of local database and development volumes"
+	@echo "  make lint          - Lint Python (Ruff) and TypeScript (ESLint)"
+	@echo "  make test          - Run automated backend and frontend test suites"
+	@echo "  make check         - Complete quality verification gate (lint + test + typecheck)"
+	@echo "  make client        - Generate TypeScript client contracts from FastAPI OpenAPI schema"
+	@echo "  make workflow-test - Trigger and test the sample Temporal workflow"
+	@echo "  make db-up         - Start local Docker infrastructure (Postgres, Redis, Temporal)"
+	@echo "  make db-down       - Stop local Docker infrastructure"
 
 # 1. Setup: Installs dependencies and configures local environment
 setup:
@@ -89,3 +90,9 @@ client:
 	@echo "==> Verifying generated contracts typecheck..."
 	pnpm --filter @agentic-hr/contracts run typecheck
 	@echo "==> TypeScript client generation complete."
+
+# 11. Workflow: Test sample Temporal workflow
+workflow-test:
+	@echo "==> Executing sample Temporal onboarding workflow..."
+	uv run python apps/api/scripts/run_workflow.py
+

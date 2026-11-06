@@ -5,7 +5,7 @@
 
 param (
     [Parameter(Position=0)]
-    [ValidateSet("setup", "dev", "seed", "reset", "lint", "test", "check", "client", "db-up", "db-down", "api", "web", "worker", "help")]
+    [ValidateSet("setup", "dev", "seed", "reset", "lint", "test", "check", "client", "workflow", "db-up", "db-down", "api", "web", "worker", "help")]
     [string]$Command = "help",
 
     [Parameter()]
@@ -57,6 +57,12 @@ switch ($Command) {
         Write-Host "Starting Temporal background worker..." -ForegroundColor Cyan
         Set-Location $RootDir
         uv run python apps/api/app/worker.py
+    }
+
+    "workflow" {
+        Write-Host "==> Executing sample Temporal onboarding workflow..." -ForegroundColor Cyan
+        Set-Location $RootDir
+        uv run python apps/api/scripts/run_workflow.py
     }
 
     "dev" {

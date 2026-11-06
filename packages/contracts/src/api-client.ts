@@ -64,6 +64,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflows/sample/trigger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger sample onboarding workflow
+         * @description Dispatches SampleOnboardingWorkflow to Temporal and returns the execution result.
+         */
+        post: operations["trigger_sample_workflow_api_v1_workflows_sample_trigger_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/synthetic/company": {
         parameters: {
             query?: never;
@@ -316,6 +336,30 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** WorkflowTriggerRequest */
+        WorkflowTriggerRequest: {
+            /**
+             * Candidate Name
+             * @default Alex Mercer
+             */
+            candidate_name: string;
+            /**
+             * Candidate Email
+             * @default agentic.hr.test.ubaid.candidate1@gmail.com
+             */
+            candidate_email: string;
+        };
+        /** WorkflowTriggerResponse */
+        WorkflowTriggerResponse: {
+            /** Status */
+            status: string;
+            /** Workflow Id */
+            workflow_id: string;
+            /** Result */
+            result: {
+                [key: string]: unknown;
+            };
+        };
     };
     responses: never;
     parameters: never;
@@ -381,6 +425,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    trigger_sample_workflow_api_v1_workflows_sample_trigger_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowTriggerRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowTriggerResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

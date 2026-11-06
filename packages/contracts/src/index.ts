@@ -3,19 +3,11 @@
  * Shared TypeScript domain models, API response DTOs, and schemas.
  */
 
-export interface HealthResponse {
-  status: string;
-  stage: string;
-  environment: string;
-  use_fake_integrations: boolean;
-  database_connected: boolean;
-  models: {
-    cheap: string;
-    strong: string;
-    embedding: string;
-  };
-  version: string;
-}
+import type { components } from "./api-client";
+
+// Derived API DTOs directly from OpenAPI schema (no manual duplication)
+export type HealthResponse = components["schemas"]["HealthResponse"];
+export type EmployeeRecord = components["schemas"]["EmployeeRecord"];
 
 export interface TenantContext {
   tenant_id: string;
@@ -60,7 +52,8 @@ export interface AgentStatus {
   lastRun?: string;
 }
 
+// Type-safe OpenAPI client and factory
+export * from "./client";
+
 // Auto-generated OpenAPI Schema Contracts
 export type * from "./api-client";
-
-
