@@ -1,0 +1,66 @@
+services:
+  db:
+    image: pgvector/pgvector:0.8.0-pg16
+    container_name: agentic_hr_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agentic_hr
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d agentic_hr"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.4.2-alpine
+    container_name: agentic_hr_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  temporal:
+    image: temporalio/temporal:1.9.1
+    container_name: agentic_hr_temporal
+    restart: unless-stopped
+    command:
+      [
+        "server",
+        "start-dev",
+        "--ip",
+        "0.0.0.0",
+        "--ui-port",
+        "8233",
+        "--db-filename",
+        "/tmp/temporal.db",
+      ]
+    ports:
+      - "7233:7233"
+      - "8233:8233"
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:

@@ -1,0 +1,113 @@
+name: Monorepo CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  validate-and-test:
+    name: Full CI Quality Gate & Test Suite
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: agentic_hr
+          POSTGRES_PASSWORD: development_password
+          POSTGRES_DB: agentic_hr_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agentic_hr -d agentic_hr_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      APP_ENV: development
+      USE_FAKE_INTEGRATIONS: "true"
+      DATABASE_URL: postgresql+asyncpg://agentic_hr:development_password@localhost:5432/agentic_hr_db
+      REDIS_URL: redis://localhost:6379/0
+      STRONG_MODEL_API_KEY: fake-ci-test-key
+      CHEAP_MODEL_API_KEY: fake-ci-test-key
+      EMBEDDING_MODEL_API_KEY: fake-ci-test-key
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      CI: "true"
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 12
+
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Install Node Dependencies
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Install Python Dependencies
+        run: uv sync
+
+      - name: Verify PostgreSQL Connection & Apply Alembic Migrations
+        run: |
+          cd apps/api
+          uv run alembic upgrade head
+
+      - name: Run Ruff (Lint & Format Check)
+        run: |
+          cd apps/api
+          uv run ruff check app tests
+          uv run ruff format --check app tests
+
+      - name: Run Prettier Formatting Checks
+        run: pnpm format:check
+
+      - name: Run ESLint
+        run: pnpm --filter @agentic-hr/web lint
+
+      - name: Run TypeScript Workspace Typechecks
+        run: pnpm -r typecheck
+
+      - name: Run Backend Tests (Pytest + HTTPX)
+        run: uv run --package agentic-hr-api pytest apps/api/tests/ -v
+
+      - name: Run Frontend Tests (Vitest)
+        run: pnpm --filter @agentic-hr/web test
+
+      - name: Build Next.js Frontend
+        run: pnpm --filter @agentic-hr/web build
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @agentic-hr/web exec playwright install --with-deps chromium
+
+      - name: Run Playwright Browser Smoke Tests
+        run: pnpm --filter @agentic-hr/web test:e2e

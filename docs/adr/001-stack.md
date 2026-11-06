@@ -1,5 +1,5 @@
 # ADR 001: Stack
-Status: Decided
-Context: Need fast MVP for one person
-Decision: Next.js 14, FastAPI, Postgres + pgvector, Temporal Cloud, Clerk, LiteLLM
-Consequences: One language for AI gateway, durable workflows
+Status: Decided (Updated for Next.js 16 Active LTS & Node.js 24)
+Context: Need fast MVP for one person, targeting Node.js 24 runtime environment.
+Decision: Next.js 16 (Active LTS), FastAPI, Postgres + pgvector, Temporal Cloud, Clerk, LiteLLM
+Consequences: Modern React and native Node.js 24 runtime support, Active LTS stability, durable workflows

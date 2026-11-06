@@ -1,3 +1,59 @@
-gitleaks.exe
+# Environment and secrets
 .env
+.env*.local
+gitleaks.exe
+gitleaks
+
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Next.js & Frontend Builds
+.next/
+out/
+build/
+dist/
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Pre-commit Cache
+.pre-commit-cache/
+
+# Databases & local persistent storage
+*.sqlite
+*.sqlite3
+pgdata/
+redisdata/
+temporaldata/
+
+# Temporal local dev data
+.temporal/
+
+# OpenAPI intermediate exports
+packages/contracts/openapi.json
+
+# Test outputs & reports
+test-results/
+playwright-report/
+blob-report/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
