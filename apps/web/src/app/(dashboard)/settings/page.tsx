@@ -2,16 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import {
-  Settings,
-  ShieldCheck,
-  Mail,
-  KeyRound,
-  ArrowLeft,
-  Server,
-  Cpu,
-  Lock,
-} from "lucide-react";
+import { Settings, ShieldCheck, Mail, KeyRound, ArrowLeft, Server, Cpu, Lock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -36,7 +27,8 @@ export default function SettingsPage() {
             Platform Settings & Integrations
           </h1>
           <p className="text-xs md:text-sm text-textSecondary">
-            Multi-tenant context isolation, Google Workspace least-privilege connectors, and AI model routing.
+            Multi-tenant context isolation, Google Workspace least-privilege connectors, and AI
+            model routing.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -78,7 +70,8 @@ export default function SettingsPage() {
             <div>
               <span className="text-textMuted block">Isolation Guarantee</span>
               <span className="text-textPrimary">
-                Transactions automatically limit visibility to records where tenant_id matches the session context.
+                Transactions automatically limit visibility to records where tenant_id matches the
+                session context.
               </span>
             </div>
           </CardContent>
@@ -101,7 +94,9 @@ export default function SettingsPage() {
           <CardContent className="text-xs text-textSecondary space-y-3">
             <div className="border-b border-appBorder pb-2">
               <span className="text-textMuted block">Current Adapter</span>
-              <span className="font-semibold text-textPrimary">In-Memory Simulator (Zero live API calls)</span>
+              <span className="font-semibold text-textPrimary">
+                In-Memory Simulator (Zero live API calls)
+              </span>
             </div>
             <div className="border-b border-appBorder pb-2">
               <span className="text-textMuted block">Permitted Scopes Whitelist</span>
@@ -142,21 +137,27 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div className="p-3 bg-appBg rounded-small border border-appBorder">
                 <span className="text-textMuted block">Strong Reasoning Model</span>
-                <span className="font-bold text-textPrimary text-sm block mt-0.5">Gemini 3.8 Flash</span>
+                <span className="font-bold text-textPrimary text-sm block mt-0.5">
+                  Gemini 3.8 Flash
+                </span>
                 <span className="text-[11px] text-textSecondary block mt-1">
                   Assigned to Policy Brain RAG & complex candidate matching.
                 </span>
               </div>
               <div className="p-3 bg-appBg rounded-small border border-appBorder">
                 <span className="text-textMuted block">High-Throughput Model</span>
-                <span className="font-bold text-textPrimary text-sm block mt-0.5">Gemini 3.5 Flash-Lite</span>
+                <span className="font-bold text-textPrimary text-sm block mt-0.5">
+                  Gemini 3.5 Flash-Lite
+                </span>
                 <span className="text-[11px] text-textSecondary block mt-1">
                   Assigned to CV OCR validation & Screener scoring.
                 </span>
               </div>
               <div className="p-3 bg-appBg rounded-small border border-appBorder">
                 <span className="text-textMuted block">Multilingual Embeddings</span>
-                <span className="font-bold text-textPrimary text-sm block mt-0.5">Gemini Embedding 2</span>
+                <span className="font-bold text-textPrimary text-sm block mt-0.5">
+                  Gemini Embedding 2
+                </span>
                 <span className="text-[11px] text-textSecondary block mt-1">
                   Urdu & English bilingual vector embeddings for policy RAG.
                 </span>
@@ -168,4 +169,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

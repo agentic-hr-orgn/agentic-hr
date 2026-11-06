@@ -36,7 +36,8 @@ export default function AssessmentsPage() {
             Code Tester & Sandboxed Assessments
           </h1>
           <p className="text-xs md:text-sm text-textSecondary">
-            Isolated candidate technical assessment and test suite execution inside firewalled E2B cloud environments.
+            Isolated candidate technical assessment and test suite execution inside firewalled E2B
+            cloud environments.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -62,9 +63,9 @@ export default function AssessmentsPage() {
           </CardHeader>
           <CardContent className="text-xs text-textSecondary space-y-4">
             <p>
-              Candidates submit code solutions to real-world engineering challenges. The Code Tester agent
-              provisions an ephemeral E2B sandbox, executes unit and integration tests, evaluates runtime
-              performance, and scores code cleanliness.
+              Candidates submit code solutions to real-world engineering challenges. The Code Tester
+              agent provisions an ephemeral E2B sandbox, executes unit and integration tests,
+              evaluates runtime performance, and scores code cleanliness.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="p-3 bg-appBg rounded-small border border-appBorder space-y-1">
@@ -72,14 +73,19 @@ export default function AssessmentsPage() {
                   <ShieldCheck className="h-3.5 w-3.5 text-primary" />
                   Network Isolation
                 </span>
-                <span>Sandboxes run with egress firewalls, preventing data exfiltration or external network calls.</span>
+                <span>
+                  Sandboxes run with egress firewalls, preventing data exfiltration or external
+                  network calls.
+                </span>
               </div>
               <div className="p-3 bg-appBg rounded-small border border-appBorder space-y-1">
                 <span className="font-semibold text-textPrimary flex items-center gap-1.5">
                   <Cpu className="h-3.5 w-3.5 text-primary" />
                   Deterministic Grading
                 </span>
-                <span>Grading is derived strictly from test suite results, not LLM speculation.</span>
+                <span>
+                  Grading is derived strictly from test suite results, not LLM speculation.
+                </span>
               </div>
             </div>
           </CardContent>
@@ -87,7 +93,9 @@ export default function AssessmentsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-bold text-textPrimary">Sandbox Specifications</CardTitle>
+            <CardTitle className="text-sm font-bold text-textPrimary">
+              Sandbox Specifications
+            </CardTitle>
             <CardDescription className="text-xs">E2B Infrastructure Plan</CardDescription>
           </CardHeader>
           <CardContent className="text-xs text-textSecondary space-y-3">
@@ -97,11 +105,15 @@ export default function AssessmentsPage() {
             </div>
             <div className="border-b border-appBorder pb-2">
               <span className="text-textMuted block">Supported Runtimes</span>
-              <span className="font-semibold text-textPrimary">Python 3.12+, Node 20+, Go 1.22</span>
+              <span className="font-semibold text-textPrimary">
+                Python 3.12+, Node 20+, Go 1.22
+              </span>
             </div>
             <div>
               <span className="text-textMuted block">Security Boundary</span>
-              <span className="font-semibold text-textPrimary">Strict read-only filesystem mounts</span>
+              <span className="font-semibold text-textPrimary">
+                Strict read-only filesystem mounts
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -130,11 +142,12 @@ export default function AssessmentsPage() {
             <p className="text-emerald-400">test_token_bucket_burst_allow PASSED [ 33%]</p>
             <p className="text-emerald-400">test_token_bucket_exhaustion_rejects PASSED [ 66%]</p>
             <p className="text-emerald-400">test_sliding_window_recovery PASSED [100%]</p>
-            <p className="text-slate-400 pt-2">== 3 passed in 0.42s (Code Score: 96/100, Cleanliness: 92/100) ==</p>
+            <p className="text-slate-400 pt-2">
+              == 3 passed in 0.42s (Code Score: 96/100, Cleanliness: 92/100) ==
+            </p>
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-

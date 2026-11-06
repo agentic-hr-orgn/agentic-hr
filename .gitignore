@@ -46,6 +46,11 @@ temporaldata/
 # OpenAPI intermediate exports
 packages/contracts/openapi.json
 
+# Test outputs & reports
+test-results/
+playwright-report/
+blob-report/
+
 # IDE & OS
 .vscode/
 .idea/

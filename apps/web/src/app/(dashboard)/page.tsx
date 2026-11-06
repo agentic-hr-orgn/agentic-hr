@@ -57,14 +57,20 @@ export default function DashboardPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="warning" className="bg-amber-400/20 text-amber-200 border-amber-300/30">
+              <Badge
+                variant="warning"
+                className="bg-amber-400/20 text-amber-200 border-amber-300/30"
+              >
                 Stage 1 — Platform Skeleton
               </Badge>
               <Badge variant="primary" className="bg-white/20 text-white border-white/30">
                 USE_FAKE_INTEGRATIONS=true
               </Badge>
               {health && (
-                <Badge variant="outline" className="bg-emerald-500/20 text-emerald-200 border-emerald-400/40">
+                <Badge
+                  variant="outline"
+                  className="bg-emerald-500/20 text-emerald-200 border-emerald-400/40"
+                >
                   Backend API: {health.status}
                 </Badge>
               )}
@@ -73,8 +79,9 @@ export default function DashboardPage() {
               Agentic HR Core Platform
             </h1>
             <p className="text-slate-200 max-w-2xl text-xs md:text-sm leading-relaxed">
-              Autonomous workforce platform for SMEs. Decoupled Next.js 16 frontend,
-              FastAPI backend, multi-tenant Postgres with Row-Level Security, and least-privilege Google integrations.
+              Autonomous workforce platform for SMEs. Decoupled Next.js 16 frontend, FastAPI
+              backend, multi-tenant Postgres with Row-Level Security, and least-privilege Google
+              integrations.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -105,7 +112,8 @@ export default function DashboardPage() {
               <Badge variant="success">Active Query</Badge>
             </div>
             <CardDescription className="text-xs">
-              Direct telemetry from FastAPI GET /health parsed via generated TypeScript OpenAPI contract.
+              Direct telemetry from FastAPI GET /health parsed via generated TypeScript OpenAPI
+              contract.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -118,7 +126,9 @@ export default function DashboardPage() {
               </div>
               <div className="p-2.5 rounded-small bg-white border border-emerald-200">
                 <span className="text-textSecondary block text-[10px]">Environment</span>
-                <span className="font-semibold text-textPrimary capitalize">{health.environment}</span>
+                <span className="font-semibold text-textPrimary capitalize">
+                  {health.environment}
+                </span>
               </div>
               <div className="p-2.5 rounded-small bg-white border border-emerald-200">
                 <span className="text-textSecondary block text-[10px]">Strong Model</span>
@@ -258,7 +268,9 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-textPrimary">Database (ADR 002)</CardTitle>
+              <CardTitle className="text-sm font-bold text-textPrimary">
+                Database (ADR 002)
+              </CardTitle>
               <Database className="h-4 w-4 text-primary" />
             </div>
             <CardDescription className="text-xs">PostgreSQL 16 + pgvector</CardDescription>
@@ -289,7 +301,9 @@ export default function DashboardPage() {
       {/* 4 Agent Archetypes */}
       <div>
         <div className="mb-4">
-          <h2 className="text-base md:text-lg font-bold text-textPrimary">Core AI Workforce Archetypes</h2>
+          <h2 className="text-base md:text-lg font-bold text-textPrimary">
+            Core AI Workforce Archetypes
+          </h2>
           <p className="text-xs text-textSecondary">
             Four specialized agents coordinated by the Agentic HR platform.
           </p>
@@ -382,7 +396,8 @@ export default function DashboardPage() {
             <Badge variant="outline">Stage 0 Kit</Badge>
           </CardTitle>
           <CardDescription className="text-xs">
-            Configured in accordance with docs/synthetic-data-plan.md and docs/adr/006-workspace-workaround.md.
+            Configured in accordance with docs/synthetic-data-plan.md and
+            docs/adr/006-workspace-workaround.md.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -390,7 +405,9 @@ export default function DashboardPage() {
             <div className="p-3 bg-appBg rounded-small border border-appBorder">
               <span className="text-textSecondary block">Total Employees</span>
               <span className="text-base font-bold text-textPrimary">40</span>
-              <span className="text-[10px] text-textSecondary block">HR(5), Eng(15), Sales(10), Ops(10)</span>
+              <span className="text-[10px] text-textSecondary block">
+                HR(5), Eng(15), Sales(10), Ops(10)
+              </span>
             </div>
             <div className="p-3 bg-appBg rounded-small border border-appBorder">
               <span className="text-textSecondary block">Authorized Test Users</span>
@@ -400,12 +417,16 @@ export default function DashboardPage() {
             <div className="p-3 bg-appBg rounded-small border border-appBorder">
               <span className="text-textSecondary block">Policy Documents</span>
               <span className="text-base font-bold text-textPrimary">6 Policies</span>
-              <span className="text-[10px] text-textSecondary block">English & Urdu Leave, Code of Conduct</span>
+              <span className="text-[10px] text-textSecondary block">
+                English & Urdu Leave, Code of Conduct
+              </span>
             </div>
             <div className="p-3 bg-appBg rounded-small border border-appBorder">
               <span className="text-textSecondary block">Testing CVs</span>
               <span className="text-base font-bold text-textPrimary">10 Resumes</span>
-              <span className="text-[10px] text-textSecondary block">5 Scanned OCR, 5 Native Text</span>
+              <span className="text-[10px] text-textSecondary block">
+                5 Scanned OCR, 5 Native Text
+              </span>
             </div>
           </div>
         </CardContent>

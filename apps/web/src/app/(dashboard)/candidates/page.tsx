@@ -36,7 +36,8 @@ export default function CandidatesPage() {
             Candidate Pipeline & Screening
           </h1>
           <p className="text-xs md:text-sm text-textSecondary">
-            DocuVerify multi-page OCR extraction and Screener 0-100 rubric-based candidate evaluations.
+            DocuVerify multi-page OCR extraction and Screener 0-100 rubric-based candidate
+            evaluations.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -63,11 +64,14 @@ export default function CandidatesPage() {
           <CardContent className="text-xs text-textSecondary space-y-3">
             <p>
               Extracts structured candidate profiles from CVs, diplomas, and identity documents.
-              Handles low-quality mobile scans, table extractions, and multilingual Urdu/English resumes.
+              Handles low-quality mobile scans, table extractions, and multilingual Urdu/English
+              resumes.
             </p>
             <div className="p-3 bg-appBg rounded-small border border-appBorder space-y-1">
               <span className="font-semibold text-textPrimary block">Stage 2 Milestone:</span>
-              <span>Upload pipeline with Google Drive least-privilege connector (drive.file scope).</span>
+              <span>
+                Upload pipeline with Google Drive least-privilege connector (drive.file scope).
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -91,8 +95,12 @@ export default function CandidatesPage() {
               reasoning logs, strengths, concerns, and recommended interview topics.
             </p>
             <div className="p-3 bg-appBg rounded-small border border-appBorder space-y-1">
-              <span className="font-semibold text-textPrimary block">LLM Proposes, Code Decides:</span>
-              <span>Screening decisions require recruiter sign-off before candidate progression.</span>
+              <span className="font-semibold text-textPrimary block">
+                LLM Proposes, Code Decides:
+              </span>
+              <span>
+                Screening decisions require recruiter sign-off before candidate progression.
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -108,7 +116,8 @@ export default function CandidatesPage() {
             <h3 className="text-base font-bold text-textPrimary">CV Ingestion Sandbox</h3>
             <p className="text-xs text-textSecondary mt-1">
               The candidate upload and automated screening pipeline will be connected in Stage 2.
-              Synthetic CVs from Acme Tech Solutions (10 test CVs) are ready for end-to-end evaluation.
+              Synthetic CVs from Acme Tech Solutions (10 test CVs) are ready for end-to-end
+              evaluation.
             </p>
           </div>
           <div className="flex justify-center gap-3">
@@ -130,12 +139,12 @@ export default function CandidatesPage() {
         <div>
           <span className="font-semibold block">Privacy & Security Boundary (ADR 003):</span>
           <span>
-            Only synthetic candidate CVs from Acme Tech Solutions are routed through free-tier Google AI Studio endpoints.
-            Candidate CVs are strictly treated as untrusted data with multi-layer prompt-injection defense.
+            Only synthetic candidate CVs from Acme Tech Solutions are routed through free-tier
+            Google AI Studio endpoints. Candidate CVs are strictly treated as untrusted data with
+            multi-layer prompt-injection defense.
           </span>
         </div>
       </div>
     </div>
   );
 }
-

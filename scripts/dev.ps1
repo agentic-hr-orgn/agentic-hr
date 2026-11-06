@@ -5,7 +5,7 @@
 
 param (
     [Parameter(Position=0)]
-    [ValidateSet("setup", "dev", "seed", "reset", "lint", "test", "check", "client", "workflow", "db-up", "db-down", "api", "web", "worker", "help")]
+    [ValidateSet("setup", "dev", "seed", "reset", "lint", "test", "e2e", "check", "client", "workflow", "db-up", "db-down", "api", "web", "worker", "help")]
     [string]$Command = "help",
 
     [Parameter()]
@@ -107,8 +107,10 @@ switch ($Command) {
         Set-Location "$RootDir\apps\api"
         uv run ruff check app tests
         uv run ruff format --check app tests
-        Write-Host "==> Linting TypeScript frontend (ESLint)..." -ForegroundColor Cyan
+        Write-Host "==> Checking Prettier formatting..." -ForegroundColor Cyan
         Set-Location $RootDir
+        pnpm format:check
+        Write-Host "==> Linting TypeScript frontend (ESLint)..." -ForegroundColor Cyan
         pnpm --filter @agentic-hr/web run lint
     }
 
@@ -116,27 +118,39 @@ switch ($Command) {
         Write-Host "==> Running Pytest suite..." -ForegroundColor Cyan
         Set-Location $RootDir
         uv run --package agentic-hr-api pytest apps/api/tests/
+        Write-Host "==> Running Vitest frontend tests..." -ForegroundColor Cyan
+        pnpm --filter @agentic-hr/web test
         Write-Host "==> Running TypeScript workspace typechecks..." -ForegroundColor Cyan
         pnpm -r typecheck
+    }
+
+    "e2e" {
+        Write-Host "==> Running Playwright browser smoke tests..." -ForegroundColor Cyan
+        Set-Location $RootDir
+        pnpm --filter @agentic-hr/web test:e2e
     }
 
     "check" {
         Write-Host "==========================================================" -ForegroundColor Cyan
         Write-Host "   Agentic HR Core - Full Quality Verification Gate       " -ForegroundColor Cyan
         Write-Host "==========================================================" -ForegroundColor Cyan
-        Write-Host "1/4. Linting Python backend (Ruff)..." -ForegroundColor Cyan
+        Write-Host "1/5. Linting Python backend (Ruff)..." -ForegroundColor Cyan
         Set-Location "$RootDir\apps\api"
         uv run ruff check app tests
         uv run ruff format --check app tests
 
-        Write-Host "2/4. Running backend tests (Pytest)..." -ForegroundColor Cyan
+        Write-Host "2/5. Running backend tests (Pytest + HTTPX)..." -ForegroundColor Cyan
         Set-Location $RootDir
         uv run --package agentic-hr-api pytest apps/api/tests/
 
-        Write-Host "3/4. Typechecking all workspace packages..." -ForegroundColor Cyan
+        Write-Host "3/5. Running frontend unit tests (Vitest)..." -ForegroundColor Cyan
+        pnpm --filter @agentic-hr/web test
+
+        Write-Host "4/5. Typechecking all workspace packages..." -ForegroundColor Cyan
         pnpm -r typecheck
 
-        Write-Host "4/4. Linting Next.js frontend (ESLint)..." -ForegroundColor Cyan
+        Write-Host "5/5. Prettier & ESLint checks..." -ForegroundColor Cyan
+        pnpm format:check
         pnpm --filter @agentic-hr/web run lint
 
         Write-Host "`n==> ALL QUALITY CHECKS PASSED!" -ForegroundColor Green

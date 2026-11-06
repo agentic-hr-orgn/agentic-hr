@@ -18,4 +18,3 @@ export function createApiClient(baseUrl?: string): Client<paths> {
  * Pre-configured default API client instance for immediate consumption.
  */
 export const apiClient: Client<paths> = createApiClient();
-

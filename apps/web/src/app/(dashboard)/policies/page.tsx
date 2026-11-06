@@ -36,7 +36,8 @@ export default function PoliciesPage() {
             Corporate Policy Brain (Bilingual RAG)
           </h1>
           <p className="text-xs md:text-sm text-textSecondary">
-            Multilingual knowledge retrieval assistant in English and Urdu for leaves, code of conduct, and HR policies.
+            Multilingual knowledge retrieval assistant in English and Urdu for leaves, code of
+            conduct, and HR policies.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -63,9 +64,10 @@ export default function PoliciesPage() {
           </CardHeader>
           <CardContent className="text-xs text-textSecondary space-y-4">
             <p>
-              Employees can inquire in English or Urdu regarding leave balances, maternity/paternity policies,
-              remote work regulations, and reimbursement rules. The system performs vector similarity search across
-              approved company policy documents and cites exact source clauses.
+              Employees can inquire in English or Urdu regarding leave balances, maternity/paternity
+              policies, remote work regulations, and reimbursement rules. The system performs vector
+              similarity search across approved company policy documents and cites exact source
+              clauses.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="p-3 bg-appBg rounded-small border border-appBorder space-y-1">
@@ -73,14 +75,19 @@ export default function PoliciesPage() {
                   <Languages className="h-3.5 w-3.5 text-primary" />
                   Urdu Native Support
                 </span>
-                <span>Trained and evaluated on bilingual policy corpuses with Matryoshka dimension embeddings.</span>
+                <span>
+                  Trained and evaluated on bilingual policy corpuses with Matryoshka dimension
+                  embeddings.
+                </span>
               </div>
               <div className="p-3 bg-appBg rounded-small border border-appBorder space-y-1">
                 <span className="font-semibold text-textPrimary flex items-center gap-1.5">
                   <ShieldCheck className="h-3.5 w-3.5 text-primary" />
                   Source-Citations Only
                 </span>
-                <span>Zero hallucinations: answers must strictly cite approved handbook paragraphs.</span>
+                <span>
+                  Zero hallucinations: answers must strictly cite approved handbook paragraphs.
+                </span>
               </div>
             </div>
           </CardContent>
@@ -88,13 +95,17 @@ export default function PoliciesPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-bold text-textPrimary">Vector Store (ADR 002)</CardTitle>
+            <CardTitle className="text-sm font-bold text-textPrimary">
+              Vector Store (ADR 002)
+            </CardTitle>
             <CardDescription className="text-xs">pgvector Configuration</CardDescription>
           </CardHeader>
           <CardContent className="text-xs text-textSecondary space-y-3">
             <div className="border-b border-appBorder pb-2">
               <span className="text-textMuted block">Database Extension</span>
-              <span className="font-semibold text-textPrimary">pgvector (Active in Postgres 16)</span>
+              <span className="font-semibold text-textPrimary">
+                pgvector (Active in Postgres 16)
+              </span>
             </div>
             <div className="border-b border-appBorder pb-2">
               <span className="text-textMuted block">Embedding Dimensions</span>
@@ -102,7 +113,9 @@ export default function PoliciesPage() {
             </div>
             <div>
               <span className="text-textMuted block">Multi-Tenant Isolation</span>
-              <span className="font-semibold text-textPrimary">Row-Level Security on vector queries</span>
+              <span className="font-semibold text-textPrimary">
+                Row-Level Security on vector queries
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -142,7 +155,9 @@ export default function PoliciesPage() {
                 <span>Cited: Acme Leave Policy Sec 4.2</span>
               </div>
               <p className="text-textPrimary text-right font-sans" dir="rtl">
-                جی ہاں، اگر سالانہ رخصت کے دوران آپ بیمار ہو جائیں تو مستند ڈاکٹر کی تصدیق شدہ میڈیکل رپورٹ جمع کرا کر ان دنوں کو بیماری کی رخصت (Sick Leave) میں تبدیل کیا جا سکتا ہے۔
+                جی ہاں، اگر سالانہ رخصت کے دوران آپ بیمار ہو جائیں تو مستند ڈاکٹر کی تصدیق شدہ
+                میڈیکل رپورٹ جمع کرا کر ان دنوں کو بیماری کی رخصت (Sick Leave) میں تبدیل کیا جا سکتا
+                ہے۔
               </p>
             </div>
           </div>
@@ -151,4 +166,3 @@ export default function PoliciesPage() {
     </div>
   );
 }
-

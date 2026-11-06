@@ -59,7 +59,8 @@ export default function EmployeesPage() {
             Employee Directory & Sheets Synchronization
           </h1>
           <p className="text-xs md:text-sm text-textSecondary">
-            PostgreSQL 16 is authoritative; Google Sheets serves as a designated synced view (ADR 002 & ADR 005).
+            PostgreSQL 16 is authoritative; Google Sheets serves as a designated synced view (ADR
+            002 & ADR 005).
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -80,18 +81,25 @@ export default function EmployeesPage() {
             </div>
             <CardTitle className="text-base">Durable Multi-Day Syncing Architecture</CardTitle>
             <CardDescription className="text-xs">
-              Temporal workflows coordinate two-way reconciliation between Postgres and Google Sheets.
+              Temporal workflows coordinate two-way reconciliation between Postgres and Google
+              Sheets.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-xs text-textSecondary space-y-3">
             <p>
-              To ensure reliability without data corruption, PostgreSQL maintains authoritative ownership of employee,
-              leave balance, and payroll state. Business users can view and edit designated ranges in Google Sheets, which
-              are safely synchronized via Temporal durable activities under least-privilege scopes.
+              To ensure reliability without data corruption, PostgreSQL maintains authoritative
+              ownership of employee, leave balance, and payroll state. Business users can view and
+              edit designated ranges in Google Sheets, which are safely synchronized via Temporal
+              durable activities under least-privilege scopes.
             </p>
             <div className="p-3 bg-appBg rounded-small border border-appBorder">
-              <span className="font-semibold text-textPrimary block mb-1">Synthetic Dataset Profile:</span>
-              <span>40 Acme Tech Solutions employees: HR (5), Engineering (15), Sales (10), Operations (10).</span>
+              <span className="font-semibold text-textPrimary block mb-1">
+                Synthetic Dataset Profile:
+              </span>
+              <span>
+                40 Acme Tech Solutions employees: HR (5), Engineering (15), Sales (10), Operations
+                (10).
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -138,7 +146,8 @@ export default function EmployeesPage() {
         <CardContent>
           {error && (
             <div className="p-3 rounded-small bg-amber-50 border border-amber-200 text-xs text-amber-800 mb-4">
-              FastAPI Standby: {error}. Backend synthetic endpoints can be connected via local dev server.
+              FastAPI Standby: {error}. Backend synthetic endpoints can be connected via local dev
+              server.
             </div>
           )}
 
@@ -158,7 +167,9 @@ export default function EmployeesPage() {
                   {employees.slice(0, 10).map((emp) => (
                     <tr key={emp.employee_id} className="hover:bg-surface-hover transition-colors">
                       <td className="p-2.5 font-medium text-textPrimary">{emp.name}</td>
-                      <td className="p-2.5 text-textSecondary font-mono text-[11px]">{emp.email}</td>
+                      <td className="p-2.5 text-textSecondary font-mono text-[11px]">
+                        {emp.email}
+                      </td>
                       <td className="p-2.5 text-textSecondary">{emp.department}</td>
                       <td className="p-2.5 text-textSecondary">{emp.role}</td>
                       <td className="p-2.5">
@@ -180,7 +191,8 @@ export default function EmployeesPage() {
             <div className="p-6 text-center text-xs text-textSecondary">
               <p className="font-semibold text-textPrimary">40 Synthetic Employees Ready</p>
               <p className="mt-1">
-                Engineering (15), Sales (10), Operations (10), HR (5) configured in accordance with ADR 006.
+                Engineering (15), Sales (10), Operations (10), HR (5) configured in accordance with
+                ADR 006.
               </p>
             </div>
           )}

@@ -1,6 +1,8 @@
 packages:
-  - 'apps/web'
-  - 'packages/ui'
-  - 'packages/contracts'
+  - "apps/web"
+  - "packages/ui"
+  - "packages/contracts"
 allowBuilds:
-  '@clerk/shared': true
+  "@clerk/shared": true
+minimumReleaseAgeExclude:
+  - playwright-core@1.65.0

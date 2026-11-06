@@ -62,11 +62,13 @@ reset:
 	docker-compose down -v
 	@echo "Local development volumes have been destroyed."
 
-# 7. Lint: Python (Ruff) and TypeScript (ESLint)
+# 7. Lint: Python (Ruff), TypeScript (ESLint), and Prettier
 lint:
 	@echo "==> Linting Python backend (Ruff)..."
 	cd apps/api && uv run ruff check app tests
 	cd apps/api && uv run ruff format --check app tests
+	@echo "==> Checking Prettier formatting..."
+	pnpm format:check
 	@echo "==> Linting TypeScript frontend (ESLint)..."
 	pnpm --filter @agentic-hr/web run lint
 
@@ -74,10 +76,17 @@ lint:
 test:
 	@echo "==> Running backend Pytest suite..."
 	uv run --package agentic-hr-api pytest apps/api/tests/
+	@echo "==> Running frontend Vitest suite..."
+	pnpm --filter @agentic-hr/web test
 	@echo "==> Running TypeScript workspace typechecks..."
 	pnpm -r typecheck
 
-# 9. Check: Complete CI quality gate
+# 9. E2E: Browser smoke tests via Playwright
+test-e2e:
+	@echo "==> Running Playwright browser smoke tests..."
+	pnpm --filter @agentic-hr/web test:e2e
+
+# 10. Check: Complete CI quality gate
 check: lint test
 	@echo "==> All quality checks passed successfully!"
 

@@ -25,4 +25,3 @@ export function Badge({ className, variant = "primary", ...props }: BadgeProps) 
     />
   );
 }
-

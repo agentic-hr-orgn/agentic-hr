@@ -43,4 +43,3 @@ repos:
         types: [file]
         files: \.(ts|tsx|js|jsx)$
         pass_filenames: false
-

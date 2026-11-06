@@ -29,8 +29,8 @@ export function Header({ onMenuClick }: HeaderProps) {
   const apiOnline = health
     ? health.status === "healthy" || health.status === "ok"
     : isError
-    ? false
-    : null;
+      ? false
+      : null;
 
   const currentRoute = routeTitles[pathname] || {
     title: "Platform Skeleton",
@@ -61,9 +61,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               Stage 1
             </Badge>
           </div>
-          <p className="text-[11px] text-textSecondary hidden sm:block">
-            {currentRoute.subtitle}
-          </p>
+          <p className="text-[11px] text-textSecondary hidden sm:block">{currentRoute.subtitle}</p>
         </div>
       </div>
 
@@ -74,8 +72,8 @@ export function Header({ onMenuClick }: HeaderProps) {
             apiOnline === true
               ? "bg-emerald-50 text-emerald-800 border-emerald-200"
               : apiOnline === false
-              ? "bg-amber-50 text-amber-800 border-amber-200"
-              : "bg-slate-50 text-slate-700 border-slate-200"
+                ? "bg-amber-50 text-amber-800 border-amber-200"
+                : "bg-slate-50 text-slate-700 border-slate-200"
           }`}
         >
           <Activity
@@ -83,12 +81,14 @@ export function Header({ onMenuClick }: HeaderProps) {
               apiOnline === true
                 ? "text-emerald-600 animate-pulse"
                 : apiOnline === false
-                ? "text-amber-600"
-                : "text-slate-400"
+                  ? "text-amber-600"
+                  : "text-slate-400"
             }`}
           />
           <span className="hidden sm:inline">FastAPI:</span>
-          <span>{apiOnline === true ? "Online (8000)" : apiOnline === false ? "Standby" : "Querying..."}</span>
+          <span>
+            {apiOnline === true ? "Online (8000)" : apiOnline === false ? "Standby" : "Querying..."}
+          </span>
         </div>
 
         {/* Security / Isolation pill */}

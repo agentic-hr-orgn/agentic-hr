@@ -9,11 +9,7 @@ export const metadata: Metadata = {
     "Agentic AI Workforce for SMEs featuring DocuVerify, Screener, Code Tester, and Policy Brain.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
   const bodyContent = <QueryProvider>{children}</QueryProvider>;

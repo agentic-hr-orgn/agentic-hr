@@ -20,4 +20,3 @@ export function useHealthQuery() {
     refetchInterval: 30000,
   });
 }
-

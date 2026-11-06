@@ -12,14 +12,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       "inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50";
 
     const variantStyles = {
-      primary:
-        "bg-primary text-white hover:bg-primary-hover shadow-button rounded-small",
-      secondary:
-        "bg-navy text-white hover:bg-navy-light rounded-small",
+      primary: "bg-primary text-white hover:bg-primary-hover shadow-button rounded-small",
+      secondary: "bg-navy text-white hover:bg-navy-light rounded-small",
       outline:
         "border border-appBorder bg-surface text-textPrimary hover:bg-surface-hover rounded-small",
-      ghost:
-        "text-textPrimary hover:bg-surface-hover rounded-small",
+      ghost: "text-textPrimary hover:bg-surface-hover rounded-small",
     };
 
     const sizeStyles = {
@@ -39,4 +36,3 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = "Button";
-
