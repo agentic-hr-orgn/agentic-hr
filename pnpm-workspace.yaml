@@ -1,0 +1,6 @@
+packages:
+  - 'apps/web'
+  - 'packages/ui'
+  - 'packages/contracts'
+allowBuilds:
+  '@clerk/shared': true

@@ -1,0 +1,41 @@
+name: Monorepo CI
+
+on:
+  push:
+    branches: [main, stage-1/platform-skeleton]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 12
+
+      - name: Install pnpm Dependencies
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Validate TypeScript & Linting
+        run: pnpm -r typecheck
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v2
+        with:
+          version: "latest"
+
+      - name: Sync uv Workspace
+        run: uv sync
+
+      - name: Run Backend Tests
+        run: uv run pytest apps/api/tests
+
