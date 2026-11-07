@@ -13,6 +13,7 @@ import {
   FolderGit2,
   X,
   Building2,
+  CheckCircle2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useUIStore } from "@/stores/ui-store";
@@ -28,6 +29,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Overview", icon: LayoutDashboard, href: "/" },
+  { label: "Approvals", icon: CheckCircle2, href: "/approvals", badge: "Human Gate" },
   { label: "Candidates", icon: Users2, href: "/candidates", badge: "DocuVerify & Screener" },
   { label: "Code Tester", icon: TerminalSquare, href: "/assessments", badge: "E2B Sandbox" },
   { label: "Policy Brain", icon: BookOpenCheck, href: "/policies", badge: "Bilingual RAG" },

@@ -251,9 +251,10 @@ async def test_cross_tenant_isolation_acme_vs_globex():
             globex_users = await conn.fetch("SELECT email FROM public.users ORDER BY email")
             globex_emails = [u["email"] for u in globex_users]
 
-            assert len(globex_emails) == 2
+            assert len(globex_emails) == 3
             assert "agentic.hr.test.ubaid.candidate1@gmail.com" in globex_emails
             assert "agentic.hr.test.ubaid.candidate2@gmail.com" in globex_emails
+            assert "agentic.hr.test.ubaid.globex_owner@gmail.com" in globex_emails
             # Acme employees must NOT be visible in Globex
             assert "agentic.hr.test.ubaid.owner@gmail.com" not in globex_emails
             assert "agentic.hr.test.ubaid.recruiter@gmail.com" not in globex_emails

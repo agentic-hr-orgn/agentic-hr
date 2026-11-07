@@ -14,10 +14,19 @@ from temporalio.worker import Worker
 
 from app.core.config import settings
 from app.workflows import (
+    DummyApprovalWorkflow,
+    HumanApprovalWorkflow,
     SampleOnboardingWorkflow,
+    WaitForApprovalWorkflow,
+    execute_dummy_approved_action_activity,
+    execute_dummy_rejected_action_activity,
     greeting_activity,
+    notify_approval_decision_activity,
+    notify_changes_requested_activity,
+    notify_resubmitted_activity,
     schedule_interview_activity,
     send_welcome_notification,
+    verify_approval_record_activity,
 )
 
 logging.basicConfig(
@@ -48,18 +57,31 @@ async def run_worker() -> None:
     worker = Worker(
         client,
         task_queue=settings.TEMPORAL_TASK_QUEUE,
-        workflows=[SampleOnboardingWorkflow],
+        workflows=[
+            SampleOnboardingWorkflow,
+            HumanApprovalWorkflow,
+            DummyApprovalWorkflow,
+            WaitForApprovalWorkflow,
+        ],
         activities=[
             greeting_activity,
             send_welcome_notification,
             schedule_interview_activity,
+            notify_changes_requested_activity,
+            notify_approval_decision_activity,
+            notify_resubmitted_activity,
+            verify_approval_record_activity,
+            execute_dummy_approved_action_activity,
+            execute_dummy_rejected_action_activity,
         ],
     )
 
     logger.info(f"Worker registered for task queue '{settings.TEMPORAL_TASK_QUEUE}'.")
-    logger.info("Registered Workflows: SampleOnboardingWorkflow")
     logger.info(
-        "Registered Activities: greeting_activity, send_welcome_notification, schedule_interview_activity"
+        "Registered Workflows: SampleOnboardingWorkflow, HumanApprovalWorkflow, DummyApprovalWorkflow, WaitForApprovalWorkflow"
+    )
+    logger.info(
+        "Registered Activities: greeting, notifications, interview scheduling, approval decisions, verification, dummy actions"
     )
 
     stop_event = asyncio.Event()

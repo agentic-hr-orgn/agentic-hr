@@ -9,9 +9,11 @@ import asyncio
 import logging
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
-from app.db.session import AsyncSessionLocal
+from app.models.approval import Approval
 from app.models.membership import Membership
 from app.models.role import Role
 from app.models.tenant_entity import Tenant
@@ -24,12 +26,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger("agentic_hr.seed")
 
+# Administrative session for synthetic provisioning
+migration_url = settings.MIGRATION_DATABASE_URL or settings.DATABASE_URL
+seed_engine = create_async_engine(migration_url, poolclass=NullPool)
+SeedSessionLocal = async_sessionmaker(
+    bind=seed_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+)
+
 
 async def seed_database() -> None:
     """Idempotently seeds PostgreSQL database with roles, companies, users, and memberships."""
     logger.info("Initializing PostgreSQL database synthetic seeder...")
 
-    async with AsyncSessionLocal() as session:
+    async with SeedSessionLocal() as session:
         # 1. Verify / Seed Roles
         logger.info("Verifying system roles in PostgreSQL...")
         role_definitions = [
@@ -104,6 +117,11 @@ async def seed_database() -> None:
                 "user_test_candidate2_06",
                 "Ubaid Cross-Company Candidate Two",
             ),
+            (
+                "agentic.hr.test.ubaid.globex_owner@gmail.com",
+                "user_test_globex_owner_07",
+                "Globex Owner",
+            ),
         ]
         users: dict[str, User] = {}
         for email, clerk_user_id, full_name in users_data:
@@ -161,6 +179,14 @@ async def seed_database() -> None:
                 True,
                 False,
             ),
+            # Globex Corporation Owner (Company B Owner for symmetric isolation & RBAC testing)
+            (
+                "agentic.hr.test.ubaid.globex_owner@gmail.com",
+                "org_globex_corp_02",
+                "owner",
+                True,
+                True,
+            ),
         ]
 
         for email, org_id, role_key, hr_head, payroll_admin in memberships_data:
@@ -194,6 +220,131 @@ async def seed_database() -> None:
         await session.commit()
         logger.info("Database synthetic tenancy seeding completed successfully.")
 
+        # 5. Seed Synthetic Approvals for Acme Tech Solutions & Globex Corp
+        logger.info("Seeding synthetic human approval requests...")
+        from datetime import UTC, datetime, timedelta
+
+        acme_tenant = tenants["org_acme_tech_01"]
+        globex_tenant = tenants["org_globex_corp_02"]
+
+        owner_user = users["agentic.hr.test.ubaid.owner@gmail.com"]
+        recruiter_user = users["agentic.hr.test.ubaid.recruiter@gmail.com"]
+        hm_user = users["agentic.hr.test.ubaid.hm@gmail.com"]
+        employee_user = users["agentic.hr.test.ubaid.employee@gmail.com"]
+        cand1_user = users["agentic.hr.test.ubaid.candidate1@gmail.com"]
+
+        approvals_data = [
+            # Acme Tech - Pending Leave Request
+            {
+                "tenant_id": acme_tenant.id,
+                "approval_type": "leave_request",
+                "requester_id": employee_user.id,
+                "approver_role": "manager",
+                "status": "pending",
+                "payload": {
+                    "leave_type": "casual",
+                    "start_date": "2026-11-15",
+                    "end_date": "2026-11-17",
+                    "days_count": 3.0,
+                    "reason": "Family gathering and personal commitments.",
+                },
+                "decided_by": None,
+                "decision_reason": None,
+                "decided_at": None,
+            },
+            # Acme Tech - Pending Candidate Offer
+            {
+                "tenant_id": acme_tenant.id,
+                "approval_type": "candidate_offer",
+                "requester_id": recruiter_user.id,
+                "approver_role": "owner",
+                "status": "pending",
+                "payload": {
+                    "candidate_name": "Zubair Khan",
+                    "candidate_email": "zubair.khan.dev@example.com",
+                    "position": "Lead AI Engineer",
+                    "offered_salary_pkr": 450000,
+                    "start_date": "2026-12-01",
+                },
+                "decided_by": None,
+                "decision_reason": None,
+                "decided_at": None,
+            },
+            # Acme Tech - Approved Payroll Override
+            {
+                "tenant_id": acme_tenant.id,
+                "approval_type": "payroll_override",
+                "requester_id": hm_user.id,
+                "approver_role": "owner",
+                "status": "approved",
+                "payload": {
+                    "employee_id": str(employee_user.id),
+                    "employee_name": employee_user.name,
+                    "bonus_pkr": 50000,
+                    "deduction_pkr": None,
+                    "justification": "Exceptional delivery of Q3 performance milestones.",
+                },
+                "decided_by": owner_user.id,
+                "decision_reason": "Approved on basis of verified project impact.",
+                "decided_at": datetime.now(UTC) - timedelta(days=2),
+            },
+            # Acme Tech - Rejected Policy Exception
+            {
+                "tenant_id": acme_tenant.id,
+                "approval_type": "policy_exception",
+                "requester_id": employee_user.id,
+                "approver_role": "hr_head",
+                "status": "rejected",
+                "payload": {
+                    "policy_name": "Remote Work Policy",
+                    "exception_description": "Requesting 60 consecutive days full-time remote arrangement.",
+                    "impact_assessment": "Team velocity maintained via async communication.",
+                },
+                "decided_by": recruiter_user.id,
+                "decision_reason": "Exceeds standard 30-day remote work policy window.",
+                "decided_at": datetime.now(UTC) - timedelta(days=1),
+            },
+            # Globex Corp - Pending Leave Request
+            {
+                "tenant_id": globex_tenant.id,
+                "approval_type": "leave_request",
+                "requester_id": cand1_user.id,
+                "approver_role": "manager",
+                "status": "pending",
+                "payload": {
+                    "leave_type": "annual",
+                    "start_date": "2026-11-20",
+                    "end_date": "2026-11-25",
+                    "days_count": 5.0,
+                    "reason": "Annual planned vacation.",
+                },
+                "decided_by": None,
+                "decision_reason": None,
+                "decided_at": None,
+            },
+        ]
+
+        for item in approvals_data:
+            stmt = select(Approval).where(
+                Approval.tenant_id == item["tenant_id"],
+                Approval.approval_type == item["approval_type"],
+                Approval.requester_id == item["requester_id"],
+            )
+            existing = (await session.execute(stmt)).scalars().first()
+            if not existing:
+                appr = Approval(**item)
+                session.add(appr)
+                logger.info(
+                    f"[Approval Created] {item['approval_type']} in tenant {item['tenant_id']} (Status: {item['status']})"
+                )
+            else:
+                logger.info(
+                    f"[Approval Exists] {item['approval_type']} in tenant {item['tenant_id']}"
+                )
+
+        await session.commit()
+        logger.info("Human approval synthetic seeding completed successfully.")
+
 
 def print_synthetic_metadata_summary() -> None:
     """Preserves Stage 1 in-memory synthetic service metadata verification."""
@@ -213,8 +364,11 @@ def print_synthetic_metadata_summary() -> None:
 
 
 async def async_main() -> None:
-    await seed_database()
-    print_synthetic_metadata_summary()
+    try:
+        await seed_database()
+        print_synthetic_metadata_summary()
+    finally:
+        await seed_engine.dispose()
 
 
 def main() -> None:

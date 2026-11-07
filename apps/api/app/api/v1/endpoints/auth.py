@@ -23,6 +23,7 @@ from app.core.security import (
 from app.db.session import get_db
 from app.models.membership import Membership
 from app.models.role import Role
+from app.services.audit_service import write_audit
 
 router = APIRouter()
 
@@ -133,6 +134,13 @@ async def update_membership(
             detail="Cannot alter your own membership role or permission flags.",
         )
 
+    # Capture state before mutation
+    previous_state = {
+        "role_key": membership.role.role_key if membership.role else None,
+        "is_hr_head": membership.is_hr_head,
+        "is_payroll_admin": membership.is_payroll_admin,
+    }
+
     if payload.role_key is not None:
         stmt_role = select(Role).where(Role.role_key == payload.role_key)
         new_role = (await db.execute(stmt_role)).scalar_one_or_none()
@@ -149,6 +157,27 @@ async def update_membership(
 
     if payload.is_payroll_admin is not None:
         membership.is_payroll_admin = payload.is_payroll_admin
+
+    new_state = {
+        "role_key": membership.role.role_key if membership.role else None,
+        "is_hr_head": membership.is_hr_head,
+        "is_payroll_admin": membership.is_payroll_admin,
+    }
+
+    # Record immutable audit entry in the same transaction
+    await write_audit(
+        db,
+        action="membership.update",
+        target_type="membership",
+        target_id=membership.id,
+        actor_id=current_user.user_id,
+        tenant_id=current_user.tenant_id,
+        details={
+            "previous": previous_state,
+            "updated": new_state,
+            "target_user_id": str(membership.user_id),
+        },
+    )
 
     await db.commit()
 
