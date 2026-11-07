@@ -4,7 +4,6 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  FileCheck2,
   Users2,
   TerminalSquare,
   BookOpenCheck,
@@ -13,15 +12,18 @@ import {
   Settings,
   FolderGit2,
   X,
+  Building2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useUIStore } from "@/stores/ui-store";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   href: string;
   badge?: string;
+  roles?: string[]; // optional role gating
 }
 
 const navItems: NavItem[] = [
@@ -42,6 +44,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const storeIsOpen = useUIStore((state) => state.isSidebarOpen);
   const setSidebarOpen = useUIStore((state) => state.setSidebarOpen);
+  const { data: currentUser } = useCurrentUser();
 
   const activeIsOpen = isOpen !== undefined ? isOpen : storeIsOpen;
   const handleClose = () => {
@@ -51,6 +54,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       setSidebarOpen(false);
     }
   };
+
+  const userRole = currentUser?.role || "owner";
 
   return (
     <aside
@@ -91,7 +96,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
         </div>
 
-        {/* Navigation Links */}
+        {/* Role-Aware Navigation Links */}
         <nav className="mt-4 space-y-1 px-3">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -130,15 +135,26 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </nav>
       </div>
 
-      {/* Footer Info */}
+      {/* Footer Info: Dynamic Tenancy & Role Context */}
       <div className="border-t border-navy-light/40 bg-navy-dark/60 p-4 text-xs text-slate-400">
-        <div className="mb-1 flex items-center gap-2">
-          <ShieldAlert className="h-3.5 w-3.5 text-amber-400" />
-          <span className="font-semibold text-slate-300">Tenant: acme-tech-01</span>
+        <div className="mb-1 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 overflow-hidden">
+            <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="font-semibold text-slate-200 truncate">
+              {currentUser?.tenant_name || "Acme Tech Solutions"}
+            </span>
+          </div>
+          <span className="rounded bg-navy-light px-1.5 py-0.5 text-[10px] font-bold text-amber-300 uppercase tracking-wider">
+            {userRole}
+          </span>
         </div>
-        <p className="text-[11px] text-slate-400">
-          Google OAuth: 6 Test Users (No inbox-read scopes)
-        </p>
+        <div className="flex items-center gap-1 mt-1 text-[11px] text-slate-400">
+          <ShieldAlert className="h-3 w-3 text-emerald-400" />
+          <span>
+            {currentUser?.is_hr_head ? "HR Head" : "Staff"}
+            {currentUser?.is_payroll_admin ? " • Payroll Admin" : ""}
+          </span>
+        </div>
       </div>
     </aside>
   );

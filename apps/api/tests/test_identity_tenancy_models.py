@@ -8,12 +8,30 @@ import uuid
 import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
-from app.db.session import AsyncSessionLocal
+from app.core.config import settings
 from app.models.membership import Membership
 from app.models.role import Role
 from app.models.tenant_entity import Tenant
 from app.models.user import User
+
+# Schema and model definition tests execute as the migration / schema owner
+schema_engine = create_async_engine(
+    settings.MIGRATION_DATABASE_URL,
+    echo=False,
+    future=True,
+    poolclass=NullPool,
+)
+SchemaSessionLocal = async_sessionmaker(
+    bind=schema_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+)
+AsyncSessionLocal = SchemaSessionLocal
 
 
 @pytest.mark.asyncio

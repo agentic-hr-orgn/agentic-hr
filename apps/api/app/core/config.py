@@ -30,7 +30,10 @@ class Settings(BaseSettings):
     USE_FAKE_INTEGRATIONS: bool = True
 
     # ADR 002: Infrastructure (Postgres + pgvector, Redis, Temporal)
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/agentic_hr"
+    MIGRATION_DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/agentic_hr"
+    DATABASE_URL: str = (
+        "postgresql+asyncpg://agentic_hr_app:agentic_hr_app_secret@localhost:5432/agentic_hr"
+    )
     REDIS_URL: str = "redis://localhost:6379/0"
     TEMPORAL_ADDRESS: str = "localhost:7233"
     TEMPORAL_TASK_QUEUE: str = "agentic-hr-task-queue"
@@ -51,6 +54,9 @@ class Settings(BaseSettings):
     # Clerk
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: str | None = None
     CLERK_SECRET_KEY: str | None = None
+    CLERK_ISSUER: str = "https://sincere-escargot-959.clerk.accounts.dev"
+    CLERK_JWKS_URL: str = "https://sincere-escargot-959.clerk.accounts.dev/.well-known/jwks.json"
+    CLERK_AUTHORIZED_PARTY: str | None = None
 
     # Langfuse
     LANGFUSE_PUBLIC_KEY: str | None = None

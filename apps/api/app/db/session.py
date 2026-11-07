@@ -43,6 +43,10 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
+# Common alias for FastAPI dependency injection
+get_db = get_db_session
+
+
 async def check_db_health() -> dict[str, bool]:
     """
     Verifies database connectivity and checks for pgvector extension presence.

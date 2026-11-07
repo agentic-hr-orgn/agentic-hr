@@ -33,9 +33,21 @@ async def seed_database() -> None:
         # 1. Verify / Seed Roles
         logger.info("Verifying system roles in PostgreSQL...")
         role_definitions = [
-            ("owner", "Owner", "Full administrative control over tenant settings, billing, and memberships"),
-            ("manager", "Manager", "Operational manager with candidate review, interview scheduling, and team oversight"),
-            ("employee", "Employee", "Standard staff access for leave requests, policy RAG queries, and personal directory"),
+            (
+                "owner",
+                "Owner",
+                "Full administrative control over tenant settings, billing, and memberships",
+            ),
+            (
+                "manager",
+                "Manager",
+                "Operational manager with candidate review, interview scheduling, and team oversight",
+            ),
+            (
+                "employee",
+                "Employee",
+                "Standard staff access for leave requests, policy RAG queries, and personal directory",
+            ),
         ]
         for key, name, desc in role_definitions:
             stmt = select(Role).where(Role.role_key == key)
@@ -71,11 +83,27 @@ async def seed_database() -> None:
         # 3. Seed Users (ADR 006 Authorized Six Test Accounts)
         users_data = [
             ("agentic.hr.test.ubaid.owner@gmail.com", "user_test_owner_01", "Ubaid Owner"),
-            ("agentic.hr.test.ubaid.recruiter@gmail.com", "user_test_recruiter_02", "Ubaid Recruiter"),
+            (
+                "agentic.hr.test.ubaid.recruiter@gmail.com",
+                "user_test_recruiter_02",
+                "Ubaid Recruiter",
+            ),
             ("agentic.hr.test.ubaid.hm@gmail.com", "user_test_hm_03", "Ubaid Hiring Manager"),
-            ("agentic.hr.test.ubaid.employee@gmail.com", "user_test_employee_04", "Ubaid Staff Employee"),
-            ("agentic.hr.test.ubaid.candidate1@gmail.com", "user_test_candidate1_05", "Ubaid Candidate One"),
-            ("agentic.hr.test.ubaid.candidate2@gmail.com", "user_test_candidate2_06", "Ubaid Cross-Company Candidate Two"),
+            (
+                "agentic.hr.test.ubaid.employee@gmail.com",
+                "user_test_employee_04",
+                "Ubaid Staff Employee",
+            ),
+            (
+                "agentic.hr.test.ubaid.candidate1@gmail.com",
+                "user_test_candidate1_05",
+                "Ubaid Candidate One",
+            ),
+            (
+                "agentic.hr.test.ubaid.candidate2@gmail.com",
+                "user_test_candidate2_06",
+                "Ubaid Cross-Company Candidate Two",
+            ),
         ]
         users: dict[str, User] = {}
         for email, clerk_user_id, full_name in users_data:
@@ -95,14 +123,44 @@ async def seed_database() -> None:
         # (user_email, clerk_org_id, role_key, is_hr_head, is_payroll_admin)
         memberships_data = [
             ("agentic.hr.test.ubaid.owner@gmail.com", "org_acme_tech_01", "owner", True, True),
-            ("agentic.hr.test.ubaid.recruiter@gmail.com", "org_acme_tech_01", "manager", True, False),
+            (
+                "agentic.hr.test.ubaid.recruiter@gmail.com",
+                "org_acme_tech_01",
+                "manager",
+                True,
+                False,
+            ),
             ("agentic.hr.test.ubaid.hm@gmail.com", "org_acme_tech_01", "manager", False, False),
-            ("agentic.hr.test.ubaid.employee@gmail.com", "org_acme_tech_01", "employee", False, False),
+            (
+                "agentic.hr.test.ubaid.employee@gmail.com",
+                "org_acme_tech_01",
+                "employee",
+                False,
+                False,
+            ),
             # Candidate 1 belongs to Globex Corporation
-            ("agentic.hr.test.ubaid.candidate1@gmail.com", "org_globex_corp_02", "employee", False, False),
+            (
+                "agentic.hr.test.ubaid.candidate1@gmail.com",
+                "org_globex_corp_02",
+                "employee",
+                False,
+                False,
+            ),
             # Candidate 2 belongs to BOTH Acme Tech Solutions AND Globex Corporation (Multi-Tenancy Proof)
-            ("agentic.hr.test.ubaid.candidate2@gmail.com", "org_acme_tech_01", "employee", False, False),
-            ("agentic.hr.test.ubaid.candidate2@gmail.com", "org_globex_corp_02", "manager", True, False),
+            (
+                "agentic.hr.test.ubaid.candidate2@gmail.com",
+                "org_acme_tech_01",
+                "employee",
+                False,
+                False,
+            ),
+            (
+                "agentic.hr.test.ubaid.candidate2@gmail.com",
+                "org_globex_corp_02",
+                "manager",
+                True,
+                False,
+            ),
         ]
 
         for email, org_id, role_key, hr_head, payroll_admin in memberships_data:
