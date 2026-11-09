@@ -12,8 +12,10 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request
 from starlette.responses import Response
 
-# Context variable accessible across async tasks during request lifetime
+# Context variables accessible across async tasks during request lifetime
 request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
+client_ip_ctx: ContextVar[str | None] = ContextVar("client_ip", default=None)
+user_agent_ctx: ContextVar[str | None] = ContextVar("user_agent", default=None)
 
 logger = logging.getLogger("agentic_hr.access")
 
@@ -22,9 +24,10 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
     """
     Middleware that:
     1. Extracts or generates a unique X-Request-ID for every request.
-    2. Stores the ID in request.state and Python contextvars for logging.
-    3. Attaches the X-Request-ID to the outgoing response headers.
-    4. Emits structured access logs with execution timing.
+    2. Captures client IP and user agent in contextvars for safe audit metadata.
+    3. Stores the ID in request.state and Python contextvars for logging.
+    4. Attaches the X-Request-ID to the outgoing response headers.
+    5. Emits structured access logs with execution timing.
     """
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -33,8 +36,15 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         if not request_id or not request_id.strip():
             request_id = uuid.uuid4().hex
 
+        client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (
+            request.client.host if request.client else "unknown"
+        )
+        user_agent = request.headers.get("user-agent", "unknown")
+
         request.state.request_id = request_id
-        token = request_id_ctx.set(request_id)
+        token_req = request_id_ctx.set(request_id)
+        token_ip = client_ip_ctx.set(client_ip)
+        token_ua = user_agent_ctx.set(user_agent)
         start_time = time.perf_counter()
 
         try:
@@ -70,4 +80,6 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
             )
             raise
         finally:
-            request_id_ctx.reset(token)
+            request_id_ctx.reset(token_req)
+            client_ip_ctx.reset(token_ip)
+            user_agent_ctx.reset(token_ua)

@@ -84,6 +84,107 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Me
+         * @description Returns the currently authenticated user's profile, active organization tenant,
+         *     resolved business role, and system permissions.
+         */
+        get: operations["get_me_api_v1_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/test/owner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Test Owner Access
+         * @description Test endpoint restricted strictly to organization Owners.
+         */
+        get: operations["test_owner_access_api_v1_auth_test_owner_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/test/manager": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Test Manager Access
+         * @description Test endpoint accessible by Managers and Owners.
+         */
+        get: operations["test_manager_access_api_v1_auth_test_manager_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/test/hr-head": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Test Hr Head Access
+         * @description Test endpoint accessible by users with HR Head permission flag or Owner.
+         */
+        get: operations["test_hr_head_access_api_v1_auth_test_hr_head_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/test/payroll-admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Test Payroll Admin Access
+         * @description Test endpoint accessible by users with Payroll Admin permission flag or Owner.
+         */
+        get: operations["test_payroll_admin_access_api_v1_auth_test_payroll_admin_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/synthetic/company": {
         parameters: {
             query?: never;
@@ -208,6 +309,44 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AuthenticatedUserContext
+         * @description Authoritative authenticated context populated strictly from verified Clerk JWT
+         *     and local PostgreSQL Tenant, User, Membership, and Role records.
+         */
+        AuthenticatedUserContext: {
+            /** User Id */
+            user_id: string;
+            /** Clerk User Id */
+            clerk_user_id: string;
+            /** Email */
+            email: string;
+            /** Name */
+            name?: string | null;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Clerk Org Id */
+            clerk_org_id: string;
+            /** Tenant Name */
+            tenant_name: string;
+            /** Role */
+            role: string;
+            /**
+             * Is Hr Head
+             * @default false
+             */
+            is_hr_head: boolean;
+            /**
+             * Is Payroll Admin
+             * @default false
+             */
+            is_payroll_admin: boolean;
+            /**
+             * Permissions
+             * @default []
+             */
+            permissions: string[];
+        };
         /** CompanyProfile */
         CompanyProfile: {
             /**
@@ -458,6 +597,114 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_me_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthenticatedUserContext"];
+                };
+            };
+        };
+    };
+    test_owner_access_api_v1_auth_test_owner_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    test_manager_access_api_v1_auth_test_manager_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    test_hr_head_access_api_v1_auth_test_hr_head_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    test_payroll_admin_access_api_v1_auth_test_payroll_admin_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
                 };
             };
         };

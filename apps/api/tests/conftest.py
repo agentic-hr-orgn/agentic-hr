@@ -11,6 +11,7 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.isolation_harness import MultiTenantTestContext, load_multi_tenant_context
 
 
 @pytest_asyncio.fixture
@@ -25,6 +26,12 @@ async def async_client() -> AsyncGenerator[httpx.AsyncClient, None]:
 def client() -> TestClient:
     """Synchronous test client for rapid local testing."""
     return TestClient(app)
+
+
+@pytest_asyncio.fixture
+async def isolation_context() -> MultiTenantTestContext:
+    """Fixture providing cached multi-tenant test context for Company A & B."""
+    return await load_multi_tenant_context()
 
 
 @pytest_asyncio.fixture(autouse=True)

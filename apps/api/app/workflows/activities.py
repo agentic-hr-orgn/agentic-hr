@@ -6,11 +6,17 @@ Enforces ADR 006: strictly zero real external API calls under USE_FAKE_INTEGRATI
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from uuid import UUID
 
+from sqlalchemy import select
 from temporalio import activity
+from temporalio.exceptions import ApplicationError
 
+from app.db.session import AsyncSessionLocal
 from app.integrations.base import CalendarEvent, EmailMessage
 from app.integrations.factory import get_calendar_service, get_email_service
+from app.models.approval import Approval
+from app.models.tenant import set_tenant_context
 
 
 @activity.defn
@@ -78,3 +84,196 @@ async def schedule_interview_activity(candidate_name: str, candidate_email: str)
         f"Calendar event result: {result.get('status')} (meet={result.get('details', {}).get('hangout_link')})"
     )
     return result
+
+
+@activity.defn
+async def notify_changes_requested_activity(
+    approval_id: str,
+    requester_email: str,
+    instructions: str | None,
+) -> dict[str, Any]:
+    """
+    Sends simulated email notification informing the requester that corrections are required.
+    Routes strictly through FakeGmailService.
+    """
+    activity.logger.info(f"Executing notify_changes_requested_activity for approval {approval_id}")
+    email_service = get_email_service()
+
+    message = EmailMessage(
+        to_email=requester_email,
+        subject=f"Corrections Required: Approval Request #{approval_id[:8]}",
+        body_text=(
+            f"Dear Requester,\n\n"
+            f"Your approval request #{approval_id} has been returned for corrections.\n\n"
+            f"Reviewer Instructions:\n{instructions or 'No specific instructions provided.'}\n\n"
+            f"Please visit the Agentic HR correction page to update and resubmit your draft.\n\n"
+            f"Best regards,\nAgentic HR Workforce Governance"
+        ),
+        sender_email="agentic.hr.test.ubaid.recruiter@gmail.com",
+    )
+    return await email_service.send_email(message)
+
+
+@activity.defn
+async def notify_approval_decision_activity(
+    approval_id: str,
+    decision: str,
+    reason: str | None,
+) -> dict[str, Any]:
+    """
+    Dispatches terminal decision notification (Approved or Rejected) to relevant parties.
+    Routes strictly through FakeGmailService.
+    """
+    activity.logger.info(
+        f"Executing notify_approval_decision_activity for approval {approval_id}: {decision}"
+    )
+    email_service = get_email_service()
+
+    message = EmailMessage(
+        to_email="agentic.hr.test.ubaid.employee@gmail.com",
+        subject=f"Approval Request #{approval_id[:8]} - Decision: {decision.upper()}",
+        body_text=(
+            f"Your approval request #{approval_id} has reached a terminal decision: {decision.upper()}.\n\n"
+            f"Details / Remarks: {reason or 'None'}\n\n"
+            f"Best regards,\nAgentic HR Workforce Governance"
+        ),
+        sender_email="agentic.hr.test.ubaid.owner@gmail.com",
+    )
+    return await email_service.send_email(message)
+
+
+@activity.defn
+async def notify_resubmitted_activity(
+    approval_id: str,
+    revision: int,
+    approver_role: str,
+) -> dict[str, Any]:
+    """
+    Notifies the assigned approver role that a corrected draft has been resubmitted (Round N).
+    Routes strictly through FakeGmailService.
+    """
+    activity.logger.info(
+        f"Executing notify_resubmitted_activity for approval {approval_id} (rev {revision}, role {approver_role})"
+    )
+    email_service = get_email_service()
+
+    message = EmailMessage(
+        to_email=f"agentic.hr.test.ubaid.{approver_role}@gmail.com",
+        subject=f"Corrected Approval Request #{approval_id[:8]} Ready for Review (Round {revision})",
+        body_text=(
+            f"Approval request #{approval_id} has been updated and resubmitted by the requester.\n\n"
+            f"Revision Round: {revision}\n"
+            f"Assigned Approver Role: {approver_role}\n\n"
+            f"Please review the updated submission in your Approvals Inbox.\n\n"
+            f"Best regards,\nAgentic HR Automated Dispatcher"
+        ),
+        sender_email="agentic.hr.test.ubaid.recruiter@gmail.com",
+    )
+    return await email_service.send_email(message)
+
+
+# ==============================================================================
+# Phase 7: Verification & Dummy Approval Activities
+# ==============================================================================
+
+
+@activity.defn
+async def verify_approval_record_activity(
+    approval_id: str,
+    expected_decision: str,
+    decided_by: str,
+    tenant_id: str | None = None,
+) -> dict[str, Any]:
+    """
+    Validates a human approval decision against the authoritative PostgreSQL database.
+    Enforces ADR 002, ADR 003, and Stage 2 Phase 7:
+    1. Connects to PostgreSQL via AsyncSessionLocal.
+    2. If tenant_id is provided, sets transaction-local app.tenant_id for RLS validation.
+    3. Fetches the Approval record by ID.
+    4. Validates that the record exists and is accessible.
+    5. Validates that record.status matches expected_decision (e.g. 'approved' or 'rejected').
+    6. Validates that str(record.decided_by) matches decided_by.
+    7. Raises ApplicationError(..., non_retryable=True) if verification fails.
+    """
+    activity.logger.info(
+        f"Verifying approval {approval_id} in database (expected: {expected_decision}, decided_by: {decided_by})"
+    )
+    try:
+        approval_uuid = UUID(approval_id)
+    except ValueError as exc:
+        raise ApplicationError(
+            f"Invalid approval_id UUID: {approval_id}",
+            non_retryable=True,
+        ) from exc
+
+    async with AsyncSessionLocal() as session:
+        if tenant_id:
+            try:
+                await set_tenant_context(session, tenant_id)
+            except Exception as exc:
+                activity.logger.warning(f"Could not set tenant context {tenant_id}: {exc}")
+
+        stmt = select(Approval).where(Approval.id == approval_uuid)
+        result = await session.execute(stmt)
+        record = result.scalar_one_or_none()
+
+        if record is None:
+            raise ApplicationError(
+                f"Approval record '{approval_id}' not found in database or inaccessible under tenant context",
+                non_retryable=True,
+            )
+
+        if record.status.lower() != expected_decision.lower():
+            raise ApplicationError(
+                f"Database status mismatch for approval '{approval_id}': record status is '{record.status}', expected '{expected_decision}'",
+                non_retryable=True,
+            )
+
+        if record.decided_by is None or str(record.decided_by) != decided_by:
+            raise ApplicationError(
+                f"Database decided_by mismatch for approval '{approval_id}': record decided_by is '{record.decided_by}', expected '{decided_by}'",
+                non_retryable=True,
+            )
+
+        activity.logger.info(
+            f"Successfully verified approval {approval_id} in database: status={record.status}, decided_by={record.decided_by}"
+        )
+        return {
+            "verified": True,
+            "approval_id": str(record.id),
+            "status": record.status,
+            "decided_by": str(record.decided_by),
+            "decision_reason": record.decision_reason,
+            "current_revision": record.current_revision,
+            "tenant_id": str(record.tenant_id),
+        }
+
+
+@activity.defn
+async def execute_dummy_approved_action_activity(approval_id: str) -> dict[str, Any]:
+    """
+    Executes downstream business action for an approved request.
+    Simulates employee onboarding or payroll dispatch without external side effects.
+    """
+    activity.logger.info(f"Executing approved business action for approval {approval_id}")
+    return {
+        "status": "SUCCESS",
+        "action": "APPROVED_ACTION_EXECUTED",
+        "approval_id": approval_id,
+        "executed_at": datetime.now(UTC).isoformat(),
+    }
+
+
+@activity.defn
+async def execute_dummy_rejected_action_activity(approval_id: str) -> dict[str, Any]:
+    """
+    Executes downstream rejection cleanup for a rejected request.
+    Simulates notification and state cleanup without external side effects.
+    """
+    activity.logger.info(f"Executing rejected cleanup action for approval {approval_id}")
+    return {
+        "status": "SUCCESS",
+        "action": "REJECTED_CLEANUP_EXECUTED",
+        "approval_id": approval_id,
+        "executed_at": datetime.now(UTC).isoformat(),
+    }

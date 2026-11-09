@@ -10,27 +10,38 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-
-  const bodyContent = <QueryProvider>{children}</QueryProvider>;
-
-  if (clerkKey) {
-    return (
-      <ClerkProvider publishableKey={clerkKey}>
-        <html lang="en">
-          <body className="min-h-screen bg-appBg font-sans antialiased text-textPrimary">
-            {bodyContent}
-          </body>
-        </html>
-      </ClerkProvider>
-    );
-  }
+  const clerkKey =
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ||
+    "pk_test_c2luY2VyZS1lc2NhcmdvdC05NTkuY2xlcmsuYWNjb3VudHMuZGV2JA";
 
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-appBg font-sans antialiased text-textPrimary">
-        {bodyContent}
-      </body>
-    </html>
+    <ClerkProvider
+      publishableKey={clerkKey}
+      appearance={{
+        variables: {
+          colorPrimary: "#2A5BDB",
+          colorText: "#0F172A",
+          colorTextSecondary: "#64748B",
+          colorBackground: "#FFFFFF",
+          colorInputBackground: "#FFFFFF",
+          borderRadius: "0.5rem",
+        },
+        elements: {
+          card: "shadow-card border border-appBorder rounded-medium",
+          formFieldInput:
+            "border border-appBorder focus:border-primary focus:ring-1 focus:ring-primary",
+          formButtonPrimary:
+            "bg-primary hover:bg-primary-hover text-white font-semibold transition-all shadow-button",
+          organizationSwitcherTrigger:
+            "border border-appBorder rounded-medium px-3 py-1.5 hover:bg-surface-hover text-textPrimary text-xs font-semibold shadow-xs",
+        },
+      }}
+    >
+      <html lang="en">
+        <body className="min-h-screen bg-appBg font-sans antialiased text-textPrimary">
+          <QueryProvider>{children}</QueryProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

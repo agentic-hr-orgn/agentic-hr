@@ -52,7 +52,9 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
         )
     ).model_dump()
 
-    headers = {"X-Request-ID": request_id} if request_id else None
+    headers = dict(exc.headers) if getattr(exc, "headers", None) else {}
+    if request_id:
+        headers["X-Request-ID"] = request_id
     return JSONResponse(status_code=exc.status_code, content=payload, headers=headers)
 
 

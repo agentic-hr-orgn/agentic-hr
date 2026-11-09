@@ -13,15 +13,15 @@ jobs:
 
     services:
       postgres:
-        image: pgvector/pgvector:pg16
+        image: pgvector/pgvector:0.8.0-pg16
         env:
-          POSTGRES_USER: agentic_hr
-          POSTGRES_PASSWORD: development_password
-          POSTGRES_DB: agentic_hr_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: agentic_hr
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U agentic_hr -d agentic_hr_db"
+          --health-cmd "pg_isready -U postgres -d agentic_hr"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -39,7 +39,8 @@ jobs:
     env:
       APP_ENV: development
       USE_FAKE_INTEGRATIONS: "true"
-      DATABASE_URL: postgresql+asyncpg://agentic_hr:development_password@localhost:5432/agentic_hr_db
+      DATABASE_URL: postgresql+asyncpg://agentic_hr_app:agentic_hr_app_secret@localhost:5432/agentic_hr
+      MIGRATION_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/agentic_hr
       REDIS_URL: redis://localhost:6379/0
       STRONG_MODEL_API_KEY: fake-ci-test-key
       CHEAP_MODEL_API_KEY: fake-ci-test-key
@@ -81,6 +82,11 @@ jobs:
         run: |
           cd apps/api
           uv run alembic upgrade head
+
+      - name: Seed Synthetic Multi-Tenant Database
+        run: |
+          cd apps/api
+          uv run python scripts/seed.py
 
       - name: Run Ruff (Lint & Format Check)
         run: |
