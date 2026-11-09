@@ -132,12 +132,13 @@ async def test_01_exact_worker_restart_scenario(
 
     try:
         async with env:
-            # Phase 1: Worker 1 Starts and runs
+            # Phase 1: Worker 1 Starts and runs (max_cached_workflows=0 disables sticky queue caching for restart testing)
             worker_1 = Worker(
                 env.client,
                 task_queue=task_queue,
                 workflows=shared_workflows,
                 activities=shared_activities,
+                max_cached_workflows=0,
             )
             async with worker_1:
                 # Start dummy workflow with test-only bounded execution timeout (Correction 1)
@@ -164,12 +165,13 @@ async def test_01_exact_worker_restart_scenario(
 
             await asyncio.sleep(0.1)
 
-            # Phase 2: Worker 2 restarts on same task queue
+            # Phase 2: Worker 2 restarts on same task queue (max_cached_workflows=0 disables sticky queue caching)
             worker_2 = Worker(
                 env.client,
                 task_queue=task_queue,
                 workflows=shared_workflows,
                 activities=shared_activities,
+                max_cached_workflows=0,
             )
             async with worker_2:
                 # Phase 3: Approve from the application (FastAPI route)
