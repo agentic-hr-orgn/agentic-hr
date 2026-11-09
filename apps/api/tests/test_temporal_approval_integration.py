@@ -22,7 +22,7 @@ Verifies:
 5. Identifiers Only (ADR 003 Privacy Boundary):
    - Workflow arguments and history contain only approval_id, never sensitive payroll/CNIC payloads.
 """
-
+import asyncio
 from datetime import timedelta
 
 import httpx
@@ -160,6 +160,8 @@ async def test_01_exact_worker_restart_scenario(
             # Confirm workflow persists on server across worker shutdown
             desc = await handle.describe(rpc_timeout=timedelta(seconds=5))
             assert desc.status == WorkflowExecutionStatus.RUNNING
+
+            await asyncio.sleep(0.1)
 
             # Phase 2: Worker 2 restarts on same task queue
             worker_2 = Worker(
