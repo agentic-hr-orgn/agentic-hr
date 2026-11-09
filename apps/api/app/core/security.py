@@ -7,7 +7,7 @@ Authoritative authorization is resolved strictly from verified JWT claims + loca
 import logging
 from collections.abc import Callable
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 from sqlalchemy import select, text
@@ -70,21 +70,25 @@ class AuthenticatedUserContext(BaseModel):
     is_hr_head: bool = False
     is_payroll_admin: bool = False
     permissions: list[str] = []
+    is_tenant_suspended: bool = False
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-    db: AsyncSession = Depends(get_db),
+async def _resolve_authenticated_context(
+    credentials: HTTPAuthorizationCredentials | None,
+    db: AsyncSession,
+    request: Request | None = None,
+    allow_suspended: bool = False,
 ) -> AuthenticatedUserContext:
     """
-    FastAPI dependency executing the exact non-circular 7-step sequence in one transaction:
+    Executes the authoritative 8-step authentication and multi-tenant resolution sequence:
     1. Extracts Bearer token and cryptographically verifies signature via Clerk JWKS.
     2. Enforces presence of active Clerk organization claim (org_id) and subject (sub).
     3. Resolves Tenant UUID via hardened SECURITY DEFINER lookup (resolve_tenant_by_clerk_org).
     4. Establishes transaction-local contexts: app.tenant_id and app.clerk_user_id.
-    5. Resolves User from PostgreSQL (enforced by users RLS).
-    6. Resolves active Membership connecting user to that Tenant (enforced by memberships RLS).
-    7. Loads business role and permission flags (hr_head, payroll_admin).
+    5. Resolves Tenant entity and evaluates PostgreSQL kill-switch state.
+    6. Resolves User from PostgreSQL (enforced by users RLS).
+    7. Resolves active Membership connecting user to that Tenant (enforced by memberships RLS).
+    8. Assembles role and permission flags.
     """
     if credentials is None or not credentials.credentials:
         logger.debug("Missing or empty Authorization header")
@@ -140,6 +144,19 @@ async def get_current_user(
             detail=f"Organization '{org_id}' is not accessible.",
         )
 
+    # Step 5b: Authoritative Database Kill-Switch Enforcement
+    # If not specifically an admin/owner executing the kill-switch restore endpoint,
+    # suspended tenants are strictly prohibited from accessing protected application operations.
+    is_suspended = bool(tenant.is_suspended or tenant.status == "suspended")
+    if is_suspended and not allow_suspended:
+        logger.warning(
+            f"Access rejected: Tenant {tenant.id} ('{tenant.name}') is suspended (kill-switch active)"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tenant organization is suspended. Access to protected operations is denied.",
+        )
+
     # Step 6: Resolve User in local PostgreSQL records (permitted by users RLS under app.clerk_user_id)
     stmt_user = select(User).where((User.clerk_user_id == sub) | (User.email == sub))
     user = (await db.execute(stmt_user)).scalar_one_or_none()
@@ -173,6 +190,16 @@ async def get_current_user(
             detail=f"User membership in '{tenant.name}' is currently {membership.status}.",
         )
 
+    # If the tenant is suspended and allow_suspended is True, enforce that only Owners can proceed
+    if is_suspended and allow_suspended and membership.role.role_key != "owner":
+        logger.warning(
+            f"Non-owner '{user.email}' ({membership.role.role_key}) denied access to suspended tenant '{tenant.name}'"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Unauthorized switch change: Only tenant Owners can toggle the kill-switch.",
+        )
+
     # Step 8: Assemble permissions
     role_key = membership.role.role_key
     permissions = [role_key]
@@ -187,7 +214,7 @@ async def get_current_user(
     if role_key == "employee":
         permissions.append("employee")
 
-    return AuthenticatedUserContext(
+    context = AuthenticatedUserContext(
         user_id=str(user.id),
         clerk_user_id=user.clerk_user_id,
         email=user.email,
@@ -199,6 +226,46 @@ async def get_current_user(
         is_hr_head=membership.is_hr_head,
         is_payroll_admin=membership.is_payroll_admin,
         permissions=sorted(set(permissions)),
+        is_tenant_suspended=is_suspended,
+    )
+
+    if request is not None:
+        request.state.current_user = context
+
+    return context
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+    request: Request = None,
+) -> AuthenticatedUserContext:
+    """
+    Standard authenticated user dependency.
+    Enforces that tenant is active and not kill-switched (fails closed with 403 if suspended).
+    """
+    return await _resolve_authenticated_context(
+        credentials=credentials,
+        db=db,
+        request=request,
+        allow_suspended=False,
+    )
+
+
+async def get_current_user_for_kill_switch(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+    request: Request = None,
+) -> AuthenticatedUserContext:
+    """
+    Specialized authentication dependency for kill-switch administration.
+    Allows authenticated Owners of suspended tenants to reach the restore action.
+    """
+    return await _resolve_authenticated_context(
+        credentials=credentials,
+        db=db,
+        request=request,
+        allow_suspended=True,
     )
 
 

@@ -4,6 +4,7 @@ Configures structured JSON logging, Request ID middleware, unified error handlin
 """
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +15,7 @@ from app.core.config import settings
 from app.core.errors import register_error_handlers
 from app.core.logging import setup_logging
 from app.core.middleware import RequestIDMiddleware
+from app.core.redis import close_redis
 from app.routers.synthetic import router as synthetic_router
 
 # 1. Initialize structured JSON logging
@@ -34,6 +36,14 @@ if settings.SENTRY_DSN and settings.ENVIRONMENT == "production":
     except Exception as exc:
         logger.warning(f"Failed to initialize Sentry: {exc}")
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan managing async connection pools."""
+    yield
+    await close_redis()
+
+
 # 3. Create FastAPI application instance
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -41,6 +51,7 @@ app = FastAPI(
     description="Agentic HR Core API - Workforce Automation for SMEs",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # 4. Attach Middleware (Request ID middleware must wrap request processing)

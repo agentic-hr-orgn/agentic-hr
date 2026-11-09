@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import Boolean, DateTime, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -48,6 +48,29 @@ class Tenant(Base):
         default="active",
         nullable=False,
         comment="Tenant lifecycle status (e.g. active, suspended, archived)",
+    )
+    is_suspended: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default=func.false(),
+        nullable=False,
+        index=True,
+        comment="Kill-switch suspension flag (True = suspended, False = active)",
+    )
+    suspended_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Timestamp when tenant was suspended",
+    )
+    suspended_by: Mapped[str | None] = mapped_column(
+        String(128),
+        nullable=True,
+        comment="Actor ID who engaged the kill-switch",
+    )
+    suspension_reason: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Administrative reason for tenant suspension",
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

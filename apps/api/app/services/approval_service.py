@@ -24,6 +24,7 @@ from app.schemas.approval import (
     validate_approval_payload,
 )
 from app.services.audit_service import write_audit
+from app.services.outbox_service import enqueue_outbox_event
 
 logger = logging.getLogger("agentic_hr.approvals")
 
@@ -97,7 +98,21 @@ async def create_approval(
         },
     )
 
-    # 5. Eagerly load relationships before commit while transaction and RLS context are active
+    # 5. Enqueue transactional outbox event
+    await enqueue_outbox_event(
+        session=db,
+        tenant_id=UUID(current_user.tenant_id),
+        event_type="approval.created",
+        event_payload={
+            "approval_id": str(approval.id),
+            "approval_type": request.approval_type,
+            "approver_role": request.approver_role,
+            "requester_id": str(current_user.user_id),
+            "revision_number": 1,
+        },
+    )
+
+    # 6. Eagerly load relationships before commit while transaction and RLS context are active
     stmt = select(Approval).options(*APPROVAL_EAGER_LOAD).where(Approval.id == approval.id)
     loaded_approval = (await db.execute(stmt)).unique().scalar_one()
 
@@ -256,7 +271,22 @@ async def decide_approval(
         },
     )
 
-    # 9. Eagerly reload relationships before commit
+    # 9. Enqueue transactional outbox event
+    await enqueue_outbox_event(
+        session=db,
+        tenant_id=UUID(current_user.tenant_id),
+        event_type=f"approval.{decision}",
+        event_payload={
+            "approval_id": str(approval.id),
+            "approval_type": approval.approval_type,
+            "decision": decision,
+            "decided_by": str(current_user.user_id),
+            "decision_reason": clean_reason,
+            "revision_number": approval.current_revision,
+        },
+    )
+
+    # 10. Eagerly reload relationships before commit
     stmt_reload = select(Approval).options(*APPROVAL_EAGER_LOAD).where(Approval.id == approval_id)
     loaded_approval = (await db.execute(stmt_reload)).unique().scalar_one()
 
@@ -367,7 +397,22 @@ async def request_changes_on_approval(
         },
     )
 
-    # 8. Eagerly reload relationships before commit
+    # 8. Enqueue transactional outbox event
+    await enqueue_outbox_event(
+        session=db,
+        tenant_id=UUID(current_user.tenant_id),
+        event_type="approval.changes_requested",
+        event_payload={
+            "approval_id": str(approval.id),
+            "approval_type": approval.approval_type,
+            "decision": "changes_requested",
+            "decided_by": str(current_user.user_id),
+            "instructions": clean_reason,
+            "revision_number": approval.current_revision,
+        },
+    )
+
+    # 9. Eagerly reload relationships before commit
     stmt_reload = select(Approval).options(*APPROVAL_EAGER_LOAD).where(Approval.id == approval_id)
     loaded_approval = (await db.execute(stmt_reload)).unique().scalar_one()
 
@@ -482,7 +527,20 @@ async def resubmit_approval(
         },
     )
 
-    # 8. Eagerly reload relationships before commit
+    # 8. Enqueue transactional outbox event
+    await enqueue_outbox_event(
+        session=db,
+        tenant_id=UUID(current_user.tenant_id),
+        event_type="approval.resubmitted",
+        event_payload={
+            "approval_id": str(approval.id),
+            "approval_type": approval.approval_type,
+            "resubmitted_by": str(current_user.user_id),
+            "new_revision": next_revision,
+        },
+    )
+
+    # 9. Eagerly reload relationships before commit
     stmt_reload = select(Approval).options(*APPROVAL_EAGER_LOAD).where(Approval.id == approval_id)
     loaded_approval = (await db.execute(stmt_reload)).unique().scalar_one()
 
