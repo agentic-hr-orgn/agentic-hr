@@ -4,7 +4,7 @@ API V1 router aggregator for Agentic HR Core.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import approvals, audit, auth, health, tenants, workflows
+from app.api.v1.endpoints import approvals, audit, auth, connectors, health, tenants, workflows
 
 api_router = APIRouter()
 
@@ -20,3 +20,5 @@ api_router.include_router(audit.router, prefix="/audit", tags=["audit"])
 api_router.include_router(approvals.router, prefix="/approvals", tags=["approvals"])
 # Mount tenant administration routes under /api/v1/tenants
 api_router.include_router(tenants.router, prefix="/tenants", tags=["tenants"])
+# Mount connector routes under /api/v1/connectors
+api_router.include_router(connectors.router, prefix="/connectors", tags=["connectors"])

@@ -26,8 +26,10 @@ import httpx
 import pytest
 
 from app.core.clerk import register_test_signing_key
+from app.core.encryption import EncryptionContext, encrypt_field
 from tests.isolation_harness import (
     APP_DB_URL,
+    MIGRATION_DB_URL,
     TEST_ISOLATION_KID,
     MultiTenantTestContext,
     _public_key,
@@ -673,3 +675,529 @@ async def test_reusable_harness_assert_route_tenant_isolation(
         expected_status_on_cross=404,
         json_payload={"is_hr_head": False},
     )
+
+
+# ===========================================================================
+# 5. STAGE 3 CONNECTOR & SHEETS TABLES MULTI-TENANT ISOLATION TESTS
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_stage3_connector_credentials_multi_tenant_isolation(
+    isolation_context: MultiTenantTestContext,
+) -> None:
+    """Verifies that connector_credentials enforces multi-tenant boundaries via RLS."""
+    ctx = isolation_context
+    conn = await get_app_connection()
+
+    cred_a_id = uuid.uuid4()
+    cred_b_id = uuid.uuid4()
+
+    enc_a = encrypt_field(
+        "mock_tok_a",
+        EncryptionContext(
+            ctx.company_a.tenant_id, "connector_credential", cred_a_id, "access_token"
+        ),
+    )
+    enc_b = encrypt_field(
+        "mock_tok_b",
+        EncryptionContext(
+            ctx.company_b.tenant_id, "connector_credential", cred_b_id, "access_token"
+        ),
+    )
+
+    try:
+        # Seed Company A
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', $1, true);", ctx.company_a.tenant_id
+            )
+            await conn.execute(
+                """
+                INSERT INTO public.connector_credentials (
+                    id, tenant_id, provider, account_email, scopes,
+                    encrypted_access_token, encrypted_refresh_token, status
+                ) VALUES ($1, $2::uuid, 'google', $3, '["gmail.send"]'::jsonb, $4, NULL, 'connected');
+                """,
+                cred_a_id,
+                ctx.company_a.tenant_id,
+                f"owner_a_{uuid.uuid4().hex[:6]}@gmail.com",
+                enc_a,
+            )
+
+        # Seed Company B
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', $1, true);", ctx.company_b.tenant_id
+            )
+            await conn.execute(
+                """
+                INSERT INTO public.connector_credentials (
+                    id, tenant_id, provider, account_email, scopes,
+                    encrypted_access_token, encrypted_refresh_token, status
+                ) VALUES ($1, $2::uuid, 'google', $3, '["gmail.send"]'::jsonb, $4, NULL, 'connected');
+                """,
+                cred_b_id,
+                ctx.company_b.tenant_id,
+                f"owner_b_{uuid.uuid4().hex[:6]}@gmail.com",
+                enc_b,
+            )
+
+        def insert_factory(target_tenant_id: str) -> tuple[str, list]:
+            ins_id = uuid.uuid4()
+            ins_enc = encrypt_field(
+                "ins_tok",
+                EncryptionContext(target_tenant_id, "connector_credential", ins_id, "access_token"),
+            )
+            sql = """
+                INSERT INTO public.connector_credentials (
+                    id, tenant_id, provider, account_email, scopes,
+                    encrypted_access_token, encrypted_refresh_token, status
+                ) VALUES ($1, $2::uuid, 'google', $3, '["gmail.send"]'::jsonb, $4, NULL, 'connected');
+            """
+            return (
+                sql,
+                [ins_id, target_tenant_id, f"test_{uuid.uuid4().hex[:6]}@gmail.com", ins_enc],
+            )
+
+        await assert_table_tenant_isolation(
+            table_name="connector_credentials",
+            company_a_tenant_id=ctx.company_a.tenant_id,
+            company_b_tenant_id=ctx.company_b.tenant_id,
+            company_a_row_id=str(cred_a_id),
+            company_b_row_id=str(cred_b_id),
+            insert_sql_factory=insert_factory,
+        )
+    finally:
+        try:
+            async with conn.transaction():
+                await conn.execute(
+                    "DELETE FROM public.connector_credentials WHERE id IN ($1::uuid, $2::uuid);",
+                    cred_a_id,
+                    cred_b_id,
+                )
+        except Exception:  # noqa: S110
+            pass
+        await conn.close()
+
+
+@pytest.mark.asyncio
+async def test_stage3_sent_messages_multi_tenant_isolation(
+    isolation_context: MultiTenantTestContext,
+) -> None:
+    """Verifies that sent_messages enforces multi-tenant boundaries via RLS."""
+    ctx = isolation_context
+    conn = await get_app_connection()
+
+    msg_a_id = uuid.uuid4()
+    msg_b_id = uuid.uuid4()
+
+    try:
+        # Seed Company A
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', $1, true);", ctx.company_a.tenant_id
+            )
+            await conn.execute(
+                """
+                INSERT INTO public.sent_messages (
+                    id, tenant_id, recipient_email, subject, text_body, status
+                ) VALUES ($1, $2::uuid, 'candidate_a@test.com', 'Interview A', 'Details A', 'sent');
+                """,
+                msg_a_id,
+                ctx.company_a.tenant_id,
+            )
+
+        # Seed Company B
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', $1, true);", ctx.company_b.tenant_id
+            )
+            await conn.execute(
+                """
+                INSERT INTO public.sent_messages (
+                    id, tenant_id, recipient_email, subject, text_body, status
+                ) VALUES ($1, $2::uuid, 'candidate_b@test.com', 'Interview B', 'Details B', 'sent');
+                """,
+                msg_b_id,
+                ctx.company_b.tenant_id,
+            )
+
+        def insert_factory(target_tenant_id: str) -> tuple[str, list]:
+            ins_id = uuid.uuid4()
+            sql = """
+                INSERT INTO public.sent_messages (
+                    id, tenant_id, recipient_email, subject, text_body, status
+                ) VALUES ($1, $2::uuid, 'candidate_ins@test.com', 'Subject Ins', 'Text Ins', 'sent');
+            """
+            return (sql, [ins_id, target_tenant_id])
+
+        await assert_table_tenant_isolation(
+            table_name="sent_messages",
+            company_a_tenant_id=ctx.company_a.tenant_id,
+            company_b_tenant_id=ctx.company_b.tenant_id,
+            company_a_row_id=str(msg_a_id),
+            company_b_row_id=str(msg_b_id),
+            insert_sql_factory=insert_factory,
+        )
+    finally:
+        try:
+            async with conn.transaction():
+                await conn.execute(
+                    "DELETE FROM public.sent_messages WHERE id IN ($1::uuid, $2::uuid);",
+                    msg_a_id,
+                    msg_b_id,
+                )
+        except Exception:  # noqa: S110
+            pass
+        await conn.close()
+
+
+@pytest.mark.asyncio
+async def test_stage3_connector_route_tenant_isolation(
+    async_client: httpx.AsyncClient,
+    isolation_context: MultiTenantTestContext,
+) -> None:
+    """Verifies that PATCH /api/v1/connectors/{id}/read-only enforces route-level tenant isolation."""
+    ctx = isolation_context
+
+    # 1. Company A Owner creates credential in Company A
+    resp_a = await async_client.post(
+        "/api/v1/connectors/google/connect",
+        headers={"Authorization": f"Bearer {ctx.company_a.owner.token}"},
+        json={
+            "provider": "google",
+            "account_email": f"owner.comp_a_{uuid.uuid4().hex[:6]}@gmail.com",
+            "scopes": ["gmail.send", "drive.file", "calendar.events"],
+            "access_token": "ya29.comp_a_token",
+        },
+    )
+    assert resp_a.status_code == 200
+    cred_a_id = resp_a.json()["id"]
+
+    # 2. Company B Owner creates credential in Company B
+    resp_b = await async_client.post(
+        "/api/v1/connectors/google/connect",
+        headers={"Authorization": f"Bearer {ctx.company_b.owner.token}"},
+        json={
+            "provider": "google",
+            "account_email": f"owner.comp_b_{uuid.uuid4().hex[:6]}@gmail.com",
+            "scopes": ["gmail.send", "drive.file", "calendar.events"],
+            "access_token": "ya29.comp_b_token",
+        },
+    )
+    assert resp_b.status_code == 200
+    cred_b_id = resp_b.json()["id"]
+
+    url_a = f"/api/v1/connectors/{cred_a_id}/read-only"
+    url_b = f"/api/v1/connectors/{cred_b_id}/read-only"
+
+    # 3. Assert Route Tenant Isolation: Company A Owner calling Company B credential returns 404
+    try:
+        await assert_route_tenant_isolation(
+            client=async_client,
+            method="PATCH",
+            url_company_a=url_a,
+            url_company_b=url_b,
+            company_a_token=ctx.company_a.owner.token,
+            company_b_token=ctx.company_b.owner.token,
+            expected_status_on_own=200,
+            expected_status_on_cross=404,
+            json_payload={"is_read_only": True},
+        )
+    finally:
+        conn = await asyncpg.connect(MIGRATION_DB_URL)
+        try:
+            async with conn.transaction():
+                await conn.execute(
+                    "DELETE FROM public.connector_credentials WHERE id IN ($1::uuid, $2::uuid);",
+                    uuid.UUID(cred_a_id),
+                    uuid.UUID(cred_b_id),
+                )
+        except Exception:  # noqa: S110
+            pass
+        await conn.close()
+
+
+@pytest.mark.asyncio
+async def test_stage3_sheets_sync_queue_multi_tenant_isolation(
+    isolation_context: MultiTenantTestContext,
+) -> None:
+    """Verifies that sheets_sync_queue enforces PostgreSQL RLS across Company A and Company B."""
+    ctx = isolation_context
+    item_a_id = uuid.uuid4()
+    item_b_id = uuid.uuid4()
+
+    conn = await get_app_connection()
+    try:
+        # Seed Company A
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', $1, true);", ctx.company_a.tenant_id
+            )
+            await conn.execute(
+                """
+                INSERT INTO public.sheets_sync_queue (
+                    id, tenant_id, spreadsheet_id, sheet_name, direction, entity_type, entity_id, action, payload, status
+                ) VALUES ($1, $2::uuid, 'sheet_a', 'Employees', 'postgres_to_sheets', 'employee', 'EMP-01', 'upsert', '{"name": "A"}'::jsonb, 'pending');
+                """,
+                item_a_id,
+                ctx.company_a.tenant_id,
+            )
+
+        # Seed Company B
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', $1, true);", ctx.company_b.tenant_id
+            )
+            await conn.execute(
+                """
+                INSERT INTO public.sheets_sync_queue (
+                    id, tenant_id, spreadsheet_id, sheet_name, direction, entity_type, entity_id, action, payload, status
+                ) VALUES ($1, $2::uuid, 'sheet_b', 'Employees', 'postgres_to_sheets', 'employee', 'EMP-02', 'upsert', '{"name": "B"}'::jsonb, 'pending');
+                """,
+                item_b_id,
+                ctx.company_b.tenant_id,
+            )
+
+        def insert_factory(target_tenant_id: str) -> tuple[str, list]:
+            ins_id = uuid.uuid4()
+            sql = """
+                INSERT INTO public.sheets_sync_queue (
+                    id, tenant_id, spreadsheet_id, sheet_name, direction, entity_type, entity_id, action, payload, status
+                ) VALUES ($1, $2::uuid, 'sheet_ins', 'Employees', 'postgres_to_sheets', 'employee', 'EMP-INS', 'upsert', '{"name": "Ins"}'::jsonb, 'pending');
+            """
+            return (sql, [ins_id, target_tenant_id])
+
+        await assert_table_tenant_isolation(
+            table_name="sheets_sync_queue",
+            company_a_tenant_id=ctx.company_a.tenant_id,
+            company_b_tenant_id=ctx.company_b.tenant_id,
+            company_a_row_id=str(item_a_id),
+            company_b_row_id=str(item_b_id),
+            insert_sql_factory=insert_factory,
+        )
+    finally:
+        try:
+            async with conn.transaction():
+                await conn.execute(
+                    "DELETE FROM public.sheets_sync_queue WHERE id IN ($1::uuid, $2::uuid);",
+                    item_a_id,
+                    item_b_id,
+                )
+        except Exception:  # noqa: S110
+            pass
+        await conn.close()
+
+
+@pytest.mark.asyncio
+async def test_stage3_sheets_drift_logs_multi_tenant_isolation(
+    isolation_context: MultiTenantTestContext,
+) -> None:
+    """Verifies that sheets_drift_logs enforces PostgreSQL RLS across Company A and Company B."""
+    ctx = isolation_context
+    drift_a_id = uuid.uuid4()
+    drift_b_id = uuid.uuid4()
+
+    conn = await get_app_connection()
+    try:
+        # Seed Company A
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', $1, true);", ctx.company_a.tenant_id
+            )
+            await conn.execute(
+                """
+                INSERT INTO public.sheets_drift_logs (
+                    id, tenant_id, spreadsheet_id, sheet_name, entity_type, entity_id, field_name, postgres_value, sheets_value, resolution
+                ) VALUES ($1, $2::uuid, 'sheet_a', 'Employees', 'employee', 'EMP-01', 'role', 'Staff', 'Lead', 'postgres_overwrote_sheets');
+                """,
+                drift_a_id,
+                ctx.company_a.tenant_id,
+            )
+
+        # Seed Company B
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', $1, true);", ctx.company_b.tenant_id
+            )
+            await conn.execute(
+                """
+                INSERT INTO public.sheets_drift_logs (
+                    id, tenant_id, spreadsheet_id, sheet_name, entity_type, entity_id, field_name, postgres_value, sheets_value, resolution
+                ) VALUES ($1, $2::uuid, 'sheet_b', 'Employees', 'employee', 'EMP-02', 'role', 'Dev', 'VP', 'postgres_overwrote_sheets');
+                """,
+                drift_b_id,
+                ctx.company_b.tenant_id,
+            )
+
+        def insert_factory(target_tenant_id: str) -> tuple[str, list]:
+            ins_id = uuid.uuid4()
+            sql = """
+                INSERT INTO public.sheets_drift_logs (
+                    id, tenant_id, spreadsheet_id, sheet_name, entity_type, entity_id, field_name, postgres_value, sheets_value, resolution
+                ) VALUES ($1, $2::uuid, 'sheet_ins', 'Employees', 'employee', 'EMP-INS', 'role', 'Eng', 'Manager', 'postgres_overwrote_sheets');
+            """
+            return (sql, [ins_id, target_tenant_id])
+
+        await assert_table_tenant_isolation(
+            table_name="sheets_drift_logs",
+            company_a_tenant_id=ctx.company_a.tenant_id,
+            company_b_tenant_id=ctx.company_b.tenant_id,
+            company_a_row_id=str(drift_a_id),
+            company_b_row_id=str(drift_b_id),
+            insert_sql_factory=insert_factory,
+        )
+    finally:
+        try:
+            async with conn.transaction():
+                await conn.execute(
+                    "DELETE FROM public.sheets_drift_logs WHERE id IN ($1::uuid, $2::uuid);",
+                    drift_a_id,
+                    drift_b_id,
+                )
+        except Exception:  # noqa: S110
+            pass
+        await conn.close()
+
+
+@pytest.mark.asyncio
+async def test_stage3_drive_files_multi_tenant_isolation(
+    isolation_context: MultiTenantTestContext,
+) -> None:
+    """Verifies that Company A cannot read, update, or delete Company B's Drive file metadata via RLS."""
+    ctx = isolation_context
+    file_a_id = uuid.uuid4()
+    file_b_id = uuid.uuid4()
+
+    conn = await get_app_connection()
+    try:
+        # Seed Company A
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', $1, true);", ctx.company_a.tenant_id
+            )
+            await conn.execute(
+                """
+                INSERT INTO public.drive_files (
+                    id, tenant_id, drive_file_id, folder_id, name, mime_type, size_bytes, web_view_link
+                ) VALUES ($1, $2::uuid, 'goog_file_a', 'folder_a', 'resume_a.pdf', 'application/pdf', 1024, 'https://drive.google.com/file/a');
+                """,
+                file_a_id,
+                ctx.company_a.tenant_id,
+            )
+
+        # Seed Company B
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', $1, true);", ctx.company_b.tenant_id
+            )
+            await conn.execute(
+                """
+                INSERT INTO public.drive_files (
+                    id, tenant_id, drive_file_id, folder_id, name, mime_type, size_bytes, web_view_link
+                ) VALUES ($1, $2::uuid, 'goog_file_b', 'folder_b', 'resume_b.pdf', 'application/pdf', 2048, 'https://drive.google.com/file/b');
+                """,
+                file_b_id,
+                ctx.company_b.tenant_id,
+            )
+
+        def insert_factory(target_tenant_id: str) -> tuple[str, list]:
+            ins_id = uuid.uuid4()
+            sql = """
+                INSERT INTO public.drive_files (
+                    id, tenant_id, drive_file_id, folder_id, name, mime_type, size_bytes, web_view_link
+                ) VALUES ($1, $2::uuid, 'goog_file_ins', 'folder_ins', 'resume_ins.pdf', 'application/pdf', 512, 'https://drive.google.com/file/ins');
+            """
+            return (sql, [ins_id, target_tenant_id])
+
+        await assert_table_tenant_isolation(
+            table_name="drive_files",
+            company_a_tenant_id=ctx.company_a.tenant_id,
+            company_b_tenant_id=ctx.company_b.tenant_id,
+            company_a_row_id=str(file_a_id),
+            company_b_row_id=str(file_b_id),
+            insert_sql_factory=insert_factory,
+        )
+    finally:
+        try:
+            async with conn.transaction():
+                await conn.execute(
+                    "DELETE FROM public.drive_files WHERE id IN ($1::uuid, $2::uuid);",
+                    file_a_id,
+                    file_b_id,
+                )
+        except Exception:  # noqa: S110
+            pass
+        await conn.close()
+
+
+@pytest.mark.asyncio
+async def test_stage3_calendar_events_multi_tenant_isolation(
+    isolation_context: MultiTenantTestContext,
+) -> None:
+    """Verifies that Company A cannot read, update, or delete Company B's Calendar events via RLS."""
+    ctx = isolation_context
+    event_a_id = uuid.uuid4()
+    event_b_id = uuid.uuid4()
+
+    conn = await get_app_connection()
+    try:
+        # Seed Company A
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', $1, true);", ctx.company_a.tenant_id
+            )
+            await conn.execute(
+                """
+                INSERT INTO public.calendar_events (
+                    id, tenant_id, google_event_id, title, start_time, end_time, timezone, attendees, status
+                ) VALUES ($1, $2::uuid, 'cal_event_a', 'Interview A', '2026-11-12 10:00:00+05', '2026-11-12 11:00:00+05', 'Asia/Karachi', '["candidate_a@test.com"]'::jsonb, 'confirmed');
+                """,
+                event_a_id,
+                ctx.company_a.tenant_id,
+            )
+
+        # Seed Company B
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.tenant_id', $1, true);", ctx.company_b.tenant_id
+            )
+            await conn.execute(
+                """
+                INSERT INTO public.calendar_events (
+                    id, tenant_id, google_event_id, title, start_time, end_time, timezone, attendees, status
+                ) VALUES ($1, $2::uuid, 'cal_event_b', 'Interview B', '2026-11-12 14:00:00+05', '2026-11-12 15:00:00+05', 'Asia/Karachi', '["candidate_b@test.com"]'::jsonb, 'confirmed');
+                """,
+                event_b_id,
+                ctx.company_b.tenant_id,
+            )
+
+        def insert_factory(target_tenant_id: str) -> tuple[str, list]:
+            ins_id = uuid.uuid4()
+            sql = """
+                INSERT INTO public.calendar_events (
+                    id, tenant_id, google_event_id, title, start_time, end_time, timezone, attendees, status
+                ) VALUES ($1, $2::uuid, 'cal_event_ins', 'Interview INS', '2026-11-12 16:00:00+05', '2026-11-12 17:00:00+05', 'Asia/Karachi', '["candidate_ins@test.com"]'::jsonb, 'confirmed');
+            """
+            return (sql, [ins_id, target_tenant_id])
+
+        await assert_table_tenant_isolation(
+            table_name="calendar_events",
+            company_a_tenant_id=ctx.company_a.tenant_id,
+            company_b_tenant_id=ctx.company_b.tenant_id,
+            company_a_row_id=str(event_a_id),
+            company_b_row_id=str(event_b_id),
+            insert_sql_factory=insert_factory,
+        )
+    finally:
+        try:
+            async with conn.transaction():
+                await conn.execute(
+                    "DELETE FROM public.calendar_events WHERE id IN ($1::uuid, $2::uuid);",
+                    event_a_id,
+                    event_b_id,
+                )
+        except Exception:  # noqa: S110
+            pass
+        await conn.close()

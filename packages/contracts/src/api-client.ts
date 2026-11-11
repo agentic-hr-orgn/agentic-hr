@@ -185,6 +185,501 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/memberships/{membership_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Membership
+         * @description Updates role and permission flags on a membership within the active tenant.
+         *     Restricted strictly to Owners.
+         *     Enforces anti-self-promotion: Users cannot change their own role or permissions.
+         */
+        patch: operations["update_membership_api_v1_auth_memberships__membership_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/audit/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Audit Logs
+         * @description Returns audit logs for the authenticated tenant.
+         *     Restricted to tenant Owners. Subject to PostgreSQL Row-Level Security.
+         */
+        get: operations["list_audit_logs_api_v1_audit_logs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List approvals for current tenant
+         * @description Returns approvals for the authenticated user's active tenant.
+         *     Results are strictly scoped by PostgreSQL Row-Level Security.
+         */
+        get: operations["list_approval_requests_api_v1_approvals_get"];
+        put?: never;
+        /**
+         * Submit a human approval request (Revision 1)
+         * @description Submits a new human approval request.
+         *     Payload is validated against the typed schema for the given approval_type.
+         *     Creates both parent Approval and initial append-only Revision 1 record.
+         */
+        post: operations["create_approval_request_api_v1_approvals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{approval_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get approval request details with revision history
+         * @description Returns full details of an approval request, including all revision snapshots.
+         *     Cross-tenant requests return 404 Not Found.
+         */
+        get: operations["get_approval_details_api_v1_approvals__approval_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{approval_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve an approval request (Terminal)
+         * @description Approves an approval request with row-level locking.
+         *     Caller must hold the required approver role or permission flag.
+         *     Anti-self-approval rule prevents requesters from approving their own requests.
+         */
+        post: operations["approve_request_api_v1_approvals__approval_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{approval_id}/request-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request corrections on an approval request
+         * @description Approver requests modifications on a pending request.
+         *     Non-empty correction instructions are strictly required.
+         *     Transitions status to 'changes_requested' and returns draft to requester.
+         */
+        post: operations["request_changes_api_v1_approvals__approval_id__request_changes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{approval_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject an approval request (Terminal)
+         * @description Rejects an approval request with row-level locking.
+         *     A non-empty rejection reason is strictly required.
+         */
+        post: operations["reject_request_api_v1_approvals__approval_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{approval_id}/resubmit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resubmit corrected draft (Round N + 1)
+         * @description Requester (or organization owner) resubmits a corrected draft.
+         *     Validates updated payload against domain schema, creates an append-only revision record,
+         *     and returns approval to 'pending' review with an incremented revision number.
+         */
+        post: operations["resubmit_corrected_draft_api_v1_approvals__approval_id__resubmit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/approvals/{approval_id}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get full chronological revision history for an approval request
+         * @description Returns the complete list of revision rounds with payloads and decisions.
+         *     Strictly isolated by PostgreSQL Row-Level Security.
+         */
+        get: operations["get_approval_revisions_api_v1_approvals__approval_id__revisions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/{tenant_id}/kill-switch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Tenant Kill Switch Status
+         * @description Retrieves authoritative kill-switch state for a tenant.
+         */
+        get: operations["get_tenant_kill_switch_status_api_v1_tenants__tenant_id__kill_switch_get"];
+        put?: never;
+        /**
+         * Toggle Tenant Kill Switch
+         * @description Engages or disengages the administrative kill-switch for a tenant.
+         *     Enforces:
+         *     1. Authorized administrator only (restricted strictly to organization Owners).
+         *     2. Anti-Cross-Tenant Tampering: Verifies path tenant_id matches authenticated tenant.
+         *     3. Authoritative database persistence in PostgreSQL.
+         *     4. Immutable audit trail entry recorded in audit_logs before committing.
+         */
+        post: operations["toggle_tenant_kill_switch_api_v1_tenants__tenant_id__kill_switch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/google/oauth/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Google Oauth Authorize
+         * @description Generates an offline-access Google OAuth URL with a signed CSRF state token.
+         */
+        get: operations["google_oauth_authorize_api_v1_connectors_google_oauth_authorize_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/google/oauth/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Google Oauth Callback
+         * @description Handles Google OAuth redirect, validates CSRF state, exchanges authorization code,
+         *     verifies scopes against prohibited list, and stores encrypted credentials.
+         */
+        get: operations["google_oauth_callback_api_v1_connectors_google_oauth_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/google/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect Google Direct
+         * @description Directly registers or updates credentials (used for synthetic testing & sandboxes).
+         */
+        post: operations["connect_google_direct_api_v1_connectors_google_connect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Connectors
+         * @description Lists all configured connectors for the caller's tenant.
+         */
+        get: operations["list_connectors_api_v1_connectors_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/{id}/read-only": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Toggle Connector Read Only
+         * @description Toggles client-enforced read-only mode for a connector.
+         */
+        patch: operations["toggle_connector_read_only_api_v1_connectors__id__read_only_patch"];
+        trace?: never;
+    };
+    "/api/v1/connectors/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Connector
+         * @description Revokes a connector credential (restricted strictly to Owners).
+         */
+        delete: operations["revoke_connector_api_v1_connectors__id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/{id}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Connector Token
+         * @description Manually refreshes OAuth access token using stored encrypted refresh token.
+         */
+        post: operations["refresh_connector_token_api_v1_connectors__id__refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/email/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Email
+         * @description Dispatches an outbound email through the tenant's connected Google Workspace connector.
+         *     Enforces per-tenant rate limit, client-side read-only switch, and at-most-once idempotency.
+         */
+        post: operations["send_email_api_v1_connectors_email_send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/email/bounces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Email Bounce
+         * @description Synchronously marks an email delivery as bounced/failed without inbox polling.
+         *     Updates the matching sent_messages record and enqueues an immutable audit log.
+         */
+        post: operations["record_email_bounce_api_v1_connectors_email_bounces_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/email/sent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sent Messages
+         * @description Lists all outbound emails dispatched by the active tenant.
+         */
+        get: operations["list_sent_messages_api_v1_connectors_email_sent_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/sheets/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Sheets Queue
+         * @description Executes one-way batch synchronization from PostgreSQL to Google Sheets.
+         *     Pulls pending queue records using SELECT ... FOR UPDATE SKIP LOCKED.
+         *     Enforces per-tenant rate limit and client-side read-only switch.
+         */
+        post: operations["sync_sheets_queue_api_v1_connectors_sheets_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/sheets/drift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sheets Drift Logs
+         * @description Lists all detected drift logs between PostgreSQL and Google Sheets for active tenant.
+         */
+        get: operations["list_sheets_drift_logs_api_v1_connectors_sheets_drift_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/sheets/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reconcile Sheets Drift
+         * @description Scans Google Sheets and compares against PostgreSQL authoritative state.
+         *     Detects unauthorized human modifications in Sheets, logs discrepancies to sheets_drift_logs,
+         *     and overwrites drifted Sheet cells with PostgreSQL truth.
+         */
+        post: operations["reconcile_sheets_drift_api_v1_connectors_sheets_reconcile_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/synthetic/company": {
         parameters: {
             query?: never;
@@ -310,6 +805,181 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * ApprovalCreateRequest
+         * @description DTO for submitting a new human approval request.
+         */
+        ApprovalCreateRequest: {
+            /**
+             * Approval Type
+             * @description Type of approval being requested
+             * @enum {string}
+             */
+            approval_type: "leave_request" | "candidate_offer" | "payroll_override" | "policy_exception";
+            /**
+             * Payload
+             * @description Domain-specific payload matching the approval_type
+             */
+            payload: {
+                [key: string]: unknown;
+            };
+            /**
+             * Approver Role
+             * @description Required role or permission flag to decide this request
+             * @enum {string}
+             */
+            approver_role: "owner" | "manager" | "hr_head" | "payroll_admin";
+            /**
+             * Workflow Id
+             * @description Optional Temporal workflow execution ID associated with this approval gate
+             */
+            workflow_id?: string | null;
+        };
+        /**
+         * ApprovalDecisionRequest
+         * @description DTO for approving or rejecting an approval request.
+         */
+        ApprovalDecisionRequest: {
+            /**
+             * Reason
+             * @description Decision reason. Mandatory for rejection; optional for approval.
+             */
+            reason?: string | null;
+        };
+        /**
+         * ApprovalRequestChangesRequest
+         * @description DTO for requesting changes on an approval request.
+         */
+        ApprovalRequestChangesRequest: {
+            /**
+             * Reason
+             * @description Mandatory correction instructions detailing what amendments are required.
+             */
+            reason: string;
+        };
+        /**
+         * ApprovalResponse
+         * @description DTO returned for approval records.
+         */
+        ApprovalResponse: {
+            /** Id */
+            id: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Approval Type */
+            approval_type: string;
+            /**
+             * Current Revision
+             * @default 1
+             */
+            current_revision: number;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Requester Id */
+            requester_id?: string | null;
+            /** Requester Name */
+            requester_name?: string | null;
+            /** Requester Email */
+            requester_email?: string | null;
+            /** Approver Role */
+            approver_role: string;
+            /** Status */
+            status: string;
+            /** Decided By */
+            decided_by?: string | null;
+            /** Decider Name */
+            decider_name?: string | null;
+            /** Decision Reason */
+            decision_reason?: string | null;
+            /** Created At */
+            created_at: string;
+            /** Decided At */
+            decided_at?: string | null;
+            /** Resubmitted At */
+            resubmitted_at?: string | null;
+            /** Workflow Id */
+            workflow_id?: string | null;
+            /**
+             * Revisions
+             * @default []
+             */
+            revisions: components["schemas"]["ApprovalRevisionResponse"][];
+        };
+        /**
+         * ApprovalResubmitRequest
+         * @description DTO for resubmitting a corrected approval draft.
+         */
+        ApprovalResubmitRequest: {
+            /**
+             * Payload
+             * @description Updated domain payload matching the original approval_type
+             */
+            payload: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * ApprovalRevisionResponse
+         * @description DTO representing an immutable historical revision round.
+         */
+        ApprovalRevisionResponse: {
+            /** Id */
+            id: string;
+            /** Approval Id */
+            approval_id: string;
+            /** Revision Number */
+            revision_number: number;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Submitted By */
+            submitted_by?: string | null;
+            /** Submitter Name */
+            submitter_name?: string | null;
+            /** Submitted At */
+            submitted_at: string;
+            /** Decision */
+            decision?: string | null;
+            /** Decided By */
+            decided_by?: string | null;
+            /** Decider Name */
+            decider_name?: string | null;
+            /** Decision Reason */
+            decision_reason?: string | null;
+            /** Decided At */
+            decided_at?: string | null;
+            /** Created At */
+            created_at: string;
+        };
+        /** AuditLogResponse */
+        AuditLogResponse: {
+            /** Id */
+            id: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Actor Id */
+            actor_id: string | null;
+            /** Action */
+            action: string;
+            /** Target Type */
+            target_type: string;
+            /** Target Id */
+            target_id: string | null;
+            /**
+             * Timestamp
+             * Format: date-time
+             */
+            timestamp: string;
+            /** Details */
+            details: {
+                [key: string]: unknown;
+            };
+            /** Request Id */
+            request_id: string | null;
+        };
+        /**
          * AuthenticatedUserContext
          * @description Authoritative authenticated context populated strictly from verified Clerk JWT
          *     and local PostgreSQL Tenant, User, Membership, and Role records.
@@ -346,6 +1016,18 @@ export interface components {
              * @default []
              */
             permissions: string[];
+            /**
+             * Is Tenant Suspended
+             * @default false
+             */
+            is_tenant_suspended: boolean;
+        };
+        /** BounceWebhookRequest */
+        BounceWebhookRequest: {
+            /** Provider Message Id */
+            provider_message_id: string;
+            /** Error Message */
+            error_message: string;
         };
         /** CompanyProfile */
         CompanyProfile: {
@@ -378,6 +1060,63 @@ export interface components {
             test_accounts: string[];
             /** Policy Documents */
             policy_documents: components["schemas"]["PolicyDocument"][];
+        };
+        /** ConnectDirectRequest */
+        ConnectDirectRequest: {
+            /**
+             * Provider
+             * @default google
+             */
+            provider: string;
+            /** Account Email */
+            account_email: string;
+            /** Scopes */
+            scopes: string[];
+            /** Access Token */
+            access_token: string;
+            /** Refresh Token */
+            refresh_token?: string | null;
+            /** Token Expiry */
+            token_expiry?: string | null;
+        };
+        /** ConnectorResponse */
+        ConnectorResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Provider */
+            provider: string;
+            /** Account Email */
+            account_email: string;
+            /** Scopes */
+            scopes: string[];
+            /** Status */
+            status: string;
+            /** Is Read Only */
+            is_read_only: boolean;
+            /** Jobs Paused */
+            jobs_paused: boolean;
+            /** Token Expiry */
+            token_expiry?: string | null;
+            /** Error Message */
+            error_message?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** DatabaseStatus */
         DatabaseStatus: {
@@ -442,6 +1181,32 @@ export interface components {
             /** Request Id */
             request_id?: string | null;
         };
+        /** MembershipResponse */
+        MembershipResponse: {
+            /** Membership Id */
+            membership_id: string;
+            /** User Id */
+            user_id: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Role Key */
+            role_key: string;
+            /** Is Hr Head */
+            is_hr_head: boolean;
+            /** Is Payroll Admin */
+            is_payroll_admin: boolean;
+            /** Status */
+            status: string;
+        };
+        /** MembershipUpdateRequest */
+        MembershipUpdateRequest: {
+            /** Role Key */
+            role_key?: string | null;
+            /** Is Hr Head */
+            is_hr_head?: boolean | null;
+            /** Is Payroll Admin */
+            is_payroll_admin?: boolean | null;
+        };
         /** ModelRoutingInfo */
         ModelRoutingInfo: {
             /** Cheap */
@@ -461,6 +1226,227 @@ export interface components {
             category: string;
             /** Summary */
             summary: string;
+        };
+        /** ReadOnlyToggleRequest */
+        ReadOnlyToggleRequest: {
+            /** Is Read Only */
+            is_read_only: boolean;
+        };
+        /** SendEmailRequest */
+        SendEmailRequest: {
+            /** To Email */
+            to_email: string;
+            /** Subject */
+            subject?: string | null;
+            /** Body Text */
+            body_text?: string | null;
+            /** Template Name */
+            template_name?: string | null;
+            /** Template Variables */
+            template_variables?: {
+                [key: string]: unknown;
+            } | null;
+            /** Credential Id */
+            credential_id?: string | null;
+            /** Force Retry */
+            force_retry?: boolean;
+        };
+        /** SentMessageResponse */
+        SentMessageResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Credential Id */
+            credential_id?: string | null;
+            /** Idempotency Key */
+            idempotency_key?: string | null;
+            /** Recipient Email */
+            recipient_email: string;
+            /** Subject */
+            subject: string;
+            /** Template Name */
+            template_name?: string | null;
+            /** Provider Message Id */
+            provider_message_id?: string | null;
+            /** Status */
+            status: string;
+            /** Error Message */
+            error_message?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * SheetsDriftItem
+         * @description Detailed discrepancy between PostgreSQL and Google Sheets.
+         */
+        SheetsDriftItem: {
+            /** Entity Id */
+            entity_id: string;
+            /** Field Name */
+            field_name: string;
+            /** Postgres Value */
+            postgres_value: string | null;
+            /** Sheets Value */
+            sheets_value: string | null;
+            /** Resolution */
+            resolution: string;
+        };
+        /**
+         * SheetsDriftLogResponse
+         * @description Audit log entry for a detected and reconciled drift discrepancy.
+         */
+        SheetsDriftLogResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Spreadsheet Id */
+            spreadsheet_id: string;
+            /** Sheet Name */
+            sheet_name: string;
+            /** Entity Type */
+            entity_type: string;
+            /** Entity Id */
+            entity_id: string;
+            /** Field Name */
+            field_name: string;
+            /** Postgres Value */
+            postgres_value: string | null;
+            /** Sheets Value */
+            sheets_value: string | null;
+            /** Resolution */
+            resolution: string;
+            /** Resolved By */
+            resolved_by: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * SheetsReconcileResponse
+         * @description Result of a drift detection and authoritative reconciliation run.
+         */
+        SheetsReconcileResponse: {
+            /** Status */
+            status: string;
+            /** Spreadsheet Id */
+            spreadsheet_id: string;
+            /** Scanned Rows */
+            scanned_rows: number;
+            /** Drifts Detected */
+            drifts_detected: number;
+            /** Reconciled Count */
+            reconciled_count: number;
+            /** Drifts */
+            drifts?: components["schemas"]["SheetsDriftItem"][];
+        };
+        /**
+         * SheetsSyncRequest
+         * @description Payload to trigger immediate synchronization of pending queue or full directory.
+         */
+        SheetsSyncRequest: {
+            /**
+             * Spreadsheet Id
+             * @description Optional Google Spreadsheet ID. Defaults to active tenant sheet.
+             */
+            spreadsheet_id?: string | null;
+            /**
+             * Sheet Name
+             * @description Target worksheet tab name.
+             * @default Employees
+             */
+            sheet_name: string;
+            /**
+             * Entity Type
+             * @description Entity collection to sync.
+             * @default employee
+             */
+            entity_type: string;
+            /**
+             * Batch Size
+             * @description Max queue rows to process.
+             * @default 50
+             */
+            batch_size: number;
+        };
+        /**
+         * SheetsSyncResponse
+         * @description Result of a sync queue execution.
+         */
+        SheetsSyncResponse: {
+            /** Status */
+            status: string;
+            /** Processed Count */
+            processed_count: number;
+            /** Completed Count */
+            completed_count: number;
+            /** Failed Count */
+            failed_count: number;
+            /** Spreadsheet Id */
+            spreadsheet_id: string;
+            /** Details */
+            details?: {
+                [key: string]: unknown;
+            }[];
+        };
+        /**
+         * TenantKillSwitchRequest
+         * @description Payload to engage or disengage the tenant kill-switch.
+         */
+        TenantKillSwitchRequest: {
+            /**
+             * Is Suspended
+             * @description Desired kill-switch state (True = suspended, False = active)
+             */
+            is_suspended: boolean;
+            /**
+             * Reason
+             * @description Administrative rationale for tenant suspension or restoration
+             */
+            reason?: string | null;
+        };
+        /**
+         * TenantKillSwitchResponse
+         * @description Authoritative response confirming updated tenant kill-switch state.
+         */
+        TenantKillSwitchResponse: {
+            /** Tenant Id */
+            tenant_id: string;
+            /** Tenant Name */
+            tenant_name: string;
+            /** Is Suspended */
+            is_suspended: boolean;
+            /** Status */
+            status: string;
+            /** Suspended At */
+            suspended_at?: string | null;
+            /** Suspended By */
+            suspended_by?: string | null;
+            /** Suspension Reason */
+            suspension_reason?: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -705,6 +1691,794 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    update_membership_api_v1_auth_memberships__membership_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                membership_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MembershipUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembershipResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_audit_logs_api_v1_audit_logs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_approval_requests_api_v1_approvals_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by status: pending, changes_requested, approved, rejected */
+                status?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_approval_request_api_v1_approvals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_approval_details_api_v1_approvals__approval_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_request_api_v1_approvals__approval_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ApprovalDecisionRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_changes_api_v1_approvals__approval_id__request_changes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalRequestChangesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_request_api_v1_approvals__approval_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resubmit_corrected_draft_api_v1_approvals__approval_id__resubmit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalResubmitRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_approval_revisions_api_v1_approvals__approval_id__revisions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRevisionResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_tenant_kill_switch_status_api_v1_tenants__tenant_id__kill_switch_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantKillSwitchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    toggle_tenant_kill_switch_api_v1_tenants__tenant_id__kill_switch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantKillSwitchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantKillSwitchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    google_oauth_authorize_api_v1_connectors_google_oauth_authorize_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    google_oauth_callback_api_v1_connectors_google_oauth_callback_get: {
+        parameters: {
+            query: {
+                code: string;
+                state: string;
+                error?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connect_google_direct_api_v1_connectors_google_connect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectDirectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_connectors_api_v1_connectors_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectorResponse"][];
+                };
+            };
+        };
+    };
+    toggle_connector_read_only_api_v1_connectors__id__read_only_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadOnlyToggleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_connector_api_v1_connectors__id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_connector_token_api_v1_connectors__id__refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_email_api_v1_connectors_email_send_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendEmailRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_email_bounce_api_v1_connectors_email_bounces_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BounceWebhookRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sent_messages_api_v1_connectors_email_sent_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentMessageResponse"][];
+                };
+            };
+        };
+    };
+    sync_sheets_queue_api_v1_connectors_sheets_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SheetsSyncRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SheetsSyncResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sheets_drift_logs_api_v1_connectors_sheets_drift_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SheetsDriftLogResponse"][];
+                };
+            };
+        };
+    };
+    reconcile_sheets_drift_api_v1_connectors_sheets_reconcile_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SheetsSyncRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SheetsReconcileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

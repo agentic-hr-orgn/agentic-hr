@@ -9,6 +9,109 @@ import type { components } from "./api-client";
 export type HealthResponse = components["schemas"]["HealthResponse"];
 export type EmployeeRecord = components["schemas"]["EmployeeRecord"];
 
+// Stage 3 Connectors DTOs
+export type ConnectorResponse = components["schemas"]["ConnectorResponse"];
+export type ConnectDirectRequest = components["schemas"]["ConnectDirectRequest"];
+export type ReadOnlyToggleRequest = components["schemas"]["ReadOnlyToggleRequest"];
+export type SendEmailRequest = components["schemas"]["SendEmailRequest"];
+export type SentMessageResponse = components["schemas"]["SentMessageResponse"];
+export type BounceWebhookRequest = components["schemas"]["BounceWebhookRequest"];
+export type SheetsSyncRequest = components["schemas"]["SheetsSyncRequest"];
+export type SheetsSyncResponse = components["schemas"]["SheetsSyncResponse"];
+export type SheetsDriftLogResponse = components["schemas"]["SheetsDriftLogResponse"];
+export type SheetsReconcileResponse = components["schemas"]["SheetsReconcileResponse"];
+
+// Google Drive DTOs
+export interface DriveFolderEnsureRequest {
+  folder_name?: string;
+  parent_folder_id?: string | null;
+}
+
+export interface DriveFolderResponse {
+  folder_id: string;
+  name: string;
+  web_view_link?: string | null;
+  parent_folder_id?: string | null;
+}
+
+export interface DriveUploadRequest {
+  name: string;
+  content_base64: string;
+  mime_type: string;
+  folder_id?: string | null;
+}
+
+export interface DriveFileResponse {
+  id: string;
+  tenant_id: string;
+  drive_file_id: string;
+  folder_id?: string | null;
+  name: string;
+  mime_type: string;
+  size_bytes: number;
+  web_view_link?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DriveFileListResponse {
+  files: DriveFileResponse[];
+  total: number;
+}
+
+// Google Calendar DTOs
+export interface TimeSlotSchema {
+  start_time: string;
+  end_time: string;
+}
+
+export interface FreeBusyQueryRequest {
+  calendar_ids?: string[];
+  time_min: string;
+  time_max: string;
+}
+
+export interface FreeBusyQueryResponse {
+  calendars: Record<string, TimeSlotSchema[]>;
+}
+
+export interface CalendarEventCreateRequest {
+  title: string;
+  start_time: string;
+  end_time: string;
+  attendees?: string[];
+  description?: string | null;
+  location?: string | null;
+  calendar_id?: string;
+  timezone?: string;
+}
+
+export interface CalendarEventUpdateRequest {
+  title?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  attendees?: string[] | null;
+  description?: string | null;
+  location?: string | null;
+}
+
+export interface CalendarEventResponse {
+  id: string;
+  tenant_id: string;
+  google_event_id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+  timezone: string;
+  attendees: string[];
+  description?: string | null;
+  location?: string | null;
+  hangout_link?: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TenantContext {
   tenant_id: string;
   user_id?: string;

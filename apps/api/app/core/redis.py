@@ -16,6 +16,7 @@ from app.core.config import settings
 logger = logging.getLogger("agentic_hr.redis")
 
 _redis_pools: dict[asyncio.AbstractEventLoop | None, aioredis.ConnectionPool] = {}
+_redis_clients: dict[asyncio.AbstractEventLoop | None, aioredis.Redis] = {}
 
 
 def get_redis_pool() -> aioredis.ConnectionPool:
@@ -29,7 +30,7 @@ def get_redis_pool() -> aioredis.ConnectionPool:
         _redis_pools[loop] = aioredis.ConnectionPool.from_url(
             settings.REDIS_URL,
             decode_responses=True,
-            max_connections=20,
+            max_connections=50,
             socket_timeout=2.0,
             socket_connect_timeout=2.0,
         )
@@ -38,7 +39,14 @@ def get_redis_pool() -> aioredis.ConnectionPool:
 
 async def get_redis_client() -> aioredis.Redis:
     """Provides an async Redis client backed by the event-loop-scoped connection pool."""
-    return aioredis.Redis(connection_pool=get_redis_pool())
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop not in _redis_clients:
+        _redis_clients[loop] = aioredis.Redis(connection_pool=get_redis_pool())
+    return _redis_clients[loop]
 
 
 async def close_redis() -> None:
@@ -47,6 +55,13 @@ async def close_redis() -> None:
         loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = None
+
+    client = _redis_clients.pop(loop, None)
+    if client is not None:
+        try:
+            await client.aclose()
+        except Exception as exc:
+            logger.warning(f"Error closing Redis client: {exc}")
 
     pool = _redis_pools.pop(loop, None)
     if pool is not None:

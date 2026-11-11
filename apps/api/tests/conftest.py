@@ -31,6 +31,10 @@ def client() -> TestClient:
 @pytest_asyncio.fixture
 async def isolation_context() -> MultiTenantTestContext:
     """Fixture providing cached multi-tenant test context for Company A & B."""
+    from app.core.clerk import register_test_signing_key
+    from tests.isolation_harness import TEST_ISOLATION_KID, _public_key
+
+    register_test_signing_key(TEST_ISOLATION_KID, _public_key)
     return await load_multi_tenant_context()
 
 

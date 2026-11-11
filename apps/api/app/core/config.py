@@ -84,6 +84,8 @@ class Settings(BaseSettings):
     # Google OAuth (Send, Drive File, Calendar Events)
     GOOGLE_CLIENT_ID: str | None = None
     GOOGLE_CLIENT_SECRET: str | None = None
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/connectors/google/oauth/callback"
+    SECRET_KEY: str = "agentic-hr-development-secret-key-at-least-32-bytes-long"
 
     # Sensitive Field Encryption (Stage 2 Phase 9: AES-256-GCM Envelope Encryption)
     FIELD_ENCRYPTION_KEY: str | None = None

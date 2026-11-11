@@ -33,4 +33,18 @@ test.describe("Frontend Smoke & Authentication Tests", () => {
     await expect(page).toHaveURL(/.*\/candidates/);
     await expect(page.getByRole("heading", { name: /Candidate Pipeline/i })).toBeVisible();
   });
+
+  test("settings page renders Google Workspace connector card, status badge, and controls", async ({
+    page,
+  }) => {
+    await page.setExtraHTTPHeaders({ "x-e2e-test": "true" });
+    await page.goto("/settings");
+    await expect(
+      page.getByRole("heading", { name: /Platform Settings & Connectors/i })
+    ).toBeVisible();
+    await expect(page.getByText("Google Workspace Connector (ADR 006)")).toBeVisible();
+    await expect(page.getByText("agentic.hr.test.ubaid.owner@gmail.com")).toBeVisible();
+    await expect(page.getByText("gmail.send")).toBeVisible();
+    await expect(page.getByRole("switch", { name: "Toggle Read-Only Mode" })).toBeVisible();
+  });
 });

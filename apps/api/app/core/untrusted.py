@@ -35,6 +35,15 @@ MUTATING_TOOLS: frozenset[str] = frozenset(
         "disburse_payroll",
         "delete_record",
         "execute_code",
+        # FastMCP Mutating Connector Tools
+        "send_email_tool",
+        "sync_sheets_tool",
+        "reconcile_sheets_drift_tool",
+        "ensure_drive_folder_tool",
+        "upload_drive_file_tool",
+        "create_calendar_event_tool",
+        "update_calendar_event_tool",
+        "cancel_calendar_event_tool",
     }
 )
 
@@ -44,6 +53,12 @@ DEFAULT_ALLOWED_READ_TOOLS: frozenset[str] = frozenset(
         "score_rubric_match",
         "search_policy_docs",
         "summarize_text",
+        # FastMCP Read-Only Connector Tools
+        "list_sent_messages_tool",
+        "read_sheets_range_tool",
+        "download_drive_file_tool",
+        "list_drive_files_tool",
+        "get_calendar_free_busy_tool",
     }
 )
 
