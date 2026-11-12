@@ -559,8 +559,9 @@ async def test_05_identifiers_only_privacy(
     headers_recruiter = {"Authorization": f"Bearer {ctx.company_a.manager.token}"}
     headers_owner = {"Authorization": f"Bearer {ctx.company_a.owner.token}"}
 
-    sensitive_salary_pkr = 450000
+    sensitive_salary_pkr = 487350
     candidate_email = "tariq.mahmood@example.com"
+    candidate_name = "Tariq Mahmood"
 
     create_resp = await async_client.post(
         "/api/v1/approvals",
@@ -568,7 +569,7 @@ async def test_05_identifiers_only_privacy(
         json={
             "approval_type": "candidate_offer",
             "payload": {
-                "candidate_name": "Tariq Mahmood",
+                "candidate_name": candidate_name,
                 "candidate_email": candidate_email,
                 "position": "Principal Architect",
                 "offered_salary_pkr": sensitive_salary_pkr,
@@ -641,6 +642,9 @@ async def test_05_identifiers_only_privacy(
             )
             assert candidate_email not in history_str, (
                 "Confidential candidate email leaked into Temporal workflow history!"
+            )
+            assert candidate_name not in history_str, (
+                "Confidential candidate name leaked into Temporal workflow history!"
             )
     finally:
         temporal_core.set_temporal_client(None)
