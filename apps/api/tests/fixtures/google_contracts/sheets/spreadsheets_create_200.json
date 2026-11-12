@@ -1,0 +1,24 @@
+{
+  "spreadsheetId": "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms",
+  "properties": {
+    "title": "Acme HR Employee Directory",
+    "locale": "en",
+    "autoRecalc": "ON_CHANGE",
+    "timeZone": "Asia/Karachi"
+  },
+  "sheets": [
+    {
+      "properties": {
+        "sheetId": 0,
+        "title": "Employees",
+        "gridProperties": {
+          "rowCount": 1000,
+          "columnCount": 26,
+          "frozenRowCount": 1
+        }
+      }
+    }
+  ],
+  "spreadsheetUrl": "https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit"
+}
+

@@ -1,0 +1,15 @@
+{
+  "error": {
+    "code": 429,
+    "message": "User-rate limit exceeded. Retry after 1s.",
+    "status": "RESOURCE_EXHAUSTED",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+        "reason": "RATE_LIMIT_EXCEEDED",
+        "domain": "googleapis.com"
+      }
+    ]
+  }
+}
+

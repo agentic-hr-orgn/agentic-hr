@@ -294,6 +294,7 @@ class SheetsSyncService:
         tenant_id: UUID | str,
         spreadsheet_id: str | None = None,
         sheet_name: str = "Employees",
+        credential_id: UUID | str | None = None,
         actor_id: UUID | str | None = None,
     ) -> SheetsReconcileResponse:
         """
@@ -319,7 +320,11 @@ class SheetsSyncService:
             )
 
         # 2. Retrieve Active Connected Credential & Check Read-Only Switch
-        cred = await ConnectorService.get_active_credential(session, t_id, provider="google")
+        cred = (
+            await ConnectorService.get_credential_by_id(session, t_id, credential_id)
+            if credential_id
+            else await ConnectorService.get_active_credential(session, t_id, provider="google")
+        )
         if cred.is_read_only:
             raise ReadOnlyConnectorError(
                 f"Connector '{cred.id}' is configured in read-only mode. Drift reconciliation write is blocked."
@@ -620,6 +625,70 @@ class SheetsSyncService:
         )
 
     @staticmethod
+    async def sync_rows(
+        session: AsyncSession,
+        *,
+        tenant_id: UUID | str,
+        spreadsheet_id: str | None = None,
+        sheet_name: str = "Employees",
+        rows: list[list[Any]] | None = None,
+        mode: str = "append",
+        range_name: str | None = None,
+        credential_id: UUID | str | None = None,
+        actor_id: UUID | str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Appends or updates cell rows in the designated Google Sheet under drive.file scope.
+        Routes through execute_connector_call ensuring token refresh, rate limit, and read-only checks.
+        """
+        t_id = UUID(str(tenant_id))
+        target_rows = rows or []
+        target_sheet_id = spreadsheet_id or "fake_sheet_employee_directory"
+        target_range = range_name or f"{sheet_name}!A2:F"
+
+        cred = (
+            await ConnectorService.get_credential_by_id(session, t_id, credential_id)
+            if credential_id
+            else await ConnectorService.get_active_credential(session, t_id, provider="google")
+        )
+        if cred.is_read_only:
+            raise ReadOnlyConnectorError(
+                f"Connector '{cred.id}' is configured in read-only mode. Sheets sync write is blocked."
+            )
+        if cred.status == "needs_reconnect" or cred.jobs_paused:
+            raise ConnectorAuthExpiredError(
+                f"Connector '{cred.id}' requires reconnect. Sheets sync is paused."
+            )
+
+        sheets_service = get_sheets_service()
+        op_name = "sheets.append_rows" if mode == "append" else "sheets.update_rows"
+
+        async def _call(token: str) -> dict[str, Any]:
+            if mode == "append":
+                return await sheets_service.append_rows(
+                    target_sheet_id, target_range, target_rows, access_token=token
+                )
+            return await sheets_service.update_rows(
+                target_sheet_id, target_range, target_rows, access_token=token
+            )
+
+        result = await execute_connector_call(
+            session=session,
+            tenant_id=t_id,
+            credential=cred,
+            operation=op_name,
+            is_write=True,
+            call_factory=_call,
+            actor_id=actor_id,
+            rate_limit_scope="sheets.sync",
+            max_requests_per_minute=30,
+            audit_target_type="sheets_sync",
+            audit_target_id=target_sheet_id,
+            audit_details={"mode": mode, "rows_count": len(target_rows), "range": target_range},
+        )
+        return result
+
+    @staticmethod
     async def read_range(
         session: AsyncSession,
         *,
@@ -634,8 +703,10 @@ class SheetsSyncService:
         Executes via execute_connector_call ensuring token refresh and rate limit enforcement.
         """
         t_id = UUID(str(tenant_id))
-        cred = await ConnectorService.get_active_credential(
-            session, t_id, provider="google", credential_id=credential_id
+        cred = (
+            await ConnectorService.get_credential_by_id(session, t_id, credential_id)
+            if credential_id
+            else await ConnectorService.get_active_credential(session, t_id, provider="google")
         )
         if cred.status == "needs_reconnect" or cred.jobs_paused:
             raise ConnectorAuthExpiredError(

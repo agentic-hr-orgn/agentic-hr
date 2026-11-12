@@ -25,8 +25,13 @@ class GoogleSheetsService(SheetsService):
     DRIVE_API_URL = "https://www.googleapis.com/drive/v3/files"
     SHEETS_API_URL = "https://sheets.googleapis.com/v4/spreadsheets"
 
-    def __init__(self, timeout: float = 15.0) -> None:
+    def __init__(
+        self,
+        timeout: float = 15.0,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
         self.timeout = timeout
+        self.transport = transport
 
     async def get_employee_directory(
         self, spreadsheet_id: str | None = None
@@ -62,7 +67,7 @@ class GoogleSheetsService(SheetsService):
         headers = {"Authorization": f"Bearer {access_token}"}
 
         # 1. Search in Drive
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             query = (
                 f"name = '{title}' and "
                 "mimeType = 'application/vnd.google-apps.spreadsheet' and "
@@ -188,7 +193,7 @@ class GoogleSheetsService(SheetsService):
         max_attempts: int = 3,
     ) -> Any:
         """Executes HTTP request with exponential backoff for transient 429/503 errors."""
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             for attempt in range(1, max_attempts + 1):
                 try:
                     if method == "GET":

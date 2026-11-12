@@ -42,8 +42,13 @@ class GoogleDriveService(DriveService):
 
     ALLOWED_SCOPE = "https://www.googleapis.com/auth/drive.file"
 
-    def __init__(self, timeout: float = 30.0) -> None:
+    def __init__(
+        self,
+        timeout: float = 30.0,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
         self.timeout = timeout
+        self.transport = transport
 
     def _validate_file(self, content: bytes, mime_type: str) -> None:
         clean_mime = mime_type.strip().lower()
@@ -101,7 +106,7 @@ class GoogleDriveService(DriveService):
             q_parts.append(f"'{parent_folder_id}' in parents")
         query_str = " and ".join(q_parts)
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             resp = await client.get(
                 "https://www.googleapis.com/drive/v3/files",
                 headers=headers,
@@ -163,7 +168,7 @@ class GoogleDriveService(DriveService):
             "Content-Length": str(len(multipart_body)),
         }
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             resp = await client.post(
                 "https://www.googleapis.com/upload/drive/v3/files",
                 params={
@@ -210,7 +215,7 @@ class GoogleDriveService(DriveService):
         headers = {
             "Authorization": f"Bearer {access_token}",
         }
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             resp = await client.get(
                 f"https://www.googleapis.com/drive/v3/files/{file_id}",
                 params={"alt": "media"},
@@ -235,7 +240,7 @@ class GoogleDriveService(DriveService):
             q_parts.append(f"'{folder_id}' in parents")
         query_str = " and ".join(q_parts)
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             resp = await client.get(
                 "https://www.googleapis.com/drive/v3/files",
                 headers=headers,

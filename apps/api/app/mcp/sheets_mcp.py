@@ -45,18 +45,34 @@ async def sync_sheets_tool(
             credential_id=ctx.credential_id,
             actor_id=ctx.user_id,
         )
+        if isinstance(response, dict):
+            status = response.get("status", "completed")
+            spreadsheet_id_val = response.get(
+                "spreadsheet_id", response.get("spreadsheetId", spreadsheet_id)
+            )
+            updates = response.get("updates", {})
+            updated_rows = updates.get("updatedRows", response.get("updatedRows", len(rows or [])))
+            return {
+                "status": status,
+                "spreadsheet_id": spreadsheet_id_val,
+                "processed_items": updated_rows,
+                "processed_count": updated_rows,
+                "failed_items": 0,
+                "failed_count": 0,
+                "details": response,
+            }
         return {
-            "status": response.status,
-            "spreadsheet_id": response.spreadsheet_id,
+            "status": getattr(response, "status", "completed"),
+            "spreadsheet_id": getattr(response, "spreadsheet_id", spreadsheet_id),
             "processed_items": getattr(
-                response, "processed_count", getattr(response, "processed_items", 0)
+                response, "processed_count", getattr(response, "processed_items", len(rows or []))
             ),
             "processed_count": getattr(
-                response, "processed_count", getattr(response, "processed_items", 0)
+                response, "processed_count", getattr(response, "processed_items", len(rows or []))
             ),
             "failed_items": getattr(response, "failed_count", getattr(response, "failed_items", 0)),
             "failed_count": getattr(response, "failed_count", getattr(response, "failed_items", 0)),
-            "details": response.details,
+            "details": getattr(response, "details", {}),
         }
 
 

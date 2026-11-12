@@ -1,0 +1,44 @@
+{
+  "kind": "calendar#event",
+  "id": "cal_evt_112233445566",
+  "status": "confirmed",
+  "summary": "Technical Interview - Backend Engineer",
+  "description": "Round 1 Technical Screening for Acme Tech Solutions",
+  "location": "Google Meet",
+  "start": {
+    "dateTime": "2026-11-13T14:00:00+05:00",
+    "timeZone": "Asia/Karachi"
+  },
+  "end": {
+    "dateTime": "2026-11-13T15:00:00+05:00",
+    "timeZone": "Asia/Karachi"
+  },
+  "attendees": [
+    {
+      "email": "agentic.hr.test.ubaid.candidate1@gmail.com",
+      "responseStatus": "needsAction"
+    },
+    {
+      "email": "agentic.hr.test.ubaid.hm@gmail.com",
+      "responseStatus": "needsAction"
+    }
+  ],
+  "hangoutLink": "https://meet.google.com/xyz-uvwx-rst",
+  "conferenceData": {
+    "entryPoints": [
+      {
+        "entryPointType": "video",
+        "uri": "https://meet.google.com/xyz-uvwx-rst",
+        "label": "meet.google.com/xyz-uvwx-rst"
+      }
+    ],
+    "conferenceSolution": {
+      "key": {
+        "type": "hangoutsMeet"
+      },
+      "name": "Google Meet"
+    },
+    "conferenceId": "xyz-uvwx-rst"
+  }
+}
+

@@ -23,8 +23,13 @@ class GoogleGmailService(EmailService):
 
     ALLOWED_SCOPE = "https://www.googleapis.com/auth/gmail.send"
 
-    def __init__(self, credentials: Any = None) -> None:
+    def __init__(
+        self,
+        credentials: Any = None,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
         self.credentials = credentials
+        self.transport = transport
 
     @staticmethod
     def build_mime_message(message: EmailMessage) -> MIMEMultipart:
@@ -85,7 +90,7 @@ class GoogleGmailService(EmailService):
         }
         body = {"raw": raw_encoded}
 
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=15.0, transport=self.transport) as client:
             resp = await client.post(url, headers=headers, json=body)
 
             if resp.status_code == 200:

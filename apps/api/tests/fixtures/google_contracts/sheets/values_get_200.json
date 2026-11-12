@@ -1,0 +1,12 @@
+{
+  "range": "Employees!A1:F5",
+  "majorDimension": "ROWS",
+  "values": [
+    ["Employee ID", "Name", "Email", "Department", "Role", "Status"],
+    ["EMP-001", "Ubaid Qureshi (Owner)", "agentic.hr.test.ubaid.owner@gmail.com", "Executive", "Company Owner & Admin", "Active"],
+    ["EMP-002", "Sarah Jenkins (Recruiter)", "agentic.hr.test.ubaid.recruiter@gmail.com", "HR", "Talent Acquisition Lead", "Active"],
+    ["EMP-003", "Tariq Mahmood (Hiring Manager)", "agentic.hr.test.ubaid.hm@gmail.com", "Engineering", "VP of Engineering", "Active"],
+    ["EMP-004", "Zainab Ali (Employee)", "agentic.hr.test.ubaid.employee@gmail.com", "Engineering", "Senior Full-Stack Engineer", "Active"]
+  ]
+}
+

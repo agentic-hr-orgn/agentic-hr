@@ -54,8 +54,13 @@ class GoogleCalendarService(CalendarService):
 
     ALLOWED_SCOPE = "https://www.googleapis.com/auth/calendar.events"
 
-    def __init__(self, timeout: float = 20.0) -> None:
+    def __init__(
+        self,
+        timeout: float = 20.0,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
         self.timeout = timeout
+        self.transport = transport
 
     def _handle_error_response(self, resp: httpx.Response, action: str) -> None:
         if resp.status_code == 401 or "invalid_grant" in resp.text:
@@ -102,7 +107,7 @@ class GoogleCalendarService(CalendarService):
             "items": [{"id": cid} for cid in calendar_ids],
         }
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             resp = await client.post(
                 "https://www.googleapis.com/calendar/v3/freeBusy",
                 headers=headers,
@@ -174,7 +179,7 @@ class GoogleCalendarService(CalendarService):
         if event.location:
             req_body["location"] = event.location
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             resp = await client.post(
                 f"https://www.googleapis.com/calendar/v3/calendars/{cal_id}/events",
                 headers=headers,
@@ -228,7 +233,7 @@ class GoogleCalendarService(CalendarService):
         if event.attendees is not None:
             patch_body["attendees"] = [{"email": a} for a in event.attendees]
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             resp = await client.patch(
                 f"https://www.googleapis.com/calendar/v3/calendars/primary/events/{event_id}",
                 headers=headers,
@@ -252,7 +257,7 @@ class GoogleCalendarService(CalendarService):
         headers = {
             "Authorization": f"Bearer {access_token}",
         }
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             resp = await client.delete(
                 f"https://www.googleapis.com/calendar/v3/calendars/primary/events/{event_id}",
                 headers=headers,

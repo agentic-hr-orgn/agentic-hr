@@ -1,0 +1,17 @@
+{
+  "kind": "calendar#event",
+  "id": "cal_evt_112233445566",
+  "status": "confirmed",
+  "summary": "Technical Interview - Rescheduled to 3 PM",
+  "description": "Updated interview timing",
+  "start": {
+    "dateTime": "2026-11-13T15:00:00+05:00",
+    "timeZone": "Asia/Karachi"
+  },
+  "end": {
+    "dateTime": "2026-11-13T16:00:00+05:00",
+    "timeZone": "Asia/Karachi"
+  },
+  "hangoutLink": "https://meet.google.com/xyz-uvwx-rst"
+}
+

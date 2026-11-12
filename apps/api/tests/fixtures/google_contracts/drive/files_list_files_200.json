@@ -1,0 +1,19 @@
+{
+  "kind": "drive#fileList",
+  "incompleteSearch": false,
+  "files": [
+    {
+      "id": "1file_resume_pdf_98765",
+      "name": "sample_candidate_cv.pdf",
+      "mimeType": "application/pdf",
+      "size": "524288",
+      "webViewLink": "https://drive.google.com/file/d/1file_resume_pdf_98765/view?usp=drivesdk",
+      "parents": [
+        "1folder_tenant_root_abc123"
+      ],
+      "createdTime": "2026-11-12T08:00:00.000Z",
+      "modifiedTime": "2026-11-12T08:00:00.000Z"
+    }
+  ]
+}
+
