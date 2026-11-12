@@ -365,6 +365,28 @@ class ConnectorService:
         stmt = stmt.order_by(desc(ConnectorCredential.updated_at))
         result = await session.execute(stmt)
         cred = result.scalars().first()
+        if not cred and settings.USE_FAKE_INTEGRATIONS:
+            # Auto-seed a connected credential for synthetic testing / development
+            await ConnectorService.save_credential(
+                session=session,
+                tenant_id=t_id,
+                provider=provider.strip().lower(),
+                account_email=account_email.strip().lower()
+                if account_email
+                else "agentic.hr.test.ubaid.owner@gmail.com",
+                scopes=[
+                    "https://www.googleapis.com/auth/gmail.send",
+                    "https://www.googleapis.com/auth/drive.file",
+                    "https://www.googleapis.com/auth/calendar.events",
+                ],
+                access_token="fake_access_token_stage3_auto_seed",
+                refresh_token="fake_refresh_token_stage3_auto_seed",
+                token_expiry=datetime.now(UTC) + timedelta(hours=1),
+                is_read_only=False,
+            )
+            result = await session.execute(stmt)
+            cred = result.scalars().first()
+
         if not cred:
             raise CredentialNotFoundError(
                 f"No active '{provider}' connector credential found for tenant."

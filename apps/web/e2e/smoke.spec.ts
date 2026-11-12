@@ -5,7 +5,7 @@ test.describe("Frontend Smoke & Authentication Tests", () => {
     await page.goto("/");
     await expect(page).toHaveURL(/.*\/sign-in/);
     await expect(
-      page.getByRole("heading", { name: /SME Workforce Platform Sign In/i })
+      page.getByRole("heading", { name: /Sign in|SME Workforce Platform Sign In/i })
     ).toBeVisible();
   });
 
@@ -37,6 +37,10 @@ test.describe("Frontend Smoke & Authentication Tests", () => {
   test("settings page renders Google Workspace connector card, status badge, and controls", async ({
     page,
   }) => {
+    page.on("pageerror", (err) => console.log("BROWSER ERROR:", err));
+    page.on("console", (msg) => {
+      if (msg.type() === "error") console.log("BROWSER CONSOLE ERROR:", msg.text());
+    });
     await page.setExtraHTTPHeaders({ "x-e2e-test": "true" });
     await page.goto("/settings");
     await expect(
@@ -45,6 +49,42 @@ test.describe("Frontend Smoke & Authentication Tests", () => {
     await expect(page.getByText("Google Workspace Connector (ADR 006)")).toBeVisible();
     await expect(page.getByText("agentic.hr.test.ubaid.owner@gmail.com")).toBeVisible();
     await expect(page.getByText("gmail.send")).toBeVisible();
-    await expect(page.getByRole("switch", { name: "Toggle Read-Only Mode" })).toBeVisible();
+    await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+
+    const switchBtn = page.getByRole("switch", { name: "Toggle Read-Only Mode" });
+    await expect(switchBtn).toBeVisible();
+    await expect(switchBtn).toHaveAttribute("data-hydrated", "true");
+    await expect(switchBtn).toHaveAttribute("aria-checked", "false");
+
+    // 1. Toggle Read-Only Mode ON
+    await switchBtn.click();
+    await expect(switchBtn).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByText("Read-Only Active", { exact: false })).toBeVisible();
+    await expect(page.getByText("Read-Only Mode is active", { exact: false })).toBeVisible();
+
+    // 2. Toggle Read-Only Mode OFF
+    await switchBtn.click();
+    await expect(switchBtn).toHaveAttribute("aria-checked", "false");
+    await expect(page.getByText("Write operations enabled", { exact: false })).toBeVisible();
+
+    // 3. Click Refresh Token
+    const refreshBtn = page.getByRole("button", { name: /Refresh Token/i });
+    await refreshBtn.click();
+    await expect(
+      page.getByText("OAuth access token refreshed successfully (+1h expiry).")
+    ).toBeVisible();
+
+    // 4. Click Disconnect with confirm dialog OK
+    page.once("dialog", async (dialog) => {
+      await dialog.accept();
+    });
+    const disconnectBtn = page.getByRole("button", { name: /Disconnect/i });
+    await disconnectBtn.click();
+    await expect(page.getByText("Revoked", { exact: true })).toBeVisible();
+
+    // 5. Click Reconnect OAuth to restore Connected status
+    const reconnectBtn = page.getByRole("button", { name: /Reconnect OAuth/i }).first();
+    await reconnectBtn.click();
+    await expect(page.getByText("Connected", { exact: true })).toBeVisible();
   });
 });

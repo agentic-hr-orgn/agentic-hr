@@ -29,6 +29,7 @@ Endpoints:
 
 import base64
 import logging
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -73,6 +74,7 @@ from app.schemas.sheets import (
     SheetsSyncRequest,
     SheetsSyncResponse,
 )
+from app.services.audit_service import write_audit
 from app.services.calendar_service import CalendarSchedulingService
 from app.services.connector_service import (
     ConnectorAuthExpiredError,
@@ -264,6 +266,27 @@ async def list_connectors(
 ) -> list[ConnectorResponse]:
     """Lists all configured connectors for the caller's tenant."""
     creds = await ConnectorService.list_credentials(db, current_user.tenant_id)
+    if not creds and settings.USE_FAKE_INTEGRATIONS:
+        # Dev / Sandbox auto-seeding (ADR 006)
+        account_email = "agentic.hr.test.ubaid.owner@gmail.com"
+        scopes = [
+            "https://www.googleapis.com/auth/gmail.send",
+            "https://www.googleapis.com/auth/drive.file",
+            "https://www.googleapis.com/auth/calendar.events",
+        ]
+        cred = await ConnectorService.store_credentials(
+            session=db,
+            tenant_id=current_user.tenant_id,
+            provider="google",
+            account_email=account_email,
+            scopes=scopes,
+            access_token="fake_oauth_access_seed",
+            refresh_token="fake_oauth_refresh_seed",
+            token_expiry=datetime.now(UTC) + timedelta(hours=1),
+            actor_id=current_user.user_id,
+        )
+        await db.commit()
+        creds = [cred]
     return [ConnectorResponse.model_validate(c) for c in creds]
 
 
@@ -303,6 +326,52 @@ async def refresh_connector_token(
     try:
         cred = await ConnectorService.get_credential_by_id(db, current_user.tenant_id, id)
         await ConnectorService.refresh_access_token(db, cred, actor_id=current_user.user_id)
+        await db.commit()
+        return ConnectorResponse.model_validate(cred)
+    except CredentialNotFoundError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post("/{id}/reconnect", response_model=ConnectorResponse)
+@router.post("/google/reconnect", response_model=ConnectorResponse)
+async def reconnect_connector(
+    id: UUID | None = None,
+    current_user: AuthenticatedUserContext = Depends(require_role(["owner", "manager"])),
+    db: AsyncSession = Depends(get_db),
+) -> ConnectorResponse:
+    """Restores status to connected and unpauses jobs for a revoked or expired credential."""
+    try:
+        if id:
+            cred = await ConnectorService.get_credential_by_id(db, current_user.tenant_id, id)
+        else:
+            creds = await ConnectorService.list_credentials(db, current_user.tenant_id)
+            if not creds:
+                raise CredentialNotFoundError("No connector found to reconnect.")
+            cred = creds[0]
+
+        cred.status = "connected"
+        cred.jobs_paused = False
+        cred.error_message = None
+        cred.token_expiry = datetime.now(UTC) + timedelta(hours=1)
+        cred.updated_at = datetime.now(UTC)
+        await db.flush()
+        await write_audit(
+            db,
+            action="connector.reconnected",
+            target_type="connector_credential",
+            target_id=cred.id,
+            details={
+                "provider": cred.provider,
+                "account_email": cred.account_email,
+                "status": "connected",
+            },
+            actor_id=current_user.user_id,
+            tenant_id=current_user.tenant_id,
+        )
         await db.commit()
         return ConnectorResponse.model_validate(cred)
     except CredentialNotFoundError as exc:

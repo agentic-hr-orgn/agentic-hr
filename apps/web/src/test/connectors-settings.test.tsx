@@ -13,6 +13,7 @@ describe("SettingsPage - Connector Subsystem UI", () => {
   const mockToggleMutate = vi.fn();
   const mockRefreshMutate = vi.fn();
   const mockRevokeMutate = vi.fn();
+  const mockReconnectMutate = vi.fn();
   const mockAuthorizeMutate = vi.fn();
 
   const baseConnector: ConnectorResponse = {
@@ -72,6 +73,11 @@ describe("SettingsPage - Connector Subsystem UI", () => {
 
     vi.spyOn(connectorsHook, "useRevokeConnector").mockReturnValue({
       mutate: mockRevokeMutate,
+      isPending: false,
+    } as any);
+
+    vi.spyOn(connectorsHook, "useReconnectConnector").mockReturnValue({
+      mutate: mockReconnectMutate,
       isPending: false,
     } as any);
 
@@ -144,10 +150,13 @@ describe("SettingsPage - Connector Subsystem UI", () => {
     fireEvent.click(switchBtn);
 
     expect(mockToggleMutate).toHaveBeenCalledTimes(1);
-    expect(mockToggleMutate).toHaveBeenCalledWith({
-      credentialId: baseConnector.id,
-      isReadOnly: true,
-    });
+    expect(mockToggleMutate).toHaveBeenCalledWith(
+      {
+        credentialId: baseConnector.id,
+        isReadOnly: true,
+      },
+      expect.any(Object)
+    );
   });
 
   it("clicking Refresh Token button triggers the refresh mutation", () => {
@@ -157,7 +166,40 @@ describe("SettingsPage - Connector Subsystem UI", () => {
     fireEvent.click(refreshBtn);
 
     expect(mockRefreshMutate).toHaveBeenCalledTimes(1);
-    expect(mockRefreshMutate).toHaveBeenCalledWith(baseConnector.id);
+    expect(mockRefreshMutate).toHaveBeenCalledWith(baseConnector.id, expect.any(Object));
+  });
+
+  it("renders Refreshing... loading state when refresh mutation is pending", () => {
+    vi.spyOn(connectorsHook, "useRefreshConnector").mockReturnValue({
+      mutate: mockRefreshMutate,
+      isPending: true,
+    } as any);
+
+    render(<SettingsPage />);
+    expect(screen.getByText("Refreshing...")).toBeInTheDocument();
+  });
+
+  it("clicking Disconnect button prompts confirm dialog and triggers revoke mutation", () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<SettingsPage />);
+
+    const disconnectBtn = screen.getByRole("button", { name: /Disconnect/i });
+    fireEvent.click(disconnectBtn);
+
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(mockRevokeMutate).toHaveBeenCalledTimes(1);
+    expect(mockRevokeMutate).toHaveBeenCalledWith(baseConnector.id);
+    confirmSpy.mockRestore();
+  });
+
+  it("clicking Reconnect OAuth triggers reconnect mutation", () => {
+    render(<SettingsPage />);
+
+    const reconnectBtn = screen.getByRole("button", { name: /Reconnect OAuth/i });
+    fireEvent.click(reconnectBtn);
+
+    expect(mockReconnectMutate).toHaveBeenCalledTimes(1);
+    expect(mockReconnectMutate).toHaveBeenCalledWith(baseConnector.id, expect.any(Object));
   });
 
   it("guarantees no raw or encrypted tokens are rendered in the HTML", () => {

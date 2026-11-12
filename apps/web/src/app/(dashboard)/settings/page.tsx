@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ShieldCheck,
@@ -25,8 +25,10 @@ import {
   useToggleReadOnly,
   useRefreshConnector,
   useRevokeConnector,
+  useReconnectConnector,
   useGoogleAuthorize,
 } from "@/hooks/use-connectors";
+import { useConnectorStore } from "@/stores/connector-store";
 import type { ConnectorResponse } from "@agentic-hr/contracts";
 
 export default function SettingsPage() {
@@ -35,50 +37,65 @@ export default function SettingsPage() {
   const toggleReadOnly = useToggleReadOnly();
   const refreshConnector = useRefreshConnector();
   const revokeConnector = useRevokeConnector();
+  const reconnectConnector = useReconnectConnector();
   const googleAuthorize = useGoogleAuthorize();
+
+  // Zustand persistent client store
+  const connector = useConnectorStore((s) => s.connector);
+  const bannerMessage = useConnectorStore((s) => s.bannerMessage);
+  const setBannerMessage = useConnectorStore((s) => s.setBannerMessage);
+  const storeToggleReadOnly = useConnectorStore((s) => s.toggleReadOnly);
+  const storeRefreshToken = useConnectorStore((s) => s.refreshToken);
+  const storeRevoke = useConnectorStore((s) => s.revokeConnector);
+  const storeReconnect = useConnectorStore((s) => s.reconnectConnector);
+  const setConnector = useConnectorStore((s) => s.setConnector);
+
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (connectors && connectors.length > 0) {
+      setConnector(connectors[0]);
+    }
+  }, [connectors, setConnector]);
 
   // Role permissions: Only Owner, Manager, or HR Head can mutate connectors
   const userRole = currentUser?.role?.toLowerCase() || "owner";
   const canManage =
     userRole === "owner" || userRole === "manager" || currentUser?.is_hr_head === true;
 
-  // Active connector resolution (Google Workspace)
-  const activeConnector: ConnectorResponse =
-    connectors && connectors.length > 0
-      ? connectors[0]
-      : {
-          id: "f63315da-87b3-4648-bb1f-eca593e60674",
-          tenant_id: currentUser?.tenant_id || "b4ec4ca5-f07b-4f61-82a9-ab78b8252496",
-          provider: "google",
-          account_email: "agentic.hr.test.ubaid.owner@gmail.com",
-          scopes: [
-            "https://www.googleapis.com/auth/gmail.send",
-            "https://www.googleapis.com/auth/drive.file",
-            "https://www.googleapis.com/auth/calendar.events",
-          ],
-          status: "connected",
-          is_read_only: false,
-          jobs_paused: false,
-          error_message: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-
+  const activeConnector = connector;
   const isReadOnly = activeConnector.is_read_only;
   const status = activeConnector.status;
   const isNeedsReconnect = status === "needs_reconnect" || activeConnector.jobs_paused;
 
   const handleToggleReadOnly = () => {
     if (!canManage) return;
-    toggleReadOnly.mutate({
-      credentialId: activeConnector.id,
-      isReadOnly: !isReadOnly,
-    });
+    const nextVal = storeToggleReadOnly();
+    toggleReadOnly.mutate(
+      {
+        credentialId: activeConnector.id,
+        isReadOnly: nextVal,
+      },
+      {
+        onSuccess: (data) => {
+          if (data) setConnector(data);
+        },
+      }
+    );
   };
 
   const handleRefreshToken = () => {
     if (!canManage) return;
-    refreshConnector.mutate(activeConnector.id);
+    storeRefreshToken();
+    refreshConnector.mutate(activeConnector.id, {
+      onSuccess: (data) => {
+        if (data) setConnector(data);
+      },
+    });
   };
 
   const handleRevoke = () => {
@@ -88,23 +105,23 @@ export default function SettingsPage() {
         "Are you sure you want to disconnect this Google Workspace connector? Outbound automations will be paused."
       )
     ) {
+      storeRevoke();
       revokeConnector.mutate(activeConnector.id);
     }
   };
 
   const handleReconnect = () => {
     if (!canManage) return;
-    googleAuthorize.mutate(undefined, {
+    storeReconnect();
+    reconnectConnector.mutate(activeConnector.id, {
       onSuccess: (data) => {
-        if (data.authorization_url) {
-          window.location.href = data.authorization_url;
-        }
+        if (data) setConnector(data);
       },
     });
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-hydrated={isHydrated}>
       {/* Top Navigation & Breadcrumbs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-appBorder pb-6">
         <div>
@@ -132,6 +149,28 @@ export default function SettingsPage() {
           <Badge variant="warning">Fake Mode (ADR 006)</Badge>
         </div>
       </div>
+
+      {/* Dynamic Status / Notification Banner */}
+      {bannerMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="p-3 bg-emerald-50 border border-emerald-200 rounded-medium text-emerald-800 text-xs flex items-center justify-between shadow-sm"
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+            <span className="font-medium">{bannerMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBannerMessage(null)}
+            className="text-emerald-700 hover:text-emerald-900 font-bold px-1"
+            aria-label="Dismiss banner"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       {/* Urgent Warning Alert Banner for Reconnect */}
       {isNeedsReconnect && (
@@ -227,33 +266,49 @@ export default function SettingsPage() {
             </div>
 
             {/* Read-Only Switch */}
-            <div className="p-3 bg-[#F8F9FD] rounded-medium border border-appBorder flex items-center justify-between">
-              <div>
-                <span className="font-semibold text-textPrimary block">
-                  Client-Enforced Read-Only Mode
-                </span>
-                <span className="text-[11px] text-textMuted">
-                  Blocks all outbound write operations (send email) with HTTP 403.
-                </span>
+            <div className="p-3 bg-[#F8F9FD] rounded-medium border border-appBorder">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-semibold text-textPrimary block">
+                    Client-Enforced Read-Only Mode
+                  </span>
+                  <span className="text-[11px] text-textMuted">
+                    Blocks all outbound write operations (send email) with HTTP 403.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  data-hydrated={isHydrated}
+                  aria-checked={isReadOnly}
+                  aria-label="Toggle Read-Only Mode"
+                  onClick={handleToggleReadOnly}
+                  disabled={!canManage || toggleReadOnly.isPending}
+                  className={`focus:outline-none transition-colors ${
+                    !canManage ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+                  }`}
+                  title={canManage ? "Toggle Read-Only Mode" : "Owner or Manager role required"}
+                >
+                  {isReadOnly ? (
+                    <ToggleRight className="h-7 w-7 text-[#2A5BDB]" />
+                  ) : (
+                    <ToggleLeft className="h-7 w-7 text-gray-400" />
+                  )}
+                </button>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={isReadOnly}
-                aria-label="Toggle Read-Only Mode"
-                onClick={handleToggleReadOnly}
-                disabled={!canManage || toggleReadOnly.isPending}
-                className={`focus:outline-none transition-colors ${
-                  !canManage ? "cursor-not-allowed opacity-60" : "cursor-pointer"
-                }`}
-                title={canManage ? "Toggle Read-Only Mode" : "Owner or Manager role required"}
-              >
+              <div className="mt-2 pt-2 border-t border-appBorder/60">
                 {isReadOnly ? (
-                  <ToggleRight className="h-7 w-7 text-[#2A5BDB]" />
+                  <span className="text-[11px] text-[#2A5BDB] font-semibold flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-[#2A5BDB]" />
+                    Read-Only Mode is active. All outbound write operations are blocked.
+                  </span>
                 ) : (
-                  <ToggleLeft className="h-7 w-7 text-gray-400" />
+                  <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    Write operations enabled (outbound send active).
+                  </span>
                 )}
-              </button>
+              </div>
             </div>
 
             {/* Scopes Whitelist */}
@@ -307,11 +362,13 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={handleReconnect}
-                disabled={!canManage || googleAuthorize.isPending}
+                disabled={!canManage || reconnectConnector.isPending}
                 className="px-3 py-1.5 bg-[#2A5BDB] hover:bg-blue-700 text-white rounded text-xs font-semibold transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Reconnect OAuth
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${reconnectConnector.isPending ? "animate-spin" : ""}`}
+                />
+                {reconnectConnector.isPending ? "Reconnecting..." : "Reconnect OAuth"}
               </button>
 
               {status !== "revoked" && (
