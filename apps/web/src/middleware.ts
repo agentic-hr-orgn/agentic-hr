@@ -9,10 +9,10 @@ const isPublicRoute = createRouteMatcher([
   "/api/synthetic(.*)",
 ]);
 
-const handler = clerkMiddleware((auth, req) => {
+const handler = clerkMiddleware(async (auth, req) => {
   // Protect all dashboard routes; unauthenticated requests are redirected to /sign-in
   if (!isPublicRoute(req)) {
-    auth().protect();
+    await auth.protect();
   }
 });
 
