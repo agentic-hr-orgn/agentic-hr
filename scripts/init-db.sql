@@ -42,3 +42,31 @@ GRANT USAGE ON SCHEMA public TO agentic_hr_app;
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 REVOKE CREATE ON SCHEMA public FROM agentic_hr_app;
 REVOKE CREATE ON SCHEMA public FROM agentic_hr_tenant_resolver;
+
+-- 5. Default Privileges for Application Runtime Role
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO agentic_hr_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO agentic_hr_migrator;
+
+-- Ensure explicit grants on all Stage 3 tables if they already exist
+DO $do$
+DECLARE
+    tbl text;
+    tables text[] := ARRAY[
+        'connector_credentials',
+        'sent_messages',
+        'tenant_spreadsheets',
+        'sheets_sync_queue',
+        'sheets_drift_logs',
+        'drive_files',
+        'calendar_events'
+    ];
+BEGIN
+    FOREACH tbl IN ARRAY tables LOOP
+        IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = tbl) THEN
+            EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO agentic_hr_app', tbl);
+            EXECUTE format('GRANT ALL ON TABLE public.%I TO agentic_hr_migrator', tbl);
+        END IF;
+    END LOOP;
+END
+$do$;
+

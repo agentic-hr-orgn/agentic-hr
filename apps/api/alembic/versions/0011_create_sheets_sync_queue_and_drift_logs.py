@@ -206,6 +206,27 @@ def upgrade() -> None:
     enable_rls("public.sheets_drift_logs")
     create_tenant_rls_policies("public.sheets_drift_logs")
 
+    # Role Grants on Stage 3 Tables
+    op.execute("GRANT ALL ON TABLE public.sheets_sync_queue TO agentic_hr_migrator;")
+    op.execute(
+        "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.sheets_sync_queue TO agentic_hr_app;"
+    )
+    op.execute("GRANT ALL ON TABLE public.sheets_drift_logs TO agentic_hr_migrator;")
+    op.execute(
+        "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.sheets_drift_logs TO agentic_hr_app;"
+    )
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'tenant_spreadsheets' AND schemaname = 'public') THEN
+                GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.tenant_spreadsheets TO agentic_hr_app;
+                GRANT ALL ON TABLE public.tenant_spreadsheets TO agentic_hr_migrator;
+            END IF;
+        END $$;
+        """
+    )
+
     # ---------------------------------------------------------
     # 3. Create view aliases for singular/plural mapping
     # ---------------------------------------------------------

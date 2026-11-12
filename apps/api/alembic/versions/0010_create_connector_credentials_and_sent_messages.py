@@ -121,7 +121,6 @@ def upgrade() -> None:
 
     # Role Grants
     op.execute("GRANT ALL ON TABLE public.connector_credentials TO agentic_hr_migrator;")
-    op.execute("REVOKE ALL ON TABLE public.connector_credentials FROM agentic_hr_app;")
     op.execute(
         "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.connector_credentials TO agentic_hr_app;"
     )
@@ -134,6 +133,17 @@ def upgrade() -> None:
         "GRANT SELECT, INSERT, UPDATE, DELETE ON public.connector_credential TO agentic_hr_app;"
     )
     op.execute("GRANT ALL ON public.connector_credential TO agentic_hr_migrator;")
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'tenant_spreadsheets' AND schemaname = 'public') THEN
+                GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.tenant_spreadsheets TO agentic_hr_app;
+                GRANT ALL ON TABLE public.tenant_spreadsheets TO agentic_hr_migrator;
+            END IF;
+        END $$;
+        """
+    )
 
     # ---------------------------------------------------------
     # 2. Create 'sent_messages' table
@@ -212,7 +222,6 @@ def upgrade() -> None:
 
     # Role Grants
     op.execute("GRANT ALL ON TABLE public.sent_messages TO agentic_hr_migrator;")
-    op.execute("REVOKE ALL ON TABLE public.sent_messages FROM agentic_hr_app;")
     op.execute(
         "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.sent_messages TO agentic_hr_app;"
     )

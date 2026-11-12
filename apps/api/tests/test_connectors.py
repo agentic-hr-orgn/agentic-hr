@@ -72,6 +72,26 @@ async def cleanup_test_state():
     yield
 
 
+async def ensure_clean_connected_credential(
+    client: httpx.AsyncClient,
+    headers: dict[str, str],
+    email: str = "agentic.hr.test.ubaid.owner@gmail.com",
+) -> str:
+    """Ensures an active, connected Google connector credential exists."""
+    resp = await client.post(
+        "/api/v1/connectors/google/connect",
+        headers=headers,
+        json={
+            "provider": "google",
+            "account_email": email,
+            "scopes": ["gmail.send", "drive.file", "calendar.events"],
+            "access_token": "ya29.test_valid_connector_token",
+        },
+    )
+    assert resp.status_code == 200, f"Failed to connect test credential: {resp.text}"
+    return resp.json()["id"]
+
+
 @pytest.mark.asyncio
 async def test_01_store_credentials_envelope_encryption(
     isolation_context: MultiTenantTestContext,
@@ -406,6 +426,7 @@ async def test_08_safe_html_template_escaping(
     """Verifies that malicious variables in email templates are auto-escaped in HTML."""
     ctx = isolation_context
     headers = {"Authorization": f"Bearer {ctx.company_a.owner.token}"}
+    await ensure_clean_connected_credential(async_client, headers)
 
     malicious_name = "<script>alert('xss')</script> John Doe"
     payload = {
@@ -446,6 +467,7 @@ async def test_09_bounce_marking_no_inbox_polling(
     """Verifies that POST /email/bounces updates delivery status without inbox polling."""
     ctx = isolation_context
     headers = {"Authorization": f"Bearer {ctx.company_a.owner.token}"}
+    await ensure_clean_connected_credential(async_client, headers)
 
     # 1. Send an email to establish record
     unique_bounce_email = f"bounce-test-{uuid.uuid4().hex[:6]}@invalid-domain.xyz"
@@ -1041,6 +1063,7 @@ async def test_20_email_send_synchronous_failure_persists_and_audits(
     """Verifies that synchronous delivery rejection (550 SMTP) persists as failed and writes audit log."""
     ctx = isolation_context
     headers = {"Authorization": f"Bearer {ctx.company_a.owner.token}"}
+    await ensure_clean_connected_credential(async_client, headers)
 
     fail_email = f"simulate-fail-{uuid.uuid4().hex[:6]}@domain.com"
     payload = {
@@ -1094,6 +1117,7 @@ async def test_21_hard_bounce_recipient_blocked_and_force_retry_override(
     """Verifies that hard-bounced recipients are blocked on subsequent sends unless force_retry=True."""
     ctx = isolation_context
     headers = {"Authorization": f"Bearer {ctx.company_a.owner.token}"}
+    await ensure_clean_connected_credential(async_client, headers)
 
     target_email = f"bounced-candidate-{uuid.uuid4().hex[:6]}@invalid.xyz"
 
@@ -1158,6 +1182,7 @@ async def test_22_list_email_messages_filtering_and_pagination(
     """Verifies GET /api/v1/connectors/email/messages supports status/recipient filters & pagination."""
     ctx = isolation_context
     headers = {"Authorization": f"Bearer {ctx.company_a.owner.token}"}
+    await ensure_clean_connected_credential(async_client, headers)
 
     # 1. Query without filters
     all_resp = await async_client.get("/api/v1/connectors/email/messages", headers=headers)
@@ -1196,6 +1221,10 @@ async def test_23_sent_messages_multi_tenant_isolation(
     ctx = isolation_context
     headers_a = {"Authorization": f"Bearer {ctx.company_a.owner.token}"}
     headers_b = {"Authorization": f"Bearer {ctx.company_b.owner.token}"}
+    await ensure_clean_connected_credential(async_client, headers_a)
+    await ensure_clean_connected_credential(
+        async_client, headers_b, email="agentic.hr.test.ubaid.recruiter@gmail.com"
+    )
 
     unique_email = f"confidential-{uuid.uuid4().hex[:6]}@secret-corp.com"
 

@@ -99,6 +99,7 @@ router = APIRouter()
 # ==============================================================================
 
 
+@router.get("/google/authorize")
 @router.get("/google/oauth/authorize")
 async def google_oauth_authorize(
     current_user: AuthenticatedUserContext = Depends(require_role(["owner", "manager"])),
@@ -111,6 +112,7 @@ async def google_oauth_authorize(
     return {"authorization_url": auth_url}
 
 
+@router.get("/google/callback")
 @router.get("/google/oauth/callback")
 async def google_oauth_callback(
     code: str = Query(...),

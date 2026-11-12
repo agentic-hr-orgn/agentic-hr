@@ -174,6 +174,16 @@ def upgrade() -> None:
     enable_rls("public.calendar_events")
     create_tenant_rls_policies("public.calendar_events")
 
+    # Role Grants on Stage 3 Tables
+    op.execute("GRANT ALL ON TABLE public.drive_files TO agentic_hr_migrator;")
+    op.execute(
+        "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.drive_files TO agentic_hr_app;"
+    )
+    op.execute("GRANT ALL ON TABLE public.calendar_events TO agentic_hr_migrator;")
+    op.execute(
+        "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.calendar_events TO agentic_hr_app;"
+    )
+
     # ---------------------------------------------------------
     # 3. Create view aliases for singular/plural mapping
     # ---------------------------------------------------------
