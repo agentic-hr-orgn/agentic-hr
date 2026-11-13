@@ -80,4 +80,3 @@ describe("Dashboard 'Test Fake Email' Integration & In-Memory Fallback", () => {
     expect(res.message_id).toMatch(/^fake_msg_\d+_[a-z0-9]+$/);
   });
 });
-
