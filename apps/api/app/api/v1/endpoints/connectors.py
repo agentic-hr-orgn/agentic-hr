@@ -266,7 +266,7 @@ async def list_connectors(
 ) -> list[ConnectorResponse]:
     """Lists all configured connectors for the caller's tenant."""
     creds = await ConnectorService.list_credentials(db, current_user.tenant_id)
-    if not creds and settings.USE_FAKE_INTEGRATIONS:
+    if not creds and settings.USE_FAKE_INTEGRATIONS and settings.is_non_production:
         # Dev / Sandbox auto-seeding (ADR 006)
         account_email = "agentic.hr.test.ubaid.owner@gmail.com"
         scopes = [

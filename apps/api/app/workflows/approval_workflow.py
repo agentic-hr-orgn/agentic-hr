@@ -17,11 +17,21 @@ with workflow.unsafe.imports_passed_through():
     from app.workflows.activities import (
         execute_dummy_approved_action_activity,
         execute_dummy_rejected_action_activity,
+        get_approval_decision_activity,
         notify_approval_decision_activity,
         notify_changes_requested_activity,
         notify_resubmitted_activity,
         verify_approval_record_activity,
     )
+
+# Retry policy for authoritative database verification activities:
+# Retries transient connection errors up to 5 times while non_retryable ApplicationErrors
+# (spoofed/mismatched signals) fail immediately on attempt 1.
+VERIFY_RETRY_POLICY = RetryPolicy(
+    maximum_attempts=5,
+    initial_interval=timedelta(seconds=1),
+    backoff_coefficient=2.0,
+)
 
 
 # ==============================================================================
@@ -74,6 +84,7 @@ class WaitForApprovalWorkflow:
     """
 
     def __init__(self) -> None:
+        self.pending_signals: list[ApprovalDecisionSignal] = []
         self.decision_signal: ApprovalDecisionSignal | None = None
         self.processed: bool = False
 
@@ -81,15 +92,18 @@ class WaitForApprovalWorkflow:
     def receive_decision_signal(self, signal: ApprovalDecisionSignal) -> None:
         """
         Receives human approval decision.
-        Enforces idempotency and signal deduplication: only the first received signal is processed.
+        Queues incoming signals until a verified decision is processed so an unverified/spoofed
+        signal cannot block a subsequent legitimate signal arriving in the same activation.
         """
-        if self.processed or self.decision_signal is not None:
+        if self.processed:
             workflow.logger.warning(
                 f"Ignoring duplicate approval decision signal for approval {signal.approval_id} (action: {signal.action})"
             )
             return
 
-        self.decision_signal = signal
+        self.pending_signals.append(signal)
+        if self.decision_signal is None:
+            self.decision_signal = signal
         workflow.logger.info(
             f"Received approval decision signal '{signal.action}' for approval {signal.approval_id} by {signal.decided_by}"
         )
@@ -100,20 +114,29 @@ class WaitForApprovalWorkflow:
 
         while True:
             # 1. Deterministically wait until an authorized decision signal arrives
-            await workflow.wait_condition(lambda: self.decision_signal is not None)
-            sig = self.decision_signal
-            self.decision_signal = None
+            await workflow.wait_condition(
+                lambda: len(self.pending_signals) > 0 or self.decision_signal is not None
+            )
+            if self.pending_signals:
+                sig = self.pending_signals.pop(0)
+                self.decision_signal = self.pending_signals[0] if self.pending_signals else None
+            else:
+                sig = self.decision_signal
+                self.decision_signal = None
+            assert sig is not None
 
             try:
                 # 2. Execute verification activity against authoritative PostgreSQL database
-                # This confirms that the decision was genuinely committed with matching status and decider
+                # Authoritative workflow tenant_id takes precedence over untrusted signal tenant_id
                 verification_result = await workflow.execute_activity(
                     verify_approval_record_activity,
-                    args=[sig.approval_id, sig.action, sig.decided_by, sig.tenant_id or tenant_id],
+                    args=[sig.approval_id, sig.action, sig.decided_by, tenant_id or sig.tenant_id],
                     start_to_close_timeout=timedelta(seconds=15),
-                    retry_policy=RetryPolicy(maximum_attempts=1),
+                    retry_policy=VERIFY_RETRY_POLICY,
                 )
                 self.processed = True
+                self.pending_signals.clear()
+                self.decision_signal = None
                 return ApprovalOutcome(
                     status=sig.action,
                     approval_id=sig.approval_id,
@@ -134,6 +157,7 @@ async def wait_for_approval(
     wait_fn: Any | None = None,
     get_signal_fn: Any | None = None,
     reset_signal_fn: Any | None = None,
+    reconcile_interval: timedelta | None = None,
 ) -> ApprovalOutcome:
     """
     Reusable asynchronous workflow helper that pauses execution until an authorized
@@ -146,19 +170,40 @@ async def wait_for_approval(
     if wait_fn is not None and get_signal_fn is not None:
         while True:
             # Direct in-workflow execution (no child workflow overhead or race conditions)
-            await workflow.wait_condition(wait_fn)
-            sig = get_signal_fn()
-            if reset_signal_fn:
-                reset_signal_fn()
-            assert sig is not None
+            try:
+                await workflow.wait_condition(wait_fn, timeout=reconcile_interval)
+            except TimeoutError:
+                # Lost-signal reconciliation: poll authoritative DB if signal was dropped
+                reconciled = await workflow.execute_activity(
+                    get_approval_decision_activity,
+                    args=[approval_id, tenant_id],
+                    start_to_close_timeout=timedelta(seconds=10),
+                    retry_policy=VERIFY_RETRY_POLICY,
+                )
+                if reconciled:
+                    sig = ApprovalDecisionSignal(
+                        approval_id=reconciled["approval_id"],
+                        action=reconciled["action"],
+                        decided_by=reconciled["decided_by"],
+                        tenant_id=reconciled.get("tenant_id"),
+                        reason=reconciled.get("reason"),
+                    )
+                else:
+                    continue
+            else:
+                sig = get_signal_fn()
+                if reset_signal_fn:
+                    reset_signal_fn()
+                assert sig is not None
 
             try:
                 # Verify against authoritative PostgreSQL database
+                # Authoritative workflow tenant_id takes precedence over untrusted signal tenant_id
                 verification_result = await workflow.execute_activity(
                     verify_approval_record_activity,
-                    args=[sig.approval_id, sig.action, sig.decided_by, sig.tenant_id or tenant_id],
+                    args=[sig.approval_id, sig.action, sig.decided_by, tenant_id or sig.tenant_id],
                     start_to_close_timeout=timedelta(seconds=15),
-                    retry_policy=RetryPolicy(maximum_attempts=1),
+                    retry_policy=VERIFY_RETRY_POLICY,
                 )
                 return ApprovalOutcome(
                     status=sig.action,
@@ -200,6 +245,7 @@ class DummyApprovalWorkflow:
     def __init__(self) -> None:
         self.status: str = "WAITING_FOR_APPROVAL"
         self.outcome: dict[str, Any] | None = None
+        self.pending_signals: list[ApprovalDecisionSignal] = []
         self.decision_signal: ApprovalDecisionSignal | None = None
         self.side_effects_executed: int = 0
 
@@ -207,14 +253,17 @@ class DummyApprovalWorkflow:
     def receive_signal(self, signal: ApprovalDecisionSignal) -> None:
         """
         Receives approval decision signal directly.
-        Enforces idempotency and deduplication: only the first received signal is processed.
+        Queues signals until a verified decision executes side effects so an unverified
+        signal cannot drop a subsequent legitimate signal.
         """
-        if self.side_effects_executed > 0 or self.decision_signal is not None:
+        if self.side_effects_executed > 0:
             workflow.logger.warning(
                 f"Ignoring duplicate signal on DummyApprovalWorkflow for {signal.approval_id}"
             )
             return
-        self.decision_signal = signal
+        self.pending_signals.append(signal)
+        if self.decision_signal is None:
+            self.decision_signal = signal
         workflow.logger.info(
             f"DummyApprovalWorkflow received decision signal '{signal.action}' for {signal.approval_id} by {signal.decided_by}"
         )
@@ -236,17 +285,28 @@ class DummyApprovalWorkflow:
         )
         self.status = "WAITING_FOR_APPROVAL"
 
+        def _get_signal() -> ApprovalDecisionSignal | None:
+            if self.pending_signals:
+                return self.pending_signals[0]
+            return self.decision_signal
+
         def _reset_signal() -> None:
-            self.decision_signal = None
+            if self.pending_signals:
+                self.pending_signals.pop(0)
+                self.decision_signal = self.pending_signals[0] if self.pending_signals else None
+            else:
+                self.decision_signal = None
 
         # 1. Deterministically pause execution waiting for human approval decision
         decision_outcome: ApprovalOutcome = await wait_for_approval(
             approval_id=input_data.approval_id,
             tenant_id=input_data.tenant_id,
-            wait_fn=lambda: self.decision_signal is not None,
-            get_signal_fn=lambda: self.decision_signal,
+            wait_fn=lambda: len(self.pending_signals) > 0 or self.decision_signal is not None,
+            get_signal_fn=_get_signal,
             reset_signal_fn=_reset_signal,
         )
+        self.pending_signals.clear()
+        self.decision_signal = None
 
         workflow.logger.info(
             f"DummyApprovalWorkflow resumed: approval {input_data.approval_id} received decision '{decision_outcome.status}'"

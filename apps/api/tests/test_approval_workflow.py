@@ -6,12 +6,20 @@ Complies with Stage 2 specifications.
 """
 
 import pytest
+from temporalio import activity
+from temporalio.exceptions import ApplicationError
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
+from app.core.temporal import ApprovalDecisionSignal
 from app.workflows import (
     ApprovalWorkflowInput,
+    DummyApprovalWorkflow,
+    DummyWorkflowInput,
     HumanApprovalWorkflow,
+    WaitForApprovalWorkflow,
+    execute_dummy_approved_action_activity,
+    execute_dummy_rejected_action_activity,
     notify_approval_decision_activity,
     notify_changes_requested_activity,
     notify_resubmitted_activity,
@@ -194,3 +202,94 @@ async def test_approval_workflow_signal_deduplication() -> None:
         result = await handle.result()
         assert result["status"] == "APPROVED"
         assert result["final_revision"] == 1
+
+
+@pytest.mark.asyncio
+async def test_dummy_approval_workflow_queued_signals_and_transient_retry() -> None:
+    """
+    Verifies H1 & M1 fixes on DummyApprovalWorkflow:
+    1. When an unverified/spoofed signal is immediately followed by a valid signal,
+       the valid signal is queued (not dropped) and processed after the unverified signal fails.
+    2. When verify_approval_record_activity encounters a transient database error,
+       VERIFY_RETRY_POLICY retries the verification rather than discarding the valid signal.
+    """
+    env = await WorkflowEnvironment.start_time_skipping()
+    task_queue = "test-approval-queue-04"
+    call_counts = {"attempts": 0}
+
+    @activity.defn(name="verify_approval_record_activity")
+    async def mock_verify_approval_record_activity(
+        approval_id: str,
+        expected_decision: str,
+        decided_by: str,
+        tenant_id: str | None = None,
+    ) -> dict[str, object]:
+        # Spoofed decider fails with non_retryable=True
+        if decided_by == "attacker-user-id":
+            raise ApplicationError("Spoofed decider rejected", non_retryable=True)
+
+        # Valid decider: simulate 1 transient DB error, then succeed on retry 2
+        call_counts["attempts"] += 1
+        if call_counts["attempts"] == 1:
+            raise RuntimeError("Simulated transient PostgreSQL connection reset")
+
+        return {
+            "verified": True,
+            "approval_id": approval_id,
+            "status": expected_decision,
+            "decided_by": decided_by,
+            "tenant_id": tenant_id,
+        }
+
+    async with (
+        env,
+        Worker(
+            env.client,
+            task_queue=task_queue,
+            workflows=[DummyApprovalWorkflow, WaitForApprovalWorkflow],
+            activities=[
+                mock_verify_approval_record_activity,
+                execute_dummy_approved_action_activity,
+                execute_dummy_rejected_action_activity,
+            ],
+        ),
+    ):
+        handle = await env.client.start_workflow(
+            DummyApprovalWorkflow.run,
+            DummyWorkflowInput(
+                workflow_id="wf-queued-retry-test",
+                approval_id="appr-queued-104",
+                tenant_id="tenant-trusted-01",
+            ),
+            id="wf-queued-retry-test",
+            task_queue=task_queue,
+        )
+
+        # Send spoofed signal AND legitimate signal back-to-back before verification finishes
+        await handle.signal(
+            "approval_decision_signal",
+            ApprovalDecisionSignal(
+                approval_id="appr-queued-104",
+                action="approved",
+                decided_by="attacker-user-id",
+                tenant_id="tenant-spoofed-99",
+                reason="Spoofed signal",
+            ),
+        )
+        await handle.signal(
+            "approval_decision_signal",
+            ApprovalDecisionSignal(
+                approval_id="appr-queued-104",
+                action="approved",
+                decided_by="legit-owner-id",
+                tenant_id="tenant-spoofed-99",
+                reason="Legitimate approval after transient DB glitch",
+            ),
+        )
+
+        result = await handle.result()
+        assert result["status"] == "COMPLETED"
+        assert result["outcome"] == "APPROVED"
+        assert result["decided_by"] == "legit-owner-id"
+        # Confirm transient retry occurred on legitimate signal (2 attempts)
+        assert call_counts["attempts"] == 2

@@ -48,12 +48,12 @@ def clear_test_signing_keys() -> None:
 def parse_mock_token(token: str) -> dict[str, Any] | None:
     """
     Parses deterministic mock test tokens (e.g., 'mock:user_email:org_id' or 'mock:user_id').
-    Only permitted in development, test, or when USE_FAKE_INTEGRATIONS=true.
+    Strictly forbidden in production even if USE_FAKE_INTEGRATIONS is set.
     """
     if not token.startswith("mock:"):
         return None
 
-    if not (settings.USE_FAKE_INTEGRATIONS or settings.ENVIRONMENT in ("development", "test")):
+    if not settings.is_non_production:
         logger.warning("Mock authentication tokens are strictly forbidden in production mode.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

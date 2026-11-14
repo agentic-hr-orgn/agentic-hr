@@ -83,13 +83,22 @@ class EncryptionContext:
     def to_aad(self) -> bytes:
         """
         Serializes context into deterministic, canonical UTF-8 bytes for AES-GCM AAD.
-        Uses sorted JSON with compact separators to guarantee identical byte representations.
+        Uses sorted JSON with compact separators and canonicalized lowercase UUID strings
+        to guarantee identical byte representations across UUID objects and uppercase strings.
         """
+
+        def _canonicalize_id(val: UUID | str) -> str:
+            s = str(val).strip()
+            try:
+                return str(UUID(s))
+            except ValueError:
+                return s
+
         canonical_dict = {
             "entity_type": str(self.entity_type).strip(),
             "field_name": str(self.field_name).strip(),
-            "record_id": str(self.record_id).strip(),
-            "tenant_id": str(self.tenant_id).strip(),
+            "record_id": _canonicalize_id(self.record_id),
+            "tenant_id": _canonicalize_id(self.tenant_id),
         }
         return json.dumps(canonical_dict, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
@@ -499,6 +508,24 @@ def decrypt_field(
 
     provider = key_provider or LocalKeyProvider()
     canonical_aad = context.to_aad()
+
+    # 0. Validate envelope metadata against downgrade / algorithm substitution
+    if payload.version != "v1":
+        raise InvalidCiphertextFormatError(
+            f"Unsupported encrypted payload version '{payload.version}'. Expected 'v1'."
+        )
+    if payload.algorithm != "AES-256-GCM":
+        raise InvalidCiphertextFormatError(
+            f"Unsupported data encryption algorithm '{payload.algorithm}'. Expected 'AES-256-GCM'."
+        )
+    if payload.wrapping_algorithm != "AES-256-GCM":
+        raise InvalidCiphertextFormatError(
+            f"Unsupported key wrapping algorithm '{payload.wrapping_algorithm}'. Expected 'AES-256-GCM'."
+        )
+    if payload.wrapping_provider != provider.provider_name:
+        raise InvalidCiphertextFormatError(
+            f"Envelope wrapping_provider '{payload.wrapping_provider}' does not match active provider '{provider.provider_name}'."
+        )
 
     # 1. Validate data nonce
     try:

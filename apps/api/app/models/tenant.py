@@ -87,5 +87,6 @@ async def get_clerk_user_context(session: AsyncSession) -> str | None:
 
 
 async def reset_tenant_context(session: AsyncSession) -> None:
-    """Explicitly resets the tenant and user context."""
-    await session.execute(text("RESET app.tenant_id; RESET app.clerk_user_id;"))
+    """Explicitly resets the tenant and user context using separate statements for asyncpg compatibility."""
+    await session.execute(text("RESET app.tenant_id"))
+    await session.execute(text("RESET app.clerk_user_id"))

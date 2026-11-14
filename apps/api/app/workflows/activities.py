@@ -206,12 +206,19 @@ async def verify_approval_record_activity(
             non_retryable=True,
         ) from exc
 
+    expected_tenant_uuid: UUID | None = None
+    if tenant_id:
+        try:
+            expected_tenant_uuid = UUID(str(tenant_id).strip())
+        except ValueError as exc:
+            raise ApplicationError(
+                f"Invalid tenant_id UUID for approval verification: {tenant_id}",
+                non_retryable=True,
+            ) from exc
+
     async with AsyncSessionLocal() as session:
-        if tenant_id:
-            try:
-                await set_tenant_context(session, tenant_id)
-            except Exception as exc:
-                activity.logger.warning(f"Could not set tenant context {tenant_id}: {exc}")
+        if expected_tenant_uuid is not None:
+            await set_tenant_context(session, str(expected_tenant_uuid))
 
         stmt = select(Approval).where(Approval.id == approval_uuid)
         result = await session.execute(stmt)
@@ -220,6 +227,12 @@ async def verify_approval_record_activity(
         if record is None:
             raise ApplicationError(
                 f"Approval record '{approval_id}' not found in database or inaccessible under tenant context",
+                non_retryable=True,
+            )
+
+        if expected_tenant_uuid is not None and record.tenant_id != expected_tenant_uuid:
+            raise ApplicationError(
+                f"Tenant mismatch for approval '{approval_id}': record tenant is '{record.tenant_id}', expected '{expected_tenant_uuid}'",
                 non_retryable=True,
             )
 
@@ -247,6 +260,44 @@ async def verify_approval_record_activity(
             "current_revision": record.current_revision,
             "tenant_id": str(record.tenant_id),
         }
+
+
+@activity.defn
+async def get_approval_decision_activity(
+    approval_id: str,
+    tenant_id: str | None = None,
+) -> dict[str, Any] | None:
+    """
+    Polls the authoritative PostgreSQL database to reconcile an approval decision
+    if a Temporal signal was dropped due to a transient network or server outage.
+    Returns decision metadata if the approval is already in a terminal/decided state
+    ('approved' or 'rejected'), or None if still pending.
+    """
+    try:
+        approval_uuid = UUID(approval_id)
+    except ValueError:
+        return None
+
+    async with AsyncSessionLocal() as session:
+        if tenant_id:
+            await set_tenant_context(session, str(UUID(str(tenant_id).strip())))
+
+        stmt = select(Approval).where(Approval.id == approval_uuid)
+        result = await session.execute(stmt)
+        record = result.scalar_one_or_none()
+        if record is None:
+            return None
+
+        status_lower = record.status.lower()
+        if status_lower in ("approved", "rejected") and record.decided_by is not None:
+            return {
+                "approval_id": str(record.id),
+                "action": status_lower,
+                "decided_by": str(record.decided_by),
+                "tenant_id": str(record.tenant_id),
+                "reason": record.decision_reason,
+            }
+        return None
 
 
 @activity.defn

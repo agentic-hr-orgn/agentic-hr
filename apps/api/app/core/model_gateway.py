@@ -29,6 +29,7 @@ os.environ["LITELLM_LOCAL_MODEL_COST_MAP"] = "True"
 
 from app.core.config import settings
 from app.core.fake_model import fake_model_provider
+from app.core.untrusted import wrap_untrusted_text
 
 logger = logging.getLogger("agentic_hr.model_gateway")
 
@@ -39,10 +40,11 @@ T = TypeVar("T", bound=BaseModel)
 # Routes & Exceptions
 # -------------------------------------------------------------------------
 class ModelRoute(str, Enum):
-    """Authoritative model routing tiers for Agentic HR Core."""
+    """Authoritative model routing tiers for Agentic HR Core (ADR 003 & ADR 007)."""
 
     CHEAP = "cheap"
     STRONG = "strong"
+    REASONING = "reasoning"
     PRIVATE = "private"
 
 
@@ -219,8 +221,23 @@ class ModelGateway:
             api_key = settings.STRONG_MODEL_API_KEY
             endpoint = None
 
+        elif route_str == ModelRoute.REASONING.value:
+            if settings.USE_FAKE_INTEGRATIONS:
+                provider = settings.REASONING_MODEL_PROVIDER or "fake"
+                model_id = settings.REASONING_MODEL_ID or "fake-reasoning-model"
+            else:
+                if not settings.REASONING_MODEL_PROVIDER or not settings.REASONING_MODEL_ID:
+                    raise ModelRouteUnavailableError(
+                        "Reasoning model route is not configured in environment "
+                        "(REASONING_MODEL_PROVIDER or REASONING_MODEL_ID missing)."
+                    )
+                provider = settings.REASONING_MODEL_PROVIDER
+                model_id = settings.REASONING_MODEL_ID
+            api_key = settings.REASONING_MODEL_API_KEY
+            endpoint = None
+
         elif route_str == ModelRoute.PRIVATE.value:
-            # Genuinely Fail-Closed Privacy Boundary (ADR 003):
+            # Genuinely Fail-Closed Privacy Boundary (ADR 003 & ADR 007):
             # Requires approved PRIVATE_MODEL_PROVIDER, PRIVATE_MODEL_ID, and PRIVATE_MODEL_ENDPOINT
             if (
                 not settings.PRIVATE_MODEL_PROVIDER
@@ -239,7 +256,7 @@ class ModelGateway:
 
         else:
             raise ValueError(
-                f"Unknown model route: '{route}'. Allowed routes: 'cheap', 'strong', 'private'."
+                f"Unknown model route: '{route}'. Allowed routes: 'cheap', 'strong', 'reasoning', 'private'."
             )
 
         return provider, model_id, api_key, endpoint
@@ -265,6 +282,8 @@ class ModelGateway:
             api_key=api_key,
             endpoint=endpoint,
             temperature=temperature,
+            system_instruction=system_instruction,
+            user_prompt=prompt if system_instruction else None,
         )
 
         self._record_trace(
@@ -305,13 +324,13 @@ class ModelGateway:
         provider, model_id, api_key, endpoint = self.resolve_route(route)
 
         schema_json = json.dumps(schema.model_json_schema(), indent=2)
-        structured_prompt = (
+        sys_prompt = (
             f"{system_instruction or 'You are an objective structured data extractor.'}\n\n"
             f"REQUIRED JSON SCHEMA:\n{schema_json}\n\n"
             f"CRITICAL INSTRUCTION: Return ONLY a valid JSON object strictly conforming to the schema above. "
-            f"Do not include markdown fences, comments, or extra text.\n\n"
-            f"INPUT:\n{prompt}"
+            f"Do not include markdown fences, comments, or extra text."
         )
+        structured_prompt = f"{sys_prompt}\n\nINPUT:\n{prompt}"
 
         # 1. Initial Attempt (up to 3 total provider attempts: 1 initial + max 2 retries for transient errors)
         raw_output, usage, latency_ms, cost_usd, retries = await self._execute_with_retries(
@@ -322,6 +341,8 @@ class ModelGateway:
             api_key=api_key,
             endpoint=endpoint,
             schema=schema,
+            system_instruction=sys_prompt,
+            user_prompt=f"INPUT:\n{prompt}",
         )
 
         validation_error_str = ""
@@ -355,10 +376,18 @@ class ModelGateway:
             )
 
         # 2. Exactly One Repair Attempt on the Original Approved Route
+        #    Wrap raw_output in untrusted boundaries so injected directives in malformed output cannot escape
+        wrapped_raw_output = wrap_untrusted_text(raw_output, label="document")
+        repair_sys_instruction = (
+            f"REPAIR ATTEMPT: Your previous JSON response failed validation against the required schema.\n\n"
+            f"VALIDATION ERROR:\n{validation_error_str}\n\n"
+            f"REQUIRED JSON SCHEMA:\n{schema_json}\n\n"
+            f"CORRECTION INSTRUCTION: Correct all issues and return ONLY a valid JSON object matching the schema."
+        )
         repair_prompt = (
             f"REPAIR ATTEMPT: Your previous JSON response failed validation against the required schema.\n\n"
             f"VALIDATION ERROR:\n{validation_error_str}\n\n"
-            f"PREVIOUS INVALID OUTPUT:\n{raw_output}\n\n"
+            f"PREVIOUS INVALID OUTPUT:\n{wrapped_raw_output}\n\n"
             f"REQUIRED JSON SCHEMA:\n{schema_json}\n\n"
             f"CORRECTION INSTRUCTION: Correct all issues and return ONLY a valid JSON object matching the schema."
         )
@@ -377,6 +406,8 @@ class ModelGateway:
             api_key=api_key,
             endpoint=endpoint,
             schema=schema,
+            system_instruction=repair_sys_instruction,
+            user_prompt=f"PREVIOUS INVALID OUTPUT:\n{wrapped_raw_output}",
         )
 
         # Combine token usage and latency from both cycles
@@ -451,6 +482,8 @@ class ModelGateway:
         endpoint: str | None = None,
         temperature: float = 0.2,
         schema: type[BaseModel] | None = None,
+        system_instruction: str | None = None,
+        user_prompt: str | None = None,
     ) -> tuple[str, TokenUsage, float, float | None, int]:
         """
         Executes the low-level provider call with bounded exponential retries.
@@ -479,13 +512,19 @@ class ModelGateway:
                     )
                     cost: float | None = None
                 else:
-                    # Execute via LiteLLM
+                    # Execute via LiteLLM with strict system/user role separation
                     import litellm
 
                     litellm.telemetry = False
 
                     litellm_model = f"{provider}/{model_id}" if "/" not in model_id else model_id
-                    messages = [{"role": "user", "content": prompt}]
+                    if system_instruction and user_prompt is not None:
+                        messages = [
+                            {"role": "system", "content": system_instruction},
+                            {"role": "user", "content": user_prompt},
+                        ]
+                    else:
+                        messages = [{"role": "user", "content": prompt}]
 
                     response = await asyncio.wait_for(
                         litellm.acompletion(

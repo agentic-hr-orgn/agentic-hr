@@ -16,7 +16,7 @@ from typing import Any, Self
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.idempotency import IdempotencyRecord
@@ -92,6 +92,58 @@ class IdempotencyGate:
         self.response_body: dict[str, Any] = {}
         self._completed: bool = False
 
+    def _inspect_existing(self, existing: IdempotencyRecord) -> Self:
+        """Inspects an existing idempotency record for replay, payload mismatch, or conflict."""
+        self.record = existing
+
+        # Requirement 3: Reusing a key with a different payload must be rejected
+        if existing.payload_hash != self.payload_hash or existing.operation != self.operation:
+            logger.warning(
+                f"Idempotency key mismatch: key='{self.key}' tenant='{self.tenant_id}'. "
+                f"Expected hash={existing.payload_hash[:8]}, got={self.payload_hash[:8]}"
+            )
+            raise IdempotencyPayloadMismatchError(
+                f"Idempotency key '{self.key}' was previously used with a different request payload or operation."
+            )
+
+        # Requirement 5: Safely return the original result if already completed
+        if existing.status == "completed":
+            self.is_replay = True
+            self.response_code = existing.response_code or 200
+            self.response_body = existing.response_body or {}
+            logger.info(
+                f"Idempotency hit (replay): key='{self.key}' tenant='{self.tenant_id}' operation='{self.operation}'"
+            )
+            return self
+
+        # In-flight concurrent request check
+        if existing.status == "started":
+            # Check for stale lock timeout
+            now = datetime.now(UTC)
+            age = (now - existing.locked_at).total_seconds()
+            if age < self.lock_timeout_seconds:
+                logger.warning(
+                    f"Concurrent request conflict: key='{self.key}' tenant='{self.tenant_id}' (age: {age:.1f}s)"
+                )
+                raise IdempotencyConflictError(
+                    f"An operation with idempotency key '{self.key}' is currently in progress. Please retry shortly."
+                )
+            else:
+                logger.warning(
+                    f"Reclaiming stale idempotency lock for key='{self.key}' (age: {age:.1f}s)"
+                )
+                existing.locked_at = now
+                return self
+
+        # If previous attempt failed, allow retry
+        if existing.status == "failed":
+            logger.info(f"Retrying previously failed idempotency operation: key='{self.key}'")
+            existing.status = "started"
+            existing.locked_at = datetime.now(UTC)
+            return self
+
+        return self
+
     async def __aenter__(self) -> Self:
         if not self.key:
             raise ValueError("idempotency_key must be a non-empty string.")
@@ -109,75 +161,41 @@ class IdempotencyGate:
         existing = result.scalar_one_or_none()
 
         if existing:
-            self.record = existing
+            return self._inspect_existing(existing)
 
-            # Requirement 3: Reusing a key with a different payload must be rejected
-            if existing.payload_hash != self.payload_hash or existing.operation != self.operation:
-                logger.warning(
-                    f"Idempotency key mismatch: key='{self.key}' tenant='{self.tenant_id}'. "
-                    f"Expected hash={existing.payload_hash[:8]}, got={self.payload_hash[:8]}"
-                )
-                raise IdempotencyPayloadMismatchError(
-                    f"Idempotency key '{self.key}' was previously used with a different request payload or operation."
-                )
-
-            # Requirement 5: Safely return the original result if already completed
-            if existing.status == "completed":
-                self.is_replay = True
-                self.response_code = existing.response_code or 200
-                self.response_body = existing.response_body or {}
-                logger.info(
-                    f"Idempotency hit (replay): key='{self.key}' tenant='{self.tenant_id}' operation='{self.operation}'"
-                )
-                return self
-
-            # In-flight concurrent request check
-            if existing.status == "started":
-                # Check for stale lock timeout
-                now = datetime.now(UTC)
-                age = (now - existing.locked_at).total_seconds()
-                if age < self.lock_timeout_seconds:
-                    logger.warning(
-                        f"Concurrent request conflict: key='{self.key}' tenant='{self.tenant_id}' (age: {age:.1f}s)"
-                    )
-                    raise IdempotencyConflictError(
-                        f"An operation with idempotency key '{self.key}' is currently in progress. Please retry shortly."
-                    )
-                else:
-                    logger.warning(
-                        f"Reclaiming stale idempotency lock for key='{self.key}' (age: {age:.1f}s)"
-                    )
-                    existing.locked_at = now
-                    return self
-
-            # If previous attempt failed, allow retry
-            if existing.status == "failed":
-                logger.info(f"Retrying previously failed idempotency operation: key='{self.key}'")
-                existing.status = "started"
-                existing.locked_at = datetime.now(UTC)
-                return self
-
-        # 2. No record exists: Insert new 'started' record
-        new_record = IdempotencyRecord(
-            tenant_id=self.tenant_id,
-            key=self.key,
-            operation=self.operation,
-            payload_hash=self.payload_hash,
-            status="started",
-            locked_at=datetime.now(UTC),
+        # 2. No record exists: Atomic insert with ON CONFLICT DO NOTHING
+        #    Prevents UniqueViolation error from aborting the caller's PostgreSQL transaction
+        #    or wiping out transaction-local app.tenant_id RLS settings.
+        insert_stmt = (
+            pg_insert(IdempotencyRecord)
+            .values(
+                tenant_id=self.tenant_id,
+                key=self.key,
+                operation=self.operation,
+                payload_hash=self.payload_hash,
+                status="started",
+                locked_at=datetime.now(UTC),
+            )
+            .on_conflict_do_nothing(constraint="uq_idempotency_keys_tenant_key")
+            .returning(IdempotencyRecord.id)
         )
-        self.session.add(new_record)
-        try:
-            await self.session.flush()
-            self.record = new_record
+        inserted_id = (await self.session.execute(insert_stmt)).scalar_one_or_none()
+
+        if inserted_id is not None:
+            self.record = await self.session.get(IdempotencyRecord, inserted_id)
             self.is_replay = False
             return self
-        except IntegrityError as exc:
-            # Race condition: Another concurrent worker inserted just before us
-            await self.session.rollback()
-            raise IdempotencyConflictError(
-                f"Concurrent creation conflict on idempotency key '{self.key}'."
-            ) from exc
+
+        # 3. Lost concurrent insert race: re-select with FOR UPDATE (waits for winner's transaction)
+        #    and inspect the winning record without rolling back our caller's transaction.
+        result = await self.session.execute(stmt)
+        existing = result.scalar_one_or_none()
+        if existing:
+            return self._inspect_existing(existing)
+
+        raise IdempotencyConflictError(
+            f"Concurrent creation conflict on idempotency key '{self.key}'."
+        )
 
     def set_result(self, response_code: int, response_body: dict[str, Any]) -> None:
         """Stores the deterministic response to be committed with the business transaction."""

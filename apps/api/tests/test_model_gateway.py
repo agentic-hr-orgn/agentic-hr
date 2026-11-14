@@ -580,3 +580,51 @@ async def test_21_unknown_cost_is_strictly_none(fast_gateway: ModelGateway):
     serialized = json.dumps(latest_trace)
     assert '"cost_usd": null' in serialized
     assert '"cost_usd": 0.0' not in serialized
+
+
+# -------------------------------------------------------------------------
+# Test 22: Reasoning Route Resolution & Fail-Closed When Unconfigured
+# -------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_22_reasoning_route_and_repair_wrapping(
+    fast_gateway: ModelGateway, monkeypatch
+) -> None:
+    """
+    Verifies ADR 007 ModelRoute.REASONING:
+    1. Resolves to fake-reasoning-model in fake mode.
+    2. Fails closed with ModelRouteUnavailableError when USE_FAKE_INTEGRATIONS=False and unconfigured.
+    3. Wraps raw_output inside <untrusted_document> boundary tags during schema repair.
+    """
+    # 1. Reasoning route in fake mode
+    response = await fast_gateway.generate(
+        prompt="Evaluate complex multi-clause Pakistani labor law statutory leave notice",
+        route=ModelRoute.REASONING,
+    )
+    assert response.route == "reasoning"
+    assert response.model_id == (settings.REASONING_MODEL_ID or "fake-reasoning-model")
+    assert response.provider == (settings.REASONING_MODEL_PROVIDER or "fake")
+    assert isinstance(response.content, str)
+
+    # 2. Reasoning route fails closed when USE_FAKE_INTEGRATIONS=False and unconfigured
+    monkeypatch.setattr(settings, "USE_FAKE_INTEGRATIONS", False)
+    monkeypatch.setattr(settings, "REASONING_MODEL_PROVIDER", None)
+    monkeypatch.setattr(settings, "REASONING_MODEL_ID", None)
+
+    with pytest.raises(ModelRouteUnavailableError) as exc_info:
+        fast_gateway.resolve_route(ModelRoute.REASONING)
+    assert "Reasoning model route is not configured in environment" in str(exc_info.value)
+
+    # Restore fake mode and verify repair prompt wraps raw_output in untrusted boundary
+    monkeypatch.setattr(settings, "USE_FAKE_INTEGRATIONS", True)
+    fake_model_provider.reset()
+    fake_model_provider.set_simulate_repair_success(True)
+
+    rep_response = await fast_gateway.structured_output(
+        schema=CandidateEvaluation,
+        prompt="Evaluate candidate with repair wrapping check",
+        route=ModelRoute.REASONING,
+    )
+    assert rep_response.repair_attempts == 1
+    repair_prompt = fake_model_provider.call_history[-1]["prompt"]
+    assert "<untrusted_document>" in repair_prompt
+    assert "</untrusted_document>" in repair_prompt

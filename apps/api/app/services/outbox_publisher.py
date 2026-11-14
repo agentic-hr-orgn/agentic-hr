@@ -19,7 +19,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations.base import EmailMessage
@@ -113,6 +113,22 @@ class FakeEventDispatcher:
 
 # Global default fake dispatcher singleton
 default_fake_dispatcher = FakeEventDispatcher()
+
+
+async def fetch_due_tenant_ids(
+    session: AsyncSession,
+    limit: int = 50,
+    stale_processing_seconds: int = 300,
+) -> list[UUID]:
+    """
+    Discovers tenant UUIDs that currently have pending or stale processing outbox events
+    using the narrow SECURITY DEFINER database function public.outbox_due_tenant_ids().
+    """
+    result = await session.execute(
+        text("SELECT public.outbox_due_tenant_ids(:limit, :stale)"),
+        {"limit": limit, "stale": stale_processing_seconds},
+    )
+    return [UUID(str(row[0])) for row in result.all() if row[0] is not None]
 
 
 async def claim_pending_events(
@@ -302,17 +318,41 @@ class OutboxPublisherWorker:
         self._task: asyncio.Task[None] | None = None
 
     async def run_once(self) -> int:
-        """Executes a single polling cycle over the outbox."""
+        """
+        Executes a single polling cycle over the outbox.
+        If self.tenant_id is None, discovers all tenants with due outbox events via
+        public.outbox_due_tenant_ids() and processes each under its strict RLS context.
+        """
         async with self.session_factory() as session:
-            return await publish_batch(
+            if self.tenant_id is not None:
+                return await publish_batch(
+                    session=session,
+                    tenant_id=self.tenant_id,
+                    batch_size=self.batch_size,
+                    dispatcher=self.dispatcher,
+                    max_attempts=self.max_attempts,
+                    base_backoff_seconds=self.base_backoff_seconds,
+                    stale_processing_seconds=self.stale_processing_seconds,
+                )
+
+            due_tenants = await fetch_due_tenant_ids(
                 session=session,
-                tenant_id=self.tenant_id,
-                batch_size=self.batch_size,
-                dispatcher=self.dispatcher,
-                max_attempts=self.max_attempts,
-                base_backoff_seconds=self.base_backoff_seconds,
+                limit=50,
                 stale_processing_seconds=self.stale_processing_seconds,
             )
+            total_processed = 0
+            for t_id in due_tenants:
+                count = await publish_batch(
+                    session=session,
+                    tenant_id=t_id,
+                    batch_size=self.batch_size,
+                    dispatcher=self.dispatcher,
+                    max_attempts=self.max_attempts,
+                    base_backoff_seconds=self.base_backoff_seconds,
+                    stale_processing_seconds=self.stale_processing_seconds,
+                )
+                total_processed += count
+            return total_processed
 
     async def start(self) -> None:
         """Starts the worker in the background."""

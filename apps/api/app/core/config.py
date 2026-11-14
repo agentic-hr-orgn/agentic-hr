@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Base directory for locating .env at repository root
@@ -40,19 +41,23 @@ class Settings(BaseSettings):
     TEMPORAL_ADDRESS: str = "localhost:7233"
     TEMPORAL_TASK_QUEUE: str = "agentic-hr-task-queue"
 
-    # ADR 003: Model Routing (Gemini 3 Free Tier - Synthetic Data Only)
+    # ADR 003 & ADR 007: Model Routing Tiers (cheap, strong, reasoning, private)
     STRONG_MODEL: str = "gemini-3.8-flash"
     CHEAP_MODEL: str = "gemini-3.5-flash-lite"
+    REASONING_MODEL: str = "claude-opus-5-5"
     EMBEDDING_MODEL: str = "gemini-embedding-2"
     STRONG_MODEL_API_KEY: str | None = None
     CHEAP_MODEL_API_KEY: str | None = None
+    REASONING_MODEL_API_KEY: str | None = None
     EMBEDDING_MODEL_API_KEY: str | None = None
 
-    # Stage 2 Phase 11: Central Model Gateway Configuration
+    # Stage 2 Phase 11 & ADR 007: Central Model Gateway Configuration
     CHEAP_MODEL_PROVIDER: str | None = None
     CHEAP_MODEL_ID: str | None = None
     STRONG_MODEL_PROVIDER: str | None = None
     STRONG_MODEL_ID: str | None = None
+    REASONING_MODEL_PROVIDER: str | None = None
+    REASONING_MODEL_ID: str | None = None
     PRIVATE_MODEL_PROVIDER: str | None = None
     PRIVATE_MODEL_ID: str | None = None
     PRIVATE_MODEL_API_KEY: str | None = None
@@ -99,6 +104,20 @@ class Settings(BaseSettings):
     RATE_LIMIT_DEFAULT_REQUESTS: int = 60
     RATE_LIMIT_DEFAULT_WINDOW_SECONDS: int = 60
     RATE_LIMIT_FAIL_OPEN: bool = True
+
+    @property
+    def is_non_production(self) -> bool:
+        """Returns True strictly when running in development, test, local, or CI environments."""
+        return self.ENVIRONMENT.strip().lower() in ("development", "test", "local", "ci")
+
+    @model_validator(mode="after")
+    def _enforce_production_security_guards(self) -> "Settings":
+        """Prevents USE_FAKE_INTEGRATIONS=true from ever being active in production."""
+        if self.ENVIRONMENT.strip().lower() == "production" and self.USE_FAKE_INTEGRATIONS:
+            raise ValueError(
+                "USE_FAKE_INTEGRATIONS=true is strictly forbidden when ENVIRONMENT=production."
+            )
+        return self
 
 
 settings = Settings()

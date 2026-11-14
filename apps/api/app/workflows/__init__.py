@@ -5,6 +5,7 @@ Durable workflow definitions and activities for Agentic HR Core.
 from app.workflows.activities import (
     execute_dummy_approved_action_activity,
     execute_dummy_rejected_action_activity,
+    get_approval_decision_activity,
     greeting_activity,
     notify_approval_decision_activity,
     notify_changes_requested_activity,
@@ -14,6 +15,7 @@ from app.workflows.activities import (
     verify_approval_record_activity,
 )
 from app.workflows.approval_workflow import (
+    VERIFY_RETRY_POLICY,
     ApprovalOutcome,
     ApprovalWorkflowInput,
     DummyApprovalWorkflow,
@@ -25,6 +27,7 @@ from app.workflows.approval_workflow import (
 from app.workflows.sample import SampleOnboardingWorkflow
 
 __all__ = [
+    "VERIFY_RETRY_POLICY",
     "ApprovalOutcome",
     "ApprovalWorkflowInput",
     "DummyApprovalWorkflow",
@@ -34,6 +37,7 @@ __all__ = [
     "WaitForApprovalWorkflow",
     "execute_dummy_approved_action_activity",
     "execute_dummy_rejected_action_activity",
+    "get_approval_decision_activity",
     "greeting_activity",
     "notify_approval_decision_activity",
     "notify_changes_requested_activity",

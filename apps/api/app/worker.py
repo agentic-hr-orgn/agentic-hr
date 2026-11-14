@@ -13,6 +13,8 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from app.core.config import settings
+from app.db.session import AsyncSessionLocal
+from app.services.outbox_publisher import OutboxPublisherWorker
 from app.workflows import (
     DummyApprovalWorkflow,
     HumanApprovalWorkflow,
@@ -20,6 +22,7 @@ from app.workflows import (
     WaitForApprovalWorkflow,
     execute_dummy_approved_action_activity,
     execute_dummy_rejected_action_activity,
+    get_approval_decision_activity,
     greeting_activity,
     notify_approval_decision_activity,
     notify_changes_requested_activity,
@@ -71,17 +74,20 @@ async def run_worker() -> None:
             notify_approval_decision_activity,
             notify_resubmitted_activity,
             verify_approval_record_activity,
+            get_approval_decision_activity,
             execute_dummy_approved_action_activity,
             execute_dummy_rejected_action_activity,
         ],
     )
+
+    outbox_worker = OutboxPublisherWorker(session_factory=AsyncSessionLocal)
 
     logger.info(f"Worker registered for task queue '{settings.TEMPORAL_TASK_QUEUE}'.")
     logger.info(
         "Registered Workflows: SampleOnboardingWorkflow, HumanApprovalWorkflow, DummyApprovalWorkflow, WaitForApprovalWorkflow"
     )
     logger.info(
-        "Registered Activities: greeting, notifications, interview scheduling, approval decisions, verification, dummy actions"
+        "Registered Activities: greeting, notifications, interview scheduling, approval decisions, verification, reconciliation, dummy actions"
     )
 
     stop_event = asyncio.Event()
@@ -100,6 +106,7 @@ async def run_worker() -> None:
     logger.info("Worker started and listening for workflow executions.")
 
     try:
+        await outbox_worker.start()
         worker_task = asyncio.create_task(worker.run())
         await stop_event.wait()
         logger.info("Stopping worker task...")
@@ -108,7 +115,8 @@ async def run_worker() -> None:
     except asyncio.CancelledError:
         pass
     finally:
-        logger.info("Temporal worker shut down cleanly.")
+        await outbox_worker.stop()
+        logger.info("Temporal and Outbox workers shut down cleanly.")
 
 
 def main() -> None:

@@ -365,7 +365,7 @@ class ConnectorService:
         stmt = stmt.order_by(desc(ConnectorCredential.updated_at))
         result = await session.execute(stmt)
         cred = result.scalars().first()
-        if not cred and settings.USE_FAKE_INTEGRATIONS:
+        if not cred and settings.USE_FAKE_INTEGRATIONS and settings.is_non_production:
             # Auto-seed a connected credential for synthetic testing / development
             await ConnectorService.save_credential(
                 session=session,
