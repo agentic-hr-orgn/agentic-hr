@@ -73,8 +73,11 @@ async def get_mcp_session(
 ) -> AsyncGenerator[AsyncSession, None]:
     """
     Async context manager yielding an AsyncSession with tenant RLS context pre-set.
-    Commits on clean exit, rolls back on exception.
+    Commits on clean exit and on ConnectorAuthExpiredError (to persist 401 circuit-breaker
+    trips, audit logs, and idempotency failure markers), rolls back on all other exceptions.
     """
+    from app.services.connector_service import ConnectorAuthExpiredError
+
     effective_ctx = ctx or get_current_mcp_context()
     async with AsyncSessionLocal() as session:
         await set_tenant_context(
@@ -85,6 +88,11 @@ async def get_mcp_session(
         try:
             yield session
             await session.commit()
+        except ConnectorAuthExpiredError:
+            # Persist 401/invalid_grant circuit-breaker trip (needs_reconnect, jobs_paused=True),
+            # audit log, and idempotency failure marker before surfacing the auth error.
+            await session.commit()
+            raise
         except Exception:
             await session.rollback()
             raise

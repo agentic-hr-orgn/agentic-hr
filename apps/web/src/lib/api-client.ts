@@ -4,10 +4,24 @@ import type {
   HealthResponse,
   PolicyDocument,
 } from "@agentic-hr/contracts";
+import { ApiHttpError, apiRequest } from "@/lib/api-request";
+import { formatBearerToken } from "@/lib/auth-header";
+import { API_BASE_URL } from "@/lib/platform";
 
 export type { CompanyProfile, Employee, HealthResponse, PolicyDocument };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export interface TestEmailResult {
+  source: "live" | "standby-simulator";
+  status: string;
+  provider?: string;
+  recipient?: string;
+  template?: string;
+  message_id?: string;
+  sent_message_id?: string;
+  fake?: boolean;
+  timestamp?: string;
+  [key: string]: unknown;
+}
 
 export async function fetchHealth(): Promise<HealthResponse> {
   const res = await fetch(`${API_BASE_URL}/api/health`, {
@@ -50,14 +64,10 @@ export async function sendTestEmail(
   subject?: string,
   body?: string,
   authToken?: string | null
-) {
+): Promise<TestEmailResult> {
   const recipient = toEmail || "agentic.hr.test.ubaid.owner@gmail.com";
   const idempotencyKey = `email-test-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-  const authHeader = authToken
-    ? authToken.startsWith("Bearer ")
-      ? authToken
-      : `Bearer ${authToken}`
-    : "Bearer mock:agentic.hr.test.ubaid.owner@gmail.com:org_acme_tech_01";
+  const authHeader = formatBearerToken(authToken);
 
   const payload = {
     to_email: recipient,
@@ -75,27 +85,40 @@ export async function sendTestEmail(
     force_retry: true,
   };
 
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/v1/connectors/email/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: authHeader,
-        "Idempotency-Key": idempotencyKey,
-        "X-Tenant-ID": "acme-tech-01",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch {
-    // Network error or backend offline: fall through to in-memory simulator response
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Idempotency-Key": idempotencyKey,
+    "X-Tenant-ID": "acme-tech-01",
+  };
+  if (authHeader) {
+    headers.Authorization = authHeader;
   }
 
-  // Local in-memory simulator response fallback (FastAPI standby or network error)
+  const res = await apiRequest<Record<string, unknown>>(
+    `${API_BASE_URL}/api/v1/connectors/email/send`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    },
+    "Email connector request failed"
+  );
+
+  if (res.kind === "live") {
+    return {
+      source: "live",
+      status: String(res.data?.status ?? "success"),
+      ...res.data,
+    };
+  }
+
+  if (res.kind === "http_error") {
+    throw new ApiHttpError(res.status, res.code, res.message, res.body);
+  }
+
+  // Local in-memory simulator response fallback ONLY when FastAPI is offline / unreachable
   return {
+    source: "standby-simulator",
     status: "sent",
     provider: "FakeGmailService",
     recipient,

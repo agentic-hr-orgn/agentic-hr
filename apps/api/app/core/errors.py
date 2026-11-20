@@ -113,8 +113,96 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     )
 
 
+def _build_error_response(
+    request: Request,
+    *,
+    status_code: int,
+    code: str,
+    message: str,
+    headers: dict[str, str] | None = None,
+) -> JSONResponse:
+    request_id = _resolve_request_id(request)
+    payload = ErrorResponse(
+        error=ErrorDetail(
+            code=code,
+            message=message,
+            details=None,
+            request_id=request_id,
+        )
+    ).model_dump()
+    resp_headers = dict(headers) if headers else {}
+    if request_id:
+        resp_headers["X-Request-ID"] = request_id
+    return JSONResponse(status_code=status_code, content=payload, headers=resp_headers)
+
+
 def register_error_handlers(app: FastAPI) -> None:
     """Register all unified error handlers with the FastAPI application."""
+    from app.services.connector_service import (
+        ConnectorAuthExpiredError,
+        ConnectorRateLimitError,
+        ConnectorServiceUnavailableError,
+        CredentialNotFoundError,
+        ReadOnlyConnectorError,
+    )
+
+    async def connector_auth_expired_handler(
+        request: Request, exc: ConnectorAuthExpiredError
+    ) -> JSONResponse:
+        return _build_error_response(
+            request,
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            code="UNAUTHORIZED",
+            message=f"CONNECTOR_AUTH_EXPIRED: {exc}",
+        )
+
+    async def connector_rate_limit_handler(
+        request: Request, exc: ConnectorRateLimitError
+    ) -> JSONResponse:
+        retry_after = max(1, int(getattr(exc, "retry_after", 1)))
+        return _build_error_response(
+            request,
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            code="TOO_MANY_REQUESTS",
+            message=f"CONNECTOR_RATE_LIMITED: {exc}",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    async def connector_unavailable_handler(
+        request: Request, exc: ConnectorServiceUnavailableError
+    ) -> JSONResponse:
+        return _build_error_response(
+            request,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            code="SERVICE_UNAVAILABLE",
+            message=f"CONNECTOR_UNAVAILABLE: {exc}",
+        )
+
+    async def connector_read_only_handler(
+        request: Request, exc: ReadOnlyConnectorError
+    ) -> JSONResponse:
+        return _build_error_response(
+            request,
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="FORBIDDEN",
+            message=f"CONNECTOR_READ_ONLY: {exc}",
+        )
+
+    async def credential_not_found_handler(
+        request: Request, exc: CredentialNotFoundError
+    ) -> JSONResponse:
+        return _build_error_response(
+            request,
+            status_code=status.HTTP_404_NOT_FOUND,
+            code="NOT_FOUND",
+            message=str(exc),
+        )
+
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(ConnectorAuthExpiredError, connector_auth_expired_handler)
+    app.add_exception_handler(ConnectorRateLimitError, connector_rate_limit_handler)
+    app.add_exception_handler(ConnectorServiceUnavailableError, connector_unavailable_handler)
+    app.add_exception_handler(ReadOnlyConnectorError, connector_read_only_handler)
+    app.add_exception_handler(CredentialNotFoundError, credential_not_found_handler)
     app.add_exception_handler(Exception, unhandled_exception_handler)

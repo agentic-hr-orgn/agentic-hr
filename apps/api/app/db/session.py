@@ -35,10 +35,24 @@ AsyncSessionLocal = async_sessionmaker(
 
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """FastAPI dependency yielding a scoped asynchronous database session."""
+    """
+    FastAPI dependency yielding a scoped asynchronous database session.
+
+    INVARIANT (Stage 3+ / Stage 4+):
+    External connector calls must NEVER execute mid-transaction after uncommitted domain writes
+    (Stage 4+ workflows must dispatch external side effects via Outbox/Temporal).
+    Because of this invariant, committing on ConnectorAuthExpiredError safely persists only
+    the 401 circuit-breaker trip (needs_reconnect, jobs_paused=True) and immutable audit row
+    even if a route forgets an explicit `except ConnectorAuthExpiredError: await db.commit()`.
+    """
+    from app.services.connector_service import ConnectorAuthExpiredError
+
     async with AsyncSessionLocal() as session:
         try:
             yield session
+        except ConnectorAuthExpiredError:
+            await session.commit()
+            raise
         finally:
             await session.close()
 

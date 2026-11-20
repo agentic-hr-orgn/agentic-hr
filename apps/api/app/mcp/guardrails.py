@@ -4,7 +4,8 @@ Enforces:
 1. Server-Bound Context Presence (no forged prompt arguments).
 2. Rule 6 Untrusted-Data Policy (blocks mutating tools when untrusted_context=True).
 3. Role-Based Access Control (RBAC: blocks mutating tools for employee role unless is_hr_head=True).
-4. Read-Only Mode enforcement (blocks mutating tools when connector is_read_only=True).
+Note: Client-side Read-Only Mode (is_read_only=True) and per-tenant rate limits are enforced
+deterministically inside execute_connector_call() on every downstream external operation.
 """
 
 import functools
@@ -73,6 +74,7 @@ def mcp_guardrail(
             # 4. Proceed with guarded tool invocation
             return await func(*args, **kwargs)
 
+        wrapper.__mcp_guardrail__ = {"tool": tool_name, "is_write": is_write}  # type: ignore[attr-defined]
         return wrapper  # type: ignore[return-value]
 
     return decorator

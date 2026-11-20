@@ -22,17 +22,20 @@ export const DEFAULT_MOCK_CONNECTOR: ConnectorResponse = {
 export interface ConnectorStoreState {
   connector: ConnectorResponse;
   bannerMessage: string | null;
+  errorMessage: string | null;
   setConnector: (connector: ConnectorResponse) => void;
   toggleReadOnly: () => boolean;
   refreshToken: () => void;
   revokeConnector: () => void;
   reconnectConnector: () => void;
   setBannerMessage: (msg: string | null) => void;
+  setErrorMessage: (msg: string | null) => void;
 }
 
 export const useConnectorStore = create<ConnectorStoreState>((set) => ({
   connector: DEFAULT_MOCK_CONNECTOR,
   bannerMessage: null,
+  errorMessage: null,
   setConnector: (connector) => set({ connector }),
   toggleReadOnly: () => {
     let nextVal = false;
@@ -47,6 +50,7 @@ export const useConnectorStore = create<ConnectorStoreState>((set) => ({
         bannerMessage: nextVal
           ? "Read-Only Mode enabled. Outbound write operations (send email) are blocked."
           : "Read-Only Mode disabled. Outbound write operations are active.",
+        errorMessage: null,
       };
     });
     return nextVal;
@@ -62,6 +66,7 @@ export const useConnectorStore = create<ConnectorStoreState>((set) => ({
         updated_at: new Date().toISOString(),
       },
       bannerMessage: "OAuth access token refreshed successfully (+1h expiry).",
+      errorMessage: null,
     })),
   revokeConnector: () =>
     set((state) => ({
@@ -72,6 +77,7 @@ export const useConnectorStore = create<ConnectorStoreState>((set) => ({
         updated_at: new Date().toISOString(),
       },
       bannerMessage: "Google Workspace connector disconnected. Status set to Revoked.",
+      errorMessage: null,
     })),
   reconnectConnector: () =>
     set((state) => ({
@@ -84,6 +90,8 @@ export const useConnectorStore = create<ConnectorStoreState>((set) => ({
         updated_at: new Date().toISOString(),
       },
       bannerMessage: "Google Workspace connector reconnected successfully.",
+      errorMessage: null,
     })),
   setBannerMessage: (bannerMessage) => set({ bannerMessage }),
+  setErrorMessage: (errorMessage) => set({ errorMessage }),
 }));

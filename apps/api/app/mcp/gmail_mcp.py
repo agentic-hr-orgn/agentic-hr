@@ -7,6 +7,7 @@ from typing import Any
 
 from sqlalchemy import desc, select
 
+from app.core.timezones import iso_pkt
 from app.mcp.base import FastMCP
 from app.mcp.context import get_current_mcp_context, get_mcp_session
 from app.mcp.guardrails import mcp_guardrail
@@ -90,7 +91,7 @@ async def list_sent_messages_tool(
                 "provider_message_id": msg.provider_message_id,
                 "status": msg.status,
                 "error_message": msg.error_message,
-                "created_at": msg.created_at.isoformat() if msg.created_at else None,
+                "created_at": iso_pkt(msg.created_at),
             }
             for msg in messages
         ]

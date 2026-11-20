@@ -7,6 +7,7 @@ and list_drive_files_tool under ADR 006 drive.file least-privilege scope.
 import base64
 from typing import Any
 
+from app.core.timezones import iso_pkt
 from app.mcp.base import FastMCP
 from app.mcp.context import get_current_mcp_context, get_mcp_session
 from app.mcp.guardrails import mcp_guardrail
@@ -85,7 +86,7 @@ async def upload_drive_file_tool(
             "web_view_link": record.web_view_link,
             "folder_id": record.folder_id,
             "parent_folder_id": record.folder_id,
-            "created_at": record.created_at.isoformat() if record.created_at else None,
+            "created_at": iso_pkt(record.created_at),
         }
 
 
@@ -150,7 +151,7 @@ async def list_drive_files_tool(
                 "web_view_link": r.web_view_link,
                 "folder_id": r.folder_id,
                 "parent_folder_id": r.folder_id,
-                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "created_at": iso_pkt(r.created_at),
             }
             for r in records
         ]

@@ -2,10 +2,13 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import SettingsPage from "@/app/(dashboard)/settings/page";
+import * as backendStatusHook from "@/hooks/use-backend-status";
 import * as connectorsHook from "@/hooks/use-connectors";
 import * as currentUserHook from "@/hooks/use-current-user";
+import { useConnectorStore } from "@/stores/connector-store";
 import type { ConnectorResponse } from "@agentic-hr/contracts";
 
+vi.mock("@/hooks/use-backend-status");
 vi.mock("@/hooks/use-connectors");
 vi.mock("@/hooks/use-current-user");
 
@@ -36,6 +39,22 @@ describe("SettingsPage - Connector Subsystem UI", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useConnectorStore.setState({
+      connector: baseConnector,
+      bannerMessage: null,
+      errorMessage: null,
+    });
+
+    vi.spyOn(backendStatusHook, "useBackendStatus").mockReturnValue({
+      status: "live",
+      health: null,
+      isLive: true,
+      isStandby: false,
+      isChecking: false,
+      useFakeIntegrations: true,
+      refetch: vi.fn(),
+      isFetching: false,
+    } as any);
 
     vi.spyOn(currentUserHook, "useCurrentUser").mockReturnValue({
       data: {
@@ -59,6 +78,7 @@ describe("SettingsPage - Connector Subsystem UI", () => {
       data: [baseConnector],
       isLoading: false,
       error: null,
+      refetch: vi.fn(),
     } as any);
 
     vi.spyOn(connectorsHook, "useToggleReadOnly").mockReturnValue({
@@ -210,5 +230,24 @@ describe("SettingsPage - Connector Subsystem UI", () => {
     expect(html).not.toContain("refresh_token");
     expect(html).not.toContain("ya29.");
     expect(html).not.toContain("AES-256-GCM$");
+  });
+
+  it("displays ADR 007 4-tier routing matrix and surfaces 401 refresh error without fabricating success", () => {
+    mockRefreshMutate.mockImplementation((_id, options) => {
+      options?.onError?.(new Error("CONNECTOR_AUTH_EXPIRED: invalid_grant"));
+    });
+
+    render(<SettingsPage />);
+
+    expect(screen.getByText(/ADR 007: 4-Tier Routing/i)).toBeInTheDocument();
+    expect(screen.getByText(/private tier \(fail-closed\)/i)).toBeInTheDocument();
+
+    const refreshBtn = screen.getByRole("button", { name: /Refresh Token/i });
+    fireEvent.click(refreshBtn);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("CONNECTOR_AUTH_EXPIRED: invalid_grant");
+    expect(
+      screen.queryByText(/OAuth access token refreshed successfully/i)
+    ).not.toBeInTheDocument();
   });
 });

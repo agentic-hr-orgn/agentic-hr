@@ -5,43 +5,92 @@ import { usePathname } from "next/navigation";
 import { Activity, ShieldCheck, Menu, Building2 } from "lucide-react";
 import { OrganizationSwitcher, UserButton, useAuth } from "@clerk/nextjs";
 import { Badge } from "@/components/ui/badge";
-import { useHealthQuery } from "@/hooks/use-health";
+import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { getApiHostLabel, PLATFORM_STAGE } from "@/lib/platform";
 import { useUIStore } from "@/stores/ui-store";
 
 interface HeaderProps {
   onMenuClick?: () => void;
 }
 
-const routeTitles: Record<string, { title: string; subtitle: string }> = {
-  "/": { title: "Dashboard Overview", subtitle: "Autonomous SME Workforce Hub" },
-  "/candidates": { title: "Candidate Management", subtitle: "DocuVerify OCR & Rubric Screener" },
-  "/assessments": { title: "Technical Assessments", subtitle: "E2B Sandboxed Code Tester" },
-  "/policies": { title: "Corporate Policy Brain", subtitle: "Bilingual English & Urdu RAG" },
-  "/employees": { title: "Employee Directory", subtitle: "Postgres Authoritative, Sheets Synced" },
-  "/settings": { title: "Platform Settings", subtitle: "Multi-Tenant & Integration Boundary" },
-};
+const routeTitles: Array<{ prefix: string; title: string; subtitle: string }> = [
+  {
+    prefix: "/approvals/",
+    title: "Approval Correction",
+    subtitle: "Revise & Resubmit Returned Governance Draft",
+  },
+  {
+    prefix: "/approvals",
+    title: "Approvals Inbox",
+    subtitle: "Human-in-the-Loop Governance Gate",
+  },
+  {
+    prefix: "/candidates",
+    title: "Candidate Management",
+    subtitle: "DocuVerify OCR & Rubric Screener",
+  },
+  {
+    prefix: "/assessments",
+    title: "Technical Assessments",
+    subtitle: "E2B Sandboxed Code Tester",
+  },
+  {
+    prefix: "/policies",
+    title: "Corporate Policy Brain",
+    subtitle: "Bilingual English & Urdu RAG",
+  },
+  {
+    prefix: "/employees",
+    title: "Employee Directory",
+    subtitle: "Postgres Authoritative, Sheets Synced",
+  },
+  {
+    prefix: "/directory",
+    title: "Employee Directory",
+    subtitle: "Postgres Authoritative, Sheets Synced",
+  },
+  {
+    prefix: "/settings",
+    title: "Platform Settings",
+    subtitle: "Multi-Tenant & Integration Boundary",
+  },
+  {
+    prefix: "/",
+    title: "Dashboard Overview",
+    subtitle: "Autonomous SME Workforce Hub",
+  },
+];
+
+export function resolveRouteTitle(pathname: string): { title: string; subtitle: string } {
+  const normalized = pathname || "/";
+  if (normalized === "/") {
+    return { title: "Dashboard Overview", subtitle: "Autonomous SME Workforce Hub" };
+  }
+  const match = routeTitles.find(
+    (entry) => entry.prefix !== "/" && normalized.startsWith(entry.prefix)
+  );
+  return (
+    match || {
+      title: "Platform Core",
+      subtitle: "Agentic HR Core",
+    }
+  );
+}
 
 export function Header({ onMenuClick }: HeaderProps) {
   const pathname = usePathname();
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const { isLoaded, isSignedIn } = useAuth();
 
-  // FastAPI backend health query
-  const { data: health, isError } = useHealthQuery();
-  const apiOnline = health
-    ? health.status === "healthy" || health.status === "ok"
-    : isError
-      ? false
-      : null;
+  // FastAPI backend health status
+  const { status: backendStatus } = useBackendStatus();
+  const apiHost = getApiHostLabel();
 
   // Authoritative verified user context from FastAPI /api/v1/auth/me
   const { data: currentUser } = useCurrentUser();
 
-  const currentRoute = routeTitles[pathname] || {
-    title: "Platform Core",
-    subtitle: "Agentic HR Core",
-  };
+  const currentRoute = resolveRouteTitle(pathname);
 
   const handleMenuClick = onMenuClick || toggleSidebar;
 
@@ -69,7 +118,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               {currentRoute.title}
             </h2>
             <Badge variant="primary" className="hidden sm:inline-flex text-[11px]">
-              Stage 2
+              {PLATFORM_STAGE}
             </Badge>
           </div>
           <p className="text-[11px] text-textSecondary hidden sm:block">{currentRoute.subtitle}</p>
@@ -102,25 +151,29 @@ export function Header({ onMenuClick }: HeaderProps) {
         {/* Backend Status indicator */}
         <div
           className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 border text-xs font-medium transition-colors ${
-            apiOnline === true
+            backendStatus === "live"
               ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-              : apiOnline === false
+              : backendStatus === "standby"
                 ? "bg-amber-50 text-amber-800 border-amber-200"
                 : "bg-slate-50 text-slate-700 border-slate-200"
           }`}
         >
           <Activity
             className={`h-3 w-3 ${
-              apiOnline === true
+              backendStatus === "live"
                 ? "text-emerald-600 animate-pulse"
-                : apiOnline === false
+                : backendStatus === "standby"
                   ? "text-amber-600"
                   : "text-slate-400"
             }`}
           />
           <span className="hidden sm:inline">FastAPI:</span>
           <span>
-            {apiOnline === true ? "Online (8000)" : apiOnline === false ? "Standby" : "Querying..."}
+            {backendStatus === "live"
+              ? `Online (${apiHost})`
+              : backendStatus === "standby"
+                ? "Standby"
+                : "Querying..."}
           </span>
         </div>
 

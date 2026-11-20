@@ -12,11 +12,28 @@ from sqlalchemy import select
 from temporalio import activity
 from temporalio.exceptions import ApplicationError
 
+from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.integrations.base import CalendarEvent, EmailMessage
 from app.integrations.factory import get_calendar_service, get_email_service
 from app.models.approval import Approval
 from app.models.tenant import set_tenant_context
+
+
+def _require_fake_integrations(activity_name: str) -> None:
+    """
+    Fail-closed guard preventing direct Stage 1/2 activity adapters from bypassing
+    execute_connector_call when USE_FAKE_INTEGRATIONS=false.
+    Stage 4+ workflows must route live dispatches through EmailDeliveryService /
+    CalendarSchedulingService with tenant-scoped sessions.
+    """
+    if not settings.USE_FAKE_INTEGRATIONS:
+        raise ApplicationError(
+            f"Activity '{activity_name}' cannot call raw integration clients when "
+            "USE_FAKE_INTEGRATIONS=false; it must route through EmailDeliveryService / "
+            "CalendarSchedulingService (execute_connector_call).",
+            non_retryable=True,
+        )
 
 
 @activity.defn
@@ -32,6 +49,7 @@ async def send_welcome_notification(candidate_name: str, candidate_email: str) -
     Sends an automated onboarding / candidate acknowledgement notification.
     Routes strictly through FakeGmailService (simulated dispatch).
     """
+    _require_fake_integrations("send_welcome_notification")
     activity.logger.info(f"Executing send_welcome_notification to {candidate_email}")
     email_service = get_email_service()
 
@@ -60,6 +78,7 @@ async def schedule_interview_activity(candidate_name: str, candidate_email: str)
     Schedules a technical assessment / screening interview.
     Routes strictly through FakeCalendarService (simulated Google Meet event).
     """
+    _require_fake_integrations("schedule_interview_activity")
     activity.logger.info(f"Executing schedule_interview_activity for {candidate_name}")
     calendar_service = get_calendar_service()
 
@@ -96,6 +115,7 @@ async def notify_changes_requested_activity(
     Sends simulated email notification informing the requester that corrections are required.
     Routes strictly through FakeGmailService.
     """
+    _require_fake_integrations("notify_changes_requested_activity")
     activity.logger.info(f"Executing notify_changes_requested_activity for approval {approval_id}")
     email_service = get_email_service()
 
@@ -124,6 +144,7 @@ async def notify_approval_decision_activity(
     Dispatches terminal decision notification (Approved or Rejected) to relevant parties.
     Routes strictly through FakeGmailService.
     """
+    _require_fake_integrations("notify_approval_decision_activity")
     activity.logger.info(
         f"Executing notify_approval_decision_activity for approval {approval_id}: {decision}"
     )
@@ -152,6 +173,7 @@ async def notify_resubmitted_activity(
     Notifies the assigned approver role that a corrected draft has been resubmitted (Round N).
     Routes strictly through FakeGmailService.
     """
+    _require_fake_integrations("notify_resubmitted_activity")
     activity.logger.info(
         f"Executing notify_resubmitted_activity for approval {approval_id} (rev {revision}, role {approver_role})"
     )

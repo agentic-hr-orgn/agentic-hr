@@ -17,26 +17,35 @@ import {
   FolderGit2,
   Settings,
   Activity,
-  Server,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StandbyBanner } from "@/components/ui/standby-banner";
 import { useAuth } from "@clerk/nextjs";
-import { sendTestEmail } from "@/lib/api-client";
-import { useHealthQuery } from "@/hooks/use-health";
+import { ApiHttpError } from "@/lib/api-request";
+import { sendTestEmail, type TestEmailResult } from "@/lib/api-client";
+import { PLATFORM_STAGE } from "@/lib/platform";
+import { useBackendStatus } from "@/hooks/use-backend-status";
+
+type EmailOutcome =
+  | { kind: "live"; payload: TestEmailResult }
+  | { kind: "standby-simulator"; payload: TestEmailResult }
+  | { kind: "error"; status: number; code: string; message: string };
 
 export default function DashboardPage() {
-  const [testResult, setTestResult] = useState<string | null>(null);
+  const [emailOutcome, setEmailOutcome] = useState<EmailOutcome | null>(null);
   const [isSending, setIsSending] = useState(false);
   const { getToken, isLoaded, isSignedIn } = useAuth();
 
   // Live backend telemetry powered by TanStack Query & generated OpenAPI client
-  const { data: health, isLoading: isHealthLoading, isError: isHealthError } = useHealthQuery();
+  const { health, isStandby, useFakeIntegrations, refetch, isFetching } = useBackendStatus();
 
   const handleTestEmail = async () => {
     setIsSending(true);
-    setTestResult(null);
+    setEmailOutcome(null);
     try {
       let token: string | null = null;
       if (isLoaded && isSignedIn) {
@@ -53,18 +62,26 @@ export default function DashboardPage() {
         "Simulated system test email sent through Stage 3 Gmail connector with USE_FAKE_INTEGRATIONS=true.",
         token
       );
-      setTestResult(JSON.stringify(res, null, 2));
-    } catch {
-      // Graceful fallback to local in-memory simulator response (FastAPI offline / network error)
-      const fallback = {
-        status: "sent",
-        provider: "FakeGmailService",
-        recipient: "agentic.hr.test.ubaid.owner@gmail.com",
-        template: "system_test_email",
-        message_id: `fake_msg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-        timestamp: new Date().toISOString(),
-      };
-      setTestResult(JSON.stringify(fallback, null, 2));
+      setEmailOutcome({
+        kind: res.source === "live" ? "live" : "standby-simulator",
+        payload: res,
+      });
+    } catch (err: unknown) {
+      if (err instanceof ApiHttpError) {
+        setEmailOutcome({
+          kind: "error",
+          status: err.status,
+          code: err.code,
+          message: err.message,
+        });
+      } else {
+        setEmailOutcome({
+          kind: "error",
+          status: 500,
+          code: "CLIENT_ERROR",
+          message: err instanceof Error ? err.message : "Unexpected error sending test email.",
+        });
+      }
     } finally {
       setIsSending(false);
     }
@@ -81,10 +98,10 @@ export default function DashboardPage() {
                 variant="warning"
                 className="bg-amber-400/20 text-amber-200 border-amber-300/30"
               >
-                Stage 1 — Platform Skeleton
+                {PLATFORM_STAGE}
               </Badge>
               <Badge variant="primary" className="bg-white/20 text-white border-white/30">
-                USE_FAKE_INTEGRATIONS=true
+                USE_FAKE_INTEGRATIONS={String(useFakeIntegrations)}
               </Badge>
               {health && (
                 <Badge
@@ -101,7 +118,7 @@ export default function DashboardPage() {
             <p className="text-slate-200 max-w-2xl text-xs md:text-sm leading-relaxed">
               Autonomous workforce platform for SMEs. Decoupled Next.js 16 frontend, FastAPI
               backend, multi-tenant Postgres with Row-Level Security, and least-privilege Google
-              integrations.
+              Workspace connectors.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -118,8 +135,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* TanStack Query Live Backend Telemetry */}
-      {health && (
+      {/* Live Backend Telemetry or Standby Banner */}
+      {health ? (
         <Card className="border-emerald-200 bg-emerald-50/30">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -161,27 +178,103 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-      )}
+      ) : isStandby ? (
+        <StandbyBanner
+          message="FastAPI backend is offline. Dashboard telemetry is paused and Test Fake Email will run in local standby simulator mode."
+          onRetry={() => refetch()}
+          isRetrying={isFetching}
+        />
+      ) : null}
 
-      {/* Verification Output Banner */}
-      {testResult && (
-        <Card className="border-primary/40 bg-primary/5">
+      {/* Verification Output Banner (3 explicit states: live / standby-simulator / error) */}
+      {emailOutcome && (
+        <Card
+          className={
+            emailOutcome.kind === "error"
+              ? "border-rose-300 bg-rose-50/70"
+              : emailOutcome.kind === "standby-simulator"
+                ? "border-amber-300 bg-amber-50/60"
+                : "border-primary/40 bg-primary/5"
+          }
+        >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-primary">
-              <CheckCircle2 className="h-4 w-4" />
-              Integration Verification Result (In-Memory Simulator):
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle
+                className={`text-sm font-semibold flex items-center gap-2 ${
+                  emailOutcome.kind === "error"
+                    ? "text-rose-800"
+                    : emailOutcome.kind === "standby-simulator"
+                      ? "text-amber-900"
+                      : "text-primary"
+                }`}
+              >
+                {emailOutcome.kind === "error" ? (
+                  <>
+                    <XCircle className="h-4 w-4 text-rose-600" />
+                    Connector Email Error (HTTP {emailOutcome.status} · {emailOutcome.code})
+                  </>
+                ) : emailOutcome.kind === "standby-simulator" ? (
+                  <>
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    Integration Verification Result (Standby Simulator — FastAPI Offline):
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    Integration Verification Result (Live FastAPI Connector):
+                  </>
+                )}
+              </CardTitle>
+              <Badge
+                variant={
+                  emailOutcome.kind === "error"
+                    ? "outline"
+                    : emailOutcome.kind === "standby-simulator"
+                      ? "warning"
+                      : "success"
+                }
+              >
+                {emailOutcome.kind === "error"
+                  ? `HTTP ${emailOutcome.status}`
+                  : emailOutcome.kind === "standby-simulator"
+                    ? "Standby Simulator"
+                    : "Live FastAPI"}
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent>
-            <pre className="text-xs bg-navy text-slate-100 p-4 rounded-small overflow-x-auto font-mono">
-              {testResult}
-            </pre>
+            {emailOutcome.kind === "error" ? (
+              <div
+                role="alert"
+                className="text-xs text-rose-900 bg-white border border-rose-200 p-3 rounded-small font-medium"
+              >
+                {emailOutcome.message}
+              </div>
+            ) : (
+              <pre className="text-xs bg-navy text-slate-100 p-4 rounded-small overflow-x-auto font-mono">
+                {JSON.stringify(emailOutcome.payload, null, 2)}
+              </pre>
+            )}
           </CardContent>
         </Card>
       )}
 
       {/* Quick Navigation Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Link
+          href="/approvals"
+          className="flex flex-col justify-between p-3.5 rounded-medium border border-appBorder bg-surface hover:border-primary/60 hover:shadow-sm transition-all"
+        >
+          <div className="flex items-center justify-between text-primary mb-2">
+            <CheckCircle2 className="h-4 w-4" />
+            <ArrowRight className="h-3.5 w-3.5 text-textSecondary" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-textPrimary leading-none">Approvals</p>
+            <p className="text-[10px] text-textSecondary mt-1">Human Gate</p>
+          </div>
+        </Link>
+
         <Link
           href="/candidates"
           className="flex flex-col justify-between p-3.5 rounded-medium border border-appBorder bg-surface hover:border-primary/60 hover:shadow-sm transition-all"
@@ -240,7 +333,7 @@ export default function DashboardPage() {
 
         <Link
           href="/settings"
-          className="col-span-2 md:col-span-1 flex flex-col justify-between p-3.5 rounded-medium border border-appBorder bg-surface hover:border-primary/60 hover:shadow-sm transition-all"
+          className="flex flex-col justify-between p-3.5 rounded-medium border border-appBorder bg-surface hover:border-primary/60 hover:shadow-sm transition-all"
         >
           <div className="flex items-center justify-between text-primary mb-2">
             <Settings className="h-4 w-4" />
@@ -248,7 +341,7 @@ export default function DashboardPage() {
           </div>
           <div>
             <p className="text-xs font-bold text-textPrimary leading-none">Settings</p>
-            <p className="text-[10px] text-textSecondary mt-1">Tenant & Config</p>
+            <p className="text-[10px] text-textSecondary mt-1">Tenant & Connectors</p>
           </div>
         </Link>
       </div>
@@ -280,8 +373,8 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="text-xs text-textSecondary space-y-1">
             <p className="font-semibold text-textPrimary">uv-managed virtualenv</p>
-            <p>Temporal Cloud / Local Worker</p>
-            <p>Pydantic Settings & JSON Logs</p>
+            <p>Temporal Worker + Outbox Publisher</p>
+            <p>13 FastMCP Guarded Tools</p>
           </CardContent>
         </Card>
 
@@ -325,7 +418,7 @@ export default function DashboardPage() {
             Core AI Workforce Archetypes
           </h2>
           <p className="text-xs text-textSecondary">
-            Four specialized agents coordinated by the Agentic HR platform.
+            Four specialized agents coordinated by the Agentic HR platform (ADR 007 4-tier routing).
           </p>
         </div>
 
@@ -344,7 +437,7 @@ export default function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="text-xs text-textSecondary">
-              <p className="font-semibold text-textPrimary">Model: Gemini 3.5 Flash-Lite</p>
+              <p className="font-semibold text-textPrimary">Route: cheap / private (PII)</p>
               <p>Supports low-quality PDFs and Urdu/English docs.</p>
             </CardContent>
           </Card>
@@ -363,7 +456,7 @@ export default function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="text-xs text-textSecondary">
-              <p className="font-semibold text-textPrimary">Model: Gemini 3.5 Flash-Lite</p>
+              <p className="font-semibold text-textPrimary">Route: cheap / strong</p>
               <p>Generates structured scorecard and hiring recommendations.</p>
             </CardContent>
           </Card>
@@ -401,8 +494,8 @@ export default function DashboardPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="text-xs text-textSecondary">
-              <p className="font-semibold text-textPrimary">Model: Gemini 3.8 Flash</p>
-              <p>Embeddings: Gemini Embedding 2 (Urdu + Eng).</p>
+              <p className="font-semibold text-textPrimary">Route: strong / reasoning</p>
+              <p>Embeddings: Multilingual (Urdu + English).</p>
             </CardContent>
           </Card>
         </div>
@@ -413,7 +506,7 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <span>Synthetic Dataset (Acme Tech Solutions)</span>
-            <Badge variant="outline">Stage 0 Kit</Badge>
+            <Badge variant="outline">Synthetic Kit (ADR 006)</Badge>
           </CardTitle>
           <CardDescription className="text-xs">
             Configured in accordance with docs/synthetic-data-plan.md and

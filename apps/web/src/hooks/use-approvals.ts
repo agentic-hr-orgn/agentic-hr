@@ -2,6 +2,9 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiHttpError, apiRequest } from "@/lib/api-request";
+import { getAuthHeader } from "@/lib/auth-header";
+import { API_BASE_URL } from "@/lib/platform";
 
 export interface ApprovalRevisionItem {
   id: string;
@@ -45,58 +48,45 @@ export interface CreateApprovalInput {
   approver_role: "owner" | "manager" | "hr_head" | "payroll_admin";
 }
 
-async function getAuthHeader(
-  getToken: () => Promise<string | null>,
-  isLoaded: boolean,
-  isSignedIn: boolean | undefined
-): Promise<string> {
-  let token: string | null = null;
-  if (isLoaded && isSignedIn) {
-    try {
-      token = await getToken();
-    } catch {
-      // Fallback
-    }
+function buildHeaders(authHeader: string | null): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (authHeader) {
+    headers.Authorization = authHeader;
   }
-  return token
-    ? `Bearer ${token}`
-    : "Bearer mock:agentic.hr.test.ubaid.owner@gmail.com:org_acme_tech_01";
+  return headers;
 }
 
 export function useApprovals(statusFilter?: string) {
   const { getToken, orgId, isLoaded, isSignedIn } = useAuth();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return useQuery<ApprovalItem[], Error>({
     queryKey: ["approvals", orgId, statusFilter],
     queryFn: async () => {
       const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
-      const url = new URL(`${apiUrl}/api/v1/approvals`);
+      const url = new URL(`${API_BASE_URL}/api/v1/approvals`);
       if (statusFilter && statusFilter !== "all") {
         url.searchParams.set("status", statusFilter);
       }
 
-      const res = await fetch(url.toString(), {
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await apiRequest<ApprovalItem[]>(
+        url.toString(),
+        { headers: buildHeaders(authHeader) },
+        "Failed to fetch approvals"
+      );
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.detail || `Failed to fetch approvals: ${res.status}`);
+      if (res.kind === "live") return res.data;
+      if (res.kind === "http_error") {
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
       }
-
-      return (await res.json()) as ApprovalItem[];
+      throw new Error("OFFLINE: FastAPI backend is currently unreachable.");
     },
-    staleTime: 1000 * 30, // 30 seconds
+    staleTime: 1000 * 30,
+    retry: 1,
   });
 }
 
 export function useApprovalDetails(id: string | null) {
   const { getToken, orgId, isLoaded, isSignedIn } = useAuth();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return useQuery<ApprovalItem, Error>({
     queryKey: ["approval", id, orgId],
@@ -104,27 +94,25 @@ export function useApprovalDetails(id: string | null) {
       if (!id) throw new Error("Approval ID required");
       const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
 
-      const res = await fetch(`${apiUrl}/api/v1/approvals/${id}`, {
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await apiRequest<ApprovalItem>(
+        `${API_BASE_URL}/api/v1/approvals/${id}`,
+        { headers: buildHeaders(authHeader) },
+        "Failed to fetch approval details"
+      );
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.detail || `Failed to fetch approval details: ${res.status}`);
+      if (res.kind === "live") return res.data;
+      if (res.kind === "http_error") {
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
       }
-
-      return (await res.json()) as ApprovalItem;
+      throw new Error("OFFLINE: FastAPI backend is currently unreachable.");
     },
     enabled: !!id,
+    retry: 1,
   });
 }
 
 export function useApprovalRevisions(id: string | null) {
   const { getToken, orgId, isLoaded, isSignedIn } = useAuth();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return useQuery<ApprovalRevisionItem[], Error>({
     queryKey: ["approval-revisions", id, orgId],
@@ -132,47 +120,45 @@ export function useApprovalRevisions(id: string | null) {
       if (!id) return [];
       const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
 
-      const res = await fetch(`${apiUrl}/api/v1/approvals/${id}/revisions`, {
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await apiRequest<ApprovalRevisionItem[]>(
+        `${API_BASE_URL}/api/v1/approvals/${id}/revisions`,
+        { headers: buildHeaders(authHeader) },
+        "Failed to fetch revisions"
+      );
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.detail || `Failed to fetch revisions: ${res.status}`);
+      if (res.kind === "live") return res.data;
+      if (res.kind === "http_error") {
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
       }
-
-      return (await res.json()) as ApprovalRevisionItem[];
+      throw new Error("OFFLINE: FastAPI backend is currently unreachable.");
     },
     enabled: !!id,
+    retry: 1,
   });
 }
 
 export function useApproveMutation() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const queryClient = useQueryClient();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason?: string }) => {
       const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
-      const res = await fetch(`${apiUrl}/api/v1/approvals/${id}/approve`, {
-        method: "POST",
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
+      const res = await apiRequest<ApprovalItem>(
+        `${API_BASE_URL}/api/v1/approvals/${id}/approve`,
+        {
+          method: "POST",
+          headers: buildHeaders(authHeader),
+          body: JSON.stringify({ reason: reason || null }),
         },
-        body: JSON.stringify({ reason: reason || null }),
-      });
+        "Approval failed"
+      );
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.detail || `Approval failed with status ${res.status}`);
+      if (res.kind === "live") return res.data;
+      if (res.kind === "http_error") {
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
       }
-
-      return (await res.json()) as ApprovalItem;
+      throw new Error("FastAPI backend is offline; approval decision could not be recorded.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
@@ -185,26 +171,25 @@ export function useApproveMutation() {
 export function useRequestChangesMutation() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const queryClient = useQueryClient();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
       const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
-      const res = await fetch(`${apiUrl}/api/v1/approvals/${id}/request-changes`, {
-        method: "POST",
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
+      const res = await apiRequest<ApprovalItem>(
+        `${API_BASE_URL}/api/v1/approvals/${id}/request-changes`,
+        {
+          method: "POST",
+          headers: buildHeaders(authHeader),
+          body: JSON.stringify({ reason }),
         },
-        body: JSON.stringify({ reason }),
-      });
+        "Requesting changes failed"
+      );
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.detail || `Requesting changes failed with status ${res.status}`);
+      if (res.kind === "live") return res.data;
+      if (res.kind === "http_error") {
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
       }
-
-      return (await res.json()) as ApprovalItem;
+      throw new Error("FastAPI backend is offline; change request could not be submitted.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
@@ -217,26 +202,25 @@ export function useRequestChangesMutation() {
 export function useRejectMutation() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const queryClient = useQueryClient();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
       const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
-      const res = await fetch(`${apiUrl}/api/v1/approvals/${id}/reject`, {
-        method: "POST",
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
+      const res = await apiRequest<ApprovalItem>(
+        `${API_BASE_URL}/api/v1/approvals/${id}/reject`,
+        {
+          method: "POST",
+          headers: buildHeaders(authHeader),
+          body: JSON.stringify({ reason }),
         },
-        body: JSON.stringify({ reason }),
-      });
+        "Rejection failed"
+      );
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.detail || `Rejection failed with status ${res.status}`);
+      if (res.kind === "live") return res.data;
+      if (res.kind === "http_error") {
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
       }
-
-      return (await res.json()) as ApprovalItem;
+      throw new Error("FastAPI backend is offline; rejection could not be recorded.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
@@ -249,26 +233,25 @@ export function useRejectMutation() {
 export function useResubmitMutation() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const queryClient = useQueryClient();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: Record<string, any> }) => {
+    mutationFn: async ({ id, payload }: { id: string; payload: Record<string, unknown> }) => {
       const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
-      const res = await fetch(`${apiUrl}/api/v1/approvals/${id}/resubmit`, {
-        method: "POST",
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
+      const res = await apiRequest<ApprovalItem>(
+        `${API_BASE_URL}/api/v1/approvals/${id}/resubmit`,
+        {
+          method: "POST",
+          headers: buildHeaders(authHeader),
+          body: JSON.stringify({ payload }),
         },
-        body: JSON.stringify({ payload }),
-      });
+        "Resubmission failed"
+      );
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.detail || `Resubmission failed with status ${res.status}`);
+      if (res.kind === "live") return res.data;
+      if (res.kind === "http_error") {
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
       }
-
-      return (await res.json()) as ApprovalItem;
+      throw new Error("FastAPI backend is offline; resubmission could not be completed.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
@@ -281,26 +264,25 @@ export function useResubmitMutation() {
 export function useCreateApprovalMutation() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const queryClient = useQueryClient();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return useMutation({
     mutationFn: async (input: CreateApprovalInput) => {
       const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
-      const res = await fetch(`${apiUrl}/api/v1/approvals`, {
-        method: "POST",
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
+      const res = await apiRequest<ApprovalItem>(
+        `${API_BASE_URL}/api/v1/approvals`,
+        {
+          method: "POST",
+          headers: buildHeaders(authHeader),
+          body: JSON.stringify(input),
         },
-        body: JSON.stringify(input),
-      });
+        "Approval creation failed"
+      );
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.detail || `Creation failed with status ${res.status}`);
+      if (res.kind === "live") return res.data;
+      if (res.kind === "http_error") {
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
       }
-
-      return (await res.json()) as ApprovalItem;
+      throw new Error("FastAPI backend is offline; approval request could not be created.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });

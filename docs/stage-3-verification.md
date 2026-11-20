@@ -422,3 +422,26 @@ The next sequential stage in our 14-Stage Master Roadmap is:
 
 **Stage 3 is formally certified and closed. Ready for Stage 4 implementation upon instruction.**
 
+---
+
+## 9. Pass 2 Hardening Audit Addendum (2026-11-20)
+
+Prior to starting Stage 4, a second-pass audit hardened Stage 3 Connectors, FastMCP, and the Next.js 16 Enterprise UI:
+
+1. **401 / `invalid_grant` Circuit-Breaker Durability (A1–A4)**:
+   - `get_mcp_session()` (`apps/api/app/mcp/context.py`) and `get_db_session()` (`apps/api/app/db/session.py`) now commit on `ConnectorAuthExpiredError` before re-raising so `needs_reconnect`, `jobs_paused=True`, `audit_logs`, and idempotency `failed` markers survive across both MCP tools and REST endpoints.
+   - `POST /api/v1/connectors/{id}/refresh` catches `ConnectorAuthExpiredError` -> commits + HTTP 401 `CONNECTOR_AUTH_EXPIRED` (instead of 500), and maps `ConnectorServiceUnavailableError` (503) / `ConnectorError` (502).
+   - `POST /api/v1/connectors/{id}/reconnect` returns HTTP `409 OAUTH_REAUTH_REQUIRED` with a signed `authorization_url` when `USE_FAKE_INTEGRATIONS=false` while preserving fake/dev mode behavior.
+   - Global exception handlers in `apps/api/app/core/errors.py` map connector rate-limit (`429` + `Retry-After`), unavailable (`503`), read-only (`403`), auth-expired (`401`), and not-found (`404`) errors consistently.
+2. **Wrapper, Guardrail & `Asia/Karachi` Timezone Coverage (B1–B7)**:
+   - Eliminated Sheets batch rate-limit double counting (`sheets.sync.rows` per-row scope) and ensured inner `429` responses re-queue rows as `pending` without burning `retry_count`.
+   - Added fail-closed `_require_fake_integrations` guards on direct Stage 1/2 Temporal activities and `FakeEventDispatcher` when `USE_FAKE_INTEGRATIONS=false`.
+   - Consolidated `Asia/Karachi` (`PKT, UTC+05:00`) normalization into `apps/api/app/core/timezones.py` (`KarachiDatetime`, `to_karachi`, `iso_pkt`) across Calendar/Sheets schemas, `CalendarSchedulingService`, and MCP tool outputs.
+   - Added `__mcp_guardrail__` metadata + AST scan test verifying 100% guardrail coverage and zero unauthorized `app.integrations.factory` bypasses.
+3. **Next.js 16 Enterprise UI & Live/Standby Polish (C1–C8)**:
+   - Introduced `apiRequest()` (`live` / `http_error` / `offline`), shared `getAuthHeader()` (dev-only mock fallback), `formatPKT()`, `useBackendStatus()`, and `<StandbyBanner />`.
+   - Fixed Settings and Overview so live HTTP 4xx/5xx responses surface real errors instead of fabricating success; added ADR 007 4-tier routing matrix to `/settings`.
+   - Added `"royal-blue"` Tailwind token, read-only standby panel on `/approvals`, React Query skeleton + standby sample on `/employees`, permanent `/directory -> /employees` redirect in `next.config.mjs`, and longest-prefix header titles.
+4. **Regression Suite**: Added 8 backend regression tests in `apps/api/tests/test_stage3_pass2_hardening.py`, updated frontend Vitest suites, and extended Playwright E2E smoke tests.
+
+

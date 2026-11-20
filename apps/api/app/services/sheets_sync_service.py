@@ -192,6 +192,7 @@ class SheetsSyncService:
 
         completed_count = 0
         failed_count = 0
+        rate_limited = False
         details: list[dict[str, Any]] = []
 
         for item in queue_items:
@@ -223,8 +224,8 @@ class SheetsSyncService:
                         access_token=token,
                     ),
                     actor_id=actor_id,
-                    rate_limit_scope="sheets.sync",
-                    max_requests_per_minute=30,
+                    rate_limit_scope="sheets.sync.rows",
+                    max_requests_per_minute=600,
                     audit_target_type="sheets_sync_queue",
                     audit_target_id=item.id,
                     audit_details={
@@ -241,6 +242,22 @@ class SheetsSyncService:
             except (ReadOnlyConnectorError, ConnectorAuthExpiredError):
                 item.status = "pending"
                 await session.flush()
+                raise
+            except HTTPException as http_exc:
+                if http_exc.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+                    # Do NOT burn retry_count or fail rows on rate limiting; re-queue and stop batch
+                    item.status = "pending"
+                    item.updated_at = datetime.now(UTC)
+                    await session.flush()
+                    rate_limited = True
+                    details.append(
+                        {
+                            "id": str(item.id),
+                            "status": "rate_limited",
+                            "entity_id": item.entity_id,
+                        }
+                    )
+                    break
                 raise
             except Exception as sync_exc:
                 item.retry_count += 1
@@ -272,15 +289,21 @@ class SheetsSyncService:
                 "processed_count": len(queue_items),
                 "completed_count": completed_count,
                 "failed_count": failed_count,
+                "rate_limited": rate_limited,
                 "spreadsheet_id": target_sheet_id,
             },
             actor_id=actor_id,
             tenant_id=t_id,
         )
 
+        batch_status = (
+            "rate_limited"
+            if rate_limited
+            else ("completed" if failed_count == 0 else "partial_failure")
+        )
         return SheetsSyncResponse(
-            status="completed" if failed_count == 0 else "partial_failure",
-            processed_count=len(queue_items),
+            status=batch_status,
+            processed_count=completed_count + failed_count,
             completed_count=completed_count,
             failed_count=failed_count,
             spreadsheet_id=target_sheet_id,
@@ -352,8 +375,8 @@ class SheetsSyncService:
                 access_token=token,
             ),
             actor_id=actor_id,
-            rate_limit_scope="sheets.sync",
-            max_requests_per_minute=30,
+            rate_limit_scope="sheets.sync.rows",
+            max_requests_per_minute=600,
         )
 
         # Index sheet rows by employee_id (col 0) or email (col 2)
@@ -507,8 +530,8 @@ class SheetsSyncService:
                         access_token=token,
                     ),
                     actor_id=act_id,
-                    rate_limit_scope="sheets.sync",
-                    max_requests_per_minute=30,
+                    rate_limit_scope="sheets.sync.rows",
+                    max_requests_per_minute=600,
                     audit_target_type="sheets_drift_logs",
                     audit_target_id=uuid.uuid4(),
                     audit_details={
@@ -583,8 +606,8 @@ class SheetsSyncService:
                         )
                     ),
                     actor_id=act_id,
-                    rate_limit_scope="sheets.sync",
-                    max_requests_per_minute=30,
+                    rate_limit_scope="sheets.sync.rows",
+                    max_requests_per_minute=600,
                     audit_target_type="sheets_drift_logs",
                     audit_target_id=uuid.uuid4(),
                     audit_details={

@@ -23,6 +23,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StandbyBanner } from "@/components/ui/standby-banner";
+import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   ApprovalItem,
@@ -31,9 +33,11 @@ import {
   useRejectMutation,
   useRequestChangesMutation,
 } from "@/hooks/use-approvals";
+import { formatPKT } from "@/lib/format";
 
 export default function ApprovalsPage() {
   const { data: currentUser } = useCurrentUser();
+  const { isStandby: isBackendStandby } = useBackendStatus();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedApprovalId, setSelectedApprovalId] = useState<string | null>(null);
 
@@ -64,6 +68,8 @@ export default function ApprovalsPage() {
   const approvedCount = approvals.filter((a) => a.status === "approved").length;
   const rejectedCount = approvals.filter((a) => a.status === "rejected").length;
 
+  const isOfflineOrError = isBackendStandby || !!error;
+
   const handleApprove = async (id: string) => {
     setActionError(null);
     setActionSuccess(null);
@@ -72,8 +78,8 @@ export default function ApprovalsPage() {
       setActionSuccess("Request successfully approved and committed to workflow.");
       setDecisionMode(null);
       setDecisionReason("");
-    } catch (err: any) {
-      setActionError(err.message || "Failed to approve request.");
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : "Failed to approve request.");
     }
   };
 
@@ -91,8 +97,8 @@ export default function ApprovalsPage() {
       );
       setDecisionMode(null);
       setDecisionReason("");
-    } catch (err: any) {
-      setActionError(err.message || "Failed to request changes.");
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : "Failed to request changes.");
     }
   };
 
@@ -108,8 +114,8 @@ export default function ApprovalsPage() {
       setActionSuccess("Request successfully rejected with reason recorded.");
       setDecisionMode(null);
       setDecisionReason("");
-    } catch (err: any) {
-      setActionError(err.message || "Failed to reject request.");
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : "Failed to reject request.");
     }
   };
 
@@ -232,6 +238,20 @@ export default function ApprovalsPage() {
         </div>
       </div>
 
+      {/* Read-Only Standby Banner when FastAPI is offline or errored */}
+      {isOfflineOrError && (
+        <StandbyBanner
+          title="Approvals Inbox in Read-Only Standby"
+          message={
+            error && !error.message.startsWith("OFFLINE:")
+              ? `Could not load approvals: ${error.message}. Governance decisions are disabled until connection is restored.`
+              : "FastAPI backend is offline. Governance records are never fabricated in standby mode and decision actions are disabled."
+          }
+          onRetry={() => refetch()}
+          isRetrying={isFetching}
+        />
+      )}
+
       {/* Summary KPI Badges */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <Card className="border-l-4 border-l-amber-500 shadow-sm">
@@ -352,7 +372,31 @@ export default function ApprovalsPage() {
           {/* List Cards */}
           <div className="space-y-2.5 max-h-[700px] overflow-y-auto pr-1">
             {isLoading ? (
-              <div className="p-8 text-center text-sm text-slate-500">Loading approvals...</div>
+              <div className="space-y-2.5 animate-pulse" aria-busy="true">
+                {Array.from({ length: 3 }).map((_, idx) => (
+                  <div key={idx} className="h-24 rounded-lg border border-slate-200 bg-slate-100" />
+                ))}
+              </div>
+            ) : isOfflineOrError ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-8 text-center">
+                <AlertTriangle className="mx-auto h-8 w-8 text-amber-500" />
+                <p className="mt-2 text-sm font-semibold text-navy">
+                  Governance Inbox Unavailable (Standby)
+                </p>
+                <p className="mt-1 text-xs text-amber-900">
+                  Connect the FastAPI backend to load live approvals from PostgreSQL.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetch()}
+                  disabled={isFetching}
+                  className="mt-4"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isFetching ? "animate-spin" : ""}`} />
+                  Retry Connection
+                </Button>
+              </div>
             ) : approvals.length === 0 ? (
               <div className="rounded-lg border border-dashed p-8 text-center">
                 <Clock className="mx-auto h-8 w-8 text-slate-300" />
@@ -406,7 +450,7 @@ export default function ApprovalsPage() {
 
                     <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
                       <span>By: {item.requester_name || item.requester_email || "System"}</span>
-                      <span>{new Date(item.created_at).toLocaleDateString()}</span>
+                      <span>{formatPKT(item.created_at, false)}</span>
                     </div>
                   </div>
                 );
@@ -443,7 +487,7 @@ export default function ApprovalsPage() {
                       "Corporate Policy Exception"}
                   </CardTitle>
                   <CardDescription>
-                    Submitted on {new Date(activeApproval.created_at).toLocaleString()} by{" "}
+                    Submitted on {formatPKT(activeApproval.created_at)} by{" "}
                     <span className="font-medium text-slate-700">
                       {activeApproval.requester_name || activeApproval.requester_email}
                     </span>
@@ -672,9 +716,7 @@ export default function ApprovalsPage() {
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-navy">Round {rev.revision_number}</span>
                             <span className="text-slate-400">
-                              {new Date(
-                                rev.submitted_at || activeApproval.created_at
-                              ).toLocaleString()}
+                              {formatPKT(rev.submitted_at || activeApproval.created_at)}
                             </span>
                           </div>
                           <div className="text-slate-600">
@@ -690,7 +732,7 @@ export default function ApprovalsPage() {
                                   Outcome: {rev.decision.replace("_", " ")}
                                 </span>
                                 <span className="text-slate-400">
-                                  {rev.decided_at ? new Date(rev.decided_at).toLocaleString() : ""}
+                                  {rev.decided_at ? formatPKT(rev.decided_at) : ""}
                                 </span>
                               </div>
                               {rev.decider_name && (
@@ -728,6 +770,7 @@ export default function ApprovalsPage() {
                           {/* 3 Decision Choice Buttons */}
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <Button
+                              disabled={isOfflineOrError}
                               onClick={() => {
                                 setDecisionMode("approve");
                                 setDecisionReason("");
@@ -743,6 +786,7 @@ export default function ApprovalsPage() {
                             </Button>
 
                             <Button
+                              disabled={isOfflineOrError}
                               onClick={() => {
                                 setDecisionMode("changes");
                                 setDecisionReason("");
@@ -758,6 +802,7 @@ export default function ApprovalsPage() {
                             </Button>
 
                             <Button
+                              disabled={isOfflineOrError}
                               onClick={() => {
                                 setDecisionMode("reject");
                                 setDecisionReason("");

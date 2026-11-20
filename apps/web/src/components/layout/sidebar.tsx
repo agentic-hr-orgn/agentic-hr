@@ -16,6 +16,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useUIStore } from "@/stores/ui-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
@@ -47,6 +48,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const storeIsOpen = useUIStore((state) => state.isSidebarOpen);
   const setSidebarOpen = useUIStore((state) => state.setSidebarOpen);
   const { data: currentUser } = useCurrentUser();
+  const { useFakeIntegrations } = useBackendStatus();
 
   const activeIsOpen = isOpen !== undefined ? isOpen : storeIsOpen;
   const handleClose = () => {
@@ -92,8 +94,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="border-b border-navy-light/30 bg-navy-dark/40 px-6 py-3">
           <div className="flex items-center justify-between">
             <span className="text-xs text-slate-300">Integrations:</span>
-            <Badge variant="warning" className="text-[10px] font-bold uppercase tracking-wider">
-              Fake Mode (ADR 006)
+            <Badge
+              variant={useFakeIntegrations ? "warning" : "success"}
+              className="text-[10px] font-bold uppercase tracking-wider"
+            >
+              {useFakeIntegrations ? "Fake Mode (ADR 006)" : "Live Mode (ADR 006)"}
             </Badge>
           </div>
         </div>

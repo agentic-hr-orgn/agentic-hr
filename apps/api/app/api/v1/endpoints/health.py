@@ -25,7 +25,7 @@ async def get_health(request: Request) -> HealthResponse:
 
     return HealthResponse(
         status="healthy",
-        stage="Stage 1: Platform Skeleton",
+        stage="Stage 3 complete — Stage 4 next",
         environment=settings.ENVIRONMENT,
         version="0.1.0",
         use_fake_integrations=settings.USE_FAKE_INTEGRATIONS,

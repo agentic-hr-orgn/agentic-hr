@@ -35,6 +35,7 @@ from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -78,7 +79,9 @@ from app.services.audit_service import write_audit
 from app.services.calendar_service import CalendarSchedulingService
 from app.services.connector_service import (
     ConnectorAuthExpiredError,
+    ConnectorError,
     ConnectorService,
+    ConnectorServiceUnavailableError,
     CredentialNotFoundError,
     InvalidScopeError,
     OAuthStateInvalidError,
@@ -328,6 +331,25 @@ async def refresh_connector_token(
         await ConnectorService.refresh_access_token(db, cred, actor_id=current_user.user_id)
         await db.commit()
         return ConnectorResponse.model_validate(cred)
+    except ConnectorAuthExpiredError as exc:
+        # Persist needs_reconnect + jobs_paused + audit log before raising 401
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"CONNECTOR_AUTH_EXPIRED: {exc}",
+        ) from exc
+    except ConnectorServiceUnavailableError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"CONNECTOR_UNAVAILABLE: {exc}",
+        ) from exc
+    except ConnectorError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"CONNECTOR_ERROR: {exc}",
+        ) from exc
     except CredentialNotFoundError as exc:
         await db.rollback()
         raise HTTPException(
@@ -342,8 +364,12 @@ async def reconnect_connector(
     id: UUID | None = None,
     current_user: AuthenticatedUserContext = Depends(require_role(["owner", "manager"])),
     db: AsyncSession = Depends(get_db),
-) -> ConnectorResponse:
-    """Restores status to connected and unpauses jobs for a revoked or expired credential."""
+) -> ConnectorResponse | JSONResponse:
+    """
+    Restores status to connected and unpauses jobs in fake/sandbox mode.
+    When USE_FAKE_INTEGRATIONS=false, returns HTTP 409 OAUTH_REAUTH_REQUIRED with a
+    signed Google OAuth authorization_url so real grants are never restored without consent.
+    """
     try:
         if id:
             cred = await ConnectorService.get_credential_by_id(db, current_user.tenant_id, id)
@@ -352,6 +378,24 @@ async def reconnect_connector(
             if not creds:
                 raise CredentialNotFoundError("No connector found to reconnect.")
             cred = creds[0]
+
+        if not settings.USE_FAKE_INTEGRATIONS:
+            auth_url = build_google_authorization_url(
+                tenant_id=current_user.tenant_id,
+                user_id=current_user.user_id,
+            )
+            return JSONResponse(
+                status_code=status.HTTP_409_CONFLICT,
+                content={
+                    "error": {
+                        "code": "OAUTH_REAUTH_REQUIRED",
+                        "message": "Reconnecting a live Google Workspace credential requires fresh OAuth consent.",
+                        "authorization_url": auth_url,
+                    },
+                    "code": "OAUTH_REAUTH_REQUIRED",
+                    "authorization_url": auth_url,
+                },
+            )
 
         cred.status = "connected"
         cred.jobs_paused = False

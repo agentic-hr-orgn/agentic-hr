@@ -9,10 +9,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.timezones import KarachiDatetime
+
 
 class TimeSlotSchema(BaseModel):
-    start_time: datetime
-    end_time: datetime
+    start_time: KarachiDatetime
+    end_time: KarachiDatetime
 
 
 class FreeBusyQueryRequest(BaseModel):
@@ -52,13 +54,13 @@ class CalendarEventResponse(BaseModel):
     tenant_id: UUID
     google_event_id: str
     title: str
-    start_time: datetime
-    end_time: datetime
+    start_time: KarachiDatetime
+    end_time: KarachiDatetime
     timezone: str
     attendees: list[str]
     description: str | None = None
     location: str | None = None
     hangout_link: str | None = None
     status: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: KarachiDatetime
+    updated_at: KarachiDatetime

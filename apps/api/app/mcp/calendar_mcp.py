@@ -8,6 +8,7 @@ Enforces Asia/Karachi (PKT, UTC+05:00) normalization and Google Meet link genera
 from datetime import datetime
 from typing import Any
 
+from app.core.timezones import iso_pkt
 from app.mcp.base import FastMCP
 from app.mcp.context import get_current_mcp_context, get_mcp_session
 from app.mcp.guardrails import mcp_guardrail
@@ -49,8 +50,8 @@ async def get_calendar_free_busy_tool(
         return {
             cal_id: [
                 {
-                    "start_time": slot.start_time.isoformat(),
-                    "end_time": slot.end_time.isoformat(),
+                    "start_time": iso_pkt(slot.start_time) or "",
+                    "end_time": iso_pkt(slot.end_time) or "",
                 }
                 for slot in slots
             ]
@@ -106,12 +107,12 @@ async def create_calendar_event_tool(
             "location": record.location,
             "meeting_link": record.hangout_link,
             "hangout_link": record.hangout_link,
-            "start_time": record.start_time.isoformat() if record.start_time else None,
-            "end_time": record.end_time.isoformat() if record.end_time else None,
+            "start_time": iso_pkt(record.start_time),
+            "end_time": iso_pkt(record.end_time),
             "timezone": record.timezone,
             "attendees": record.attendees,
             "status": record.status,
-            "created_at": record.created_at.isoformat() if record.created_at else None,
+            "created_at": iso_pkt(record.created_at),
         }
 
 
@@ -161,12 +162,12 @@ async def update_calendar_event_tool(
             "location": record.location,
             "meeting_link": record.hangout_link,
             "hangout_link": record.hangout_link,
-            "start_time": record.start_time.isoformat() if record.start_time else None,
-            "end_time": record.end_time.isoformat() if record.end_time else None,
+            "start_time": iso_pkt(record.start_time),
+            "end_time": iso_pkt(record.end_time),
             "timezone": record.timezone,
             "attendees": record.attendees,
             "status": record.status,
-            "updated_at": record.updated_at.isoformat() if record.updated_at else None,
+            "updated_at": iso_pkt(record.updated_at),
         }
 
 

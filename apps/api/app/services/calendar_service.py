@@ -7,7 +7,7 @@ Enforces IdempotencyGate, Read-Only mode, Redis rate limits, and audit logging.
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -15,16 +15,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.idempotency import IdempotencyGate, compute_payload_hash
+from app.core.timezones import DEFAULT_TIMEZONE, KARACHI_TZ_NAME, to_karachi
 from app.integrations.base import (
     CalendarEvent,
     CalendarEventUpdate,
     TimeSlot,
 )
 from app.integrations.factory import get_calendar_service
-from app.integrations.google.calendar_client import (
-    DEFAULT_TIMEZONE,
-    normalize_to_karachi_tz,
-)
 from app.models.calendar import CalendarEventRecord
 from app.services.connector_call_wrapper import execute_connector_call
 from app.services.connector_service import ConnectorService
@@ -128,8 +125,8 @@ class CalendarSchedulingService:
     ) -> CalendarEventRecord:
         """Creates a calendar event (with Google Meet link) normalized to Asia/Karachi timezone."""
         t_id = UUID(str(tenant_id))
-        s_norm = normalize_to_karachi_tz(start_time, timezone)
-        e_norm = normalize_to_karachi_tz(end_time, timezone)
+        s_norm = to_karachi(start_time, source_tz=timezone)
+        e_norm = to_karachi(end_time, source_tz=timezone)
         clean_attendees = [a.strip().lower() for a in (attendees or [])]
 
         if credential_id:
@@ -211,7 +208,7 @@ class CalendarSchedulingService:
                 hangout_link=hangout_link,
                 start_time=s_norm,
                 end_time=e_norm,
-                timezone=timezone,
+                timezone=KARACHI_TZ_NAME,
                 attendees=clean_attendees,
                 status="confirmed",
             )
@@ -263,8 +260,8 @@ class CalendarSchedulingService:
         record = res.scalars().first()
         target_event_id = record.google_event_id if record else event_id
 
-        s_norm = normalize_to_karachi_tz(start_time) if start_time else None
-        e_norm = normalize_to_karachi_tz(end_time) if end_time else None
+        s_norm = to_karachi(start_time) if start_time else None
+        e_norm = to_karachi(end_time) if end_time else None
         clean_attendees = [a.strip().lower() for a in attendees] if attendees is not None else None
 
         update_dto = CalendarEventUpdate(
@@ -310,13 +307,15 @@ class CalendarSchedulingService:
             await session.flush()
         else:
             # Create local representation if not already tracked
+            now_pkt = to_karachi(datetime.now(UTC))
             record = CalendarEventRecord(
                 tenant_id=t_id,
                 credential_id=cred.id,
                 google_event_id=target_event_id,
                 title=title or "Updated Event",
-                start_time=s_norm or datetime.now(),
-                end_time=e_norm or datetime.now(),
+                start_time=s_norm or now_pkt,
+                end_time=e_norm or now_pkt,
+                timezone=KARACHI_TZ_NAME,
                 attendees=clean_attendees or [],
                 status="confirmed",
             )

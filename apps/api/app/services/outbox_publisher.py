@@ -22,6 +22,7 @@ from uuid import UUID
 from sqlalchemy import and_, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.integrations.base import EmailMessage
 from app.integrations.fake.fake_gmail import FakeGmailService
 from app.models.outbox import OutboxEvent
@@ -86,6 +87,11 @@ class FakeEventDispatcher:
 
         # Default domain event routing
         if event.event_type.startswith("approval."):
+            if not settings.USE_FAKE_INTEGRATIONS:
+                raise PermanentDeliveryError(
+                    "FakeEventDispatcher cannot dispatch live emails when USE_FAKE_INTEGRATIONS=false; "
+                    "must route through EmailDeliveryService / execute_connector_call."
+                )
             payload = event.event_payload
             subject = f"[Action Required] Approval {event.event_type}: {payload.get('approval_type', 'General')}"
             recipient = payload.get("approver_email") or "agentic.hr.test.ubaid.owner@gmail.com"

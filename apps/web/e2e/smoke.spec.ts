@@ -87,4 +87,39 @@ test.describe("Frontend Smoke & Authentication Tests", () => {
     await reconnectBtn.click();
     await expect(page.getByText("Connected", { exact: true })).toBeVisible();
   });
+
+  test("directory route permanently redirects to /employees and core pages load without console or hydration errors", async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (err) => errors.push(`pageerror: ${err.message}`));
+    page.on("console", (msg) => {
+      if (msg.type() === "error") {
+        const text = msg.text();
+        // Ignore expected external/offline network errors when running standalone Playwright smoke
+        if (
+          !text.includes("ERR_CONNECTION_REFUSED") &&
+          !text.includes("Failed to load resource") &&
+          !text.includes("clerk.accounts.dev")
+        ) {
+          errors.push(`console.error: ${text}`);
+        }
+      }
+    });
+
+    await page.setExtraHTTPHeaders({ "x-e2e-test": "true" });
+
+    // Verify /directory -> /employees redirect
+    await page.goto("/directory");
+    await expect(page).toHaveURL(/.*\/employees/);
+    await expect(
+      page.getByRole("heading", { name: /Employee Directory & Sheets Synchronization/i })
+    ).toBeVisible();
+
+    // Verify /approvals loads cleanly with proper header title
+    await page.goto("/approvals");
+    await expect(page.getByRole("heading", { name: "Approvals Inbox" }).first()).toBeVisible();
+
+    expect(errors).toEqual([]);
+  });
 });

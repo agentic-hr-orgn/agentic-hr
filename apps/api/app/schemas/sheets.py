@@ -2,11 +2,12 @@
 Pydantic Schemas for Google Sheets Synchronization and Drift Management in Agentic HR Core.
 """
 
-from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.core.timezones import KarachiDatetime
 
 
 class SheetsSyncRequest(BaseModel):
@@ -68,4 +69,4 @@ class SheetsDriftLogResponse(BaseModel):
     sheets_value: str | None
     resolution: str
     resolved_by: UUID | None
-    created_at: datetime
+    created_at: KarachiDatetime

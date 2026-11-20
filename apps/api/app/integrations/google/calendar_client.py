@@ -6,12 +6,16 @@ Mandatory Default Timezone: Asia/Karachi (PKT, UTC+05:00).
 
 import logging
 import uuid
-import zoneinfo
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Any
 
 import httpx
 
+from app.core.timezones import (
+    DEFAULT_TIMEZONE,
+    get_karachi_tz,
+    normalize_to_karachi_tz,
+)
 from app.integrations.base import (
     CalendarEvent,
     CalendarEventUpdate,
@@ -27,23 +31,12 @@ from app.services.connector_service import (
 
 logger = logging.getLogger("agentic_hr.integrations.google.calendar")
 
-DEFAULT_TIMEZONE = "Asia/Karachi"
-
-
-def get_karachi_tz(tz_name: str = DEFAULT_TIMEZONE) -> datetime.tzinfo:
-    """Returns zoneinfo timezone if available, otherwise fixed UTC+05:00 offset."""
-    try:
-        return zoneinfo.ZoneInfo(tz_name)
-    except Exception:
-        return timezone(timedelta(hours=5), name=tz_name)
-
-
-def normalize_to_karachi_tz(dt: datetime, default_tz: str = DEFAULT_TIMEZONE) -> datetime:
-    """Normalizes naive or foreign datetime objects to Asia/Karachi (PKT, UTC+05:00)."""
-    target_tz = get_karachi_tz(default_tz)
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=target_tz)
-    return dt.astimezone(target_tz)
+__all__ = [
+    "DEFAULT_TIMEZONE",
+    "GoogleCalendarService",
+    "get_karachi_tz",
+    "normalize_to_karachi_tz",
+]
 
 
 class GoogleCalendarService(CalendarService):

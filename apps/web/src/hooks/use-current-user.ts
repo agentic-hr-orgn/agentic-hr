@@ -2,6 +2,9 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
+import { ApiHttpError, apiRequest } from "@/lib/api-request";
+import { getAuthHeader } from "@/lib/auth-header";
+import { API_BASE_URL } from "@/lib/platform";
 
 export interface AuthenticatedUserContext {
   user_id: string;
@@ -23,39 +26,25 @@ export function useCurrentUser() {
   return useQuery<AuthenticatedUserContext | null, Error>({
     queryKey: ["auth", "me", orgId, isSignedIn],
     queryFn: async () => {
-      let token: string | null = null;
-      if (isLoaded && isSignedIn) {
-        try {
-          token = await getToken();
-        } catch {
-          // Token extraction error fallback
-        }
+      const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (authHeader) {
+        headers.Authorization = authHeader;
       }
 
-      // If no live Clerk session token exists during local development or test mode,
-      // fallback to the authorized test owner account
-      const authHeader = token
-        ? `Bearer ${token}`
-        : "Bearer mock:agentic.hr.test.ubaid.owner@gmail.com:org_acme_tech_01";
+      const res = await apiRequest<AuthenticatedUserContext>(
+        `${API_BASE_URL}/api/v1/auth/me`,
+        { headers },
+        "Auth context request failed"
+      );
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await fetch(`${apiUrl}/api/v1/auth/me`, {
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        const errorMsg =
-          errorData?.error?.message || `Auth context request failed: ${response.status}`;
-        throw new Error(errorMsg);
+      if (res.kind === "live") return res.data;
+      if (res.kind === "http_error") {
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
       }
-
-      return (await response.json()) as AuthenticatedUserContext;
+      throw new Error("OFFLINE: FastAPI backend is unreachable.");
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    staleTime: 1000 * 60 * 5,
     retry: 1,
   });
 }

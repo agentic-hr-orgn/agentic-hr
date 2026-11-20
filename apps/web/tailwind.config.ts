@@ -20,6 +20,9 @@ const config: Config = {
           hover: "var(--color-primary-hover, #214FC5)",
           light: "#3675EA",
         },
+        "royal-blue": {
+          DEFAULT: "var(--color-primary, #2A5BDB)",
+        },
         surface: {
           DEFAULT: "var(--color-surface, #FFFFFF)",
           hover: "var(--color-surface-hover, #F1F4FA)",

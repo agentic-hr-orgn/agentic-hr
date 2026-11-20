@@ -35,7 +35,7 @@ The application is built on a decoupled, multi-tenant vertical-slice architectur
 Before writing code, altering configuration, or proposing architectural changes, future coding agents **MUST**:
 1. Read `CLAUDE.md` and this `AGENTS.md` file.
 2. Read all existing ADR documents in `docs/adr/`.
-3. Never introduce patterns or dependencies that violate ADR decisions (ADR 001 through 006).
+3. Never introduce patterns or dependencies that violate ADR decisions (ADR 001 through 007).
 4. Query user permission before altering host environments or launching standalone background processes.
 5. In planning mode (`/plan`), create a detailed implementation plan artifact and obtain explicit user approval before modifying code or files.
 
@@ -78,17 +78,19 @@ Only the following minimum scopes are permitted:
 
 ---
 
-## 6. AI Model Routing & Privacy Policy (ADR 003)
+## 6. AI Model Routing & Privacy Policy (ADR 003 & ADR 007)
 
-### Model Routing Matrix (100% Free Tier via Google AI Studio)
-- **Strong Model**: `gemini-3.8-flash` (15 RPM / 1,500 RPD, 1M context) — Policy Brain & complex reasoning.
-- **Cheap Model**: `gemini-3.5-flash-lite` (30 RPM / 1,500 RPD, 1M context) — High-throughput document ingestion & candidate screening.
-- **Multilingual Embedding**: `gemini-embedding-2` (100 RPM / 1,500 RPD, MRL dimensions: 768/1536/3072) — Urdu + English bilingual policy RAG.
+### Four-Tier Model Routing Matrix (Environment-Configured via `ModelGateway`)
+- **`cheap`** (`CHEAP_MODEL_PROVIDER` / `CHEAP_MODEL_ID`): High-throughput OCR structuring & bulk candidate screening (e.g., `gemini-3.5-flash-lite`, `gemini-3.8-flash`, `gemini-4-hydrogen`).
+- **`strong`** (`STRONG_MODEL_PROVIDER` / `STRONG_MODEL_ID`): Bilingual (English & Urdu) Policy Brain RAG & structured rubric analysis (e.g., `gemini-3.8-flash`, `claude-sonnet-5-5`, `gemini-4-argon`).
+- **`reasoning`** (`REASONING_MODEL_PROVIDER` / `REASONING_MODEL_ID`): Deep multi-step compliance & statutory edge-case critique (e.g., `claude-opus-5-5`).
+- **`private`** (`PRIVATE_MODEL_PROVIDER` / `PRIVATE_MODEL_ID` / `PRIVATE_MODEL_ENDPOINT`): **Fail-closed** VPC/private endpoint — mandatory for all real (non-synthetic) sensitive HR PII (CNICs, IBANs, compensation). Never falls back to public or free-tier routes.
+- **Multilingual Embedding**: `gemini-embedding-2` (MRL dimensions: 768/1536/3072) — Urdu + English bilingual policy RAG.
 
-### Free-Tier No-Training Privacy Boundary
-- Content sent through the Google AI Studio Free Tier is subject to human review and training to improve Google products.
+### Privacy & No-Training Boundary
+- Content sent through free-tier developer endpoints (e.g. Google AI Studio Free Tier) is subject to human review and training.
 - **Mandatory Policy**: Only **synthetic test data** (Acme Tech Solutions) is permitted on free-tier APIs.
-- Real candidate or employee data must NEVER touch free-tier endpoints. Real pilot and production workloads must route through enterprise-grade paid endpoints (e.g., Vertex AI) with zero-training confidentiality guarantees.
+- Real (non-synthetic) PII is strictly restricted to the `private` route; `cheap`, `strong`, and `reasoning` routes are permitted only for synthetic data or zero-retention enterprise contracts.
 
 ---
 
@@ -119,7 +121,7 @@ agentic-hr/
 │   └── workflows/
 │       └── ci.yml             # Monorepo CI workflow
 ├── docs/
-│   ├── adr/                   # Architecture Decision Records (001 - 006)
+│   ├── adr/                   # Architecture Decision Records (001 - 007)
 │   ├── oauth-scopes.md        # OAuth scope whitelist & CV ingestion policy
 │   └── synthetic-data-plan.md # Acme Tech Solutions synthetic dataset kit
 ├── apps/
@@ -131,14 +133,18 @@ agentic-hr/
 │   │   └── src/app/           # App Router layout & pages
 │   └── api/                   # FastAPI Backend Service (Python 3.13 + uv)
 │       ├── pyproject.toml     # Member pyproject.toml
+│       ├── alembic/versions/  # Migrations 0001 - 0013 (RLS + security_invoker views)
 │       ├── app/
 │       │   ├── main.py        # FastAPI entry point
-│       │   ├── core/          # Config, database, security
-│       │   ├── integrations/  # Fake (Stage 1) vs Real Google service adapters
-│       │   ├── models/        # TenantBase & synthetic schemas
-│       │   ├── routers/       # /api/health, /api/synthetic
-│       │   └── services/      # Synthetic data service
-│       └── tests/             # Pytest integration suite
+│       │   ├── worker.py      # Temporal + OutboxPublisherWorker entrypoint
+│       │   ├── core/          # Config, encryption, idempotency, model_gateway, timezones, security
+│       │   ├── integrations/  # Fake vs Real Google service adapters
+│       │   ├── mcp/           # 13 FastMCP tools & @mcp_guardrail
+│       │   ├── models/        # TenantBase & domain schemas
+│       │   ├── api/v1/        # Versioned REST endpoints (/approvals, /connectors, /auth)
+│       │   ├── services/      # Connector wrapper, Gmail, Sheets, Drive, Calendar, Outbox
+│       │   └── workflows/     # Durable Temporal workflows & activities
+│       └── tests/             # Pytest integration & security regression suite
 └── packages/
     ├── ui/                    # Shared Component & Design System Package
     │   ├── package.json       # @agentic-hr/ui
@@ -170,19 +176,28 @@ agentic-hr/
 
 ## 10. Development & Testing Commands
 
-### Unified Validation (Cross-Platform)
+### Windows Foreground Verification Suite (Never Background)
 ```powershell
-# Windows PowerShell (Native)
-powershell -ExecutionPolicy Bypass -File scripts/dev.ps1 check
+# Python Backend Lint & Format
+uv run ruff check apps/api ; uv run ruff format --check apps/api
 
-# Linux / macOS / WSL
-make check
+# Full Backend Pytest Suite (requires Postgres 5432, Redis 6379, Temporal 7233)
+uv run --package agentic-hr-api pytest apps/api/tests -q
+
+# Frontend Typecheck, Lint, Unit Tests & Playwright Smoke
+pnpm --filter @agentic-hr/contracts typecheck
+pnpm --filter @agentic-hr/ui typecheck
+pnpm --filter @agentic-hr/web typecheck
+pnpm --filter @agentic-hr/web lint
+pnpm --filter @agentic-hr/web test
+pnpm --filter @agentic-hr/web exec playwright test --reporter=list
+pnpm format:check
 ```
 
 ### Local Services
 ```powershell
-# Start PostgreSQL container
-docker-compose up -d db
+# Start PostgreSQL, Redis, Temporal containers
+docker-compose up -d db redis temporal
 
 # Run Backend (Terminal 1)
 cd apps/api && uv run uvicorn app.main:app --reload --port 8000
@@ -193,9 +208,8 @@ pnpm --filter @agentic-hr/web dev
 
 ---
 
-## 11. Current Stage: Stage 1 — Platform Skeleton
-- Backend and frontend skeletons are fully established.
-- Fake integration adapters are active (`USE_FAKE_INTEGRATIONS=true`).
-- 8/8 automated backend tests pass.
-- Frontend compiles cleanly under Next.js 16 with zero ESLint/TypeScript errors.
-- Next steps proceed into Stage 2 (Database Migrations & Tenant Isolation Verification).
+## 11. Current Stage: Stages 1–3 Complete — Ready for Stage 4 (Milestone B)
+- **Stage 1 (Platform Skeleton)**: Monorepo, Next.js 16, FastAPI, Docker Postgres/Redis/Temporal complete.
+- **Stage 2 (Governance Core + Pass 1 Hardening)**: Forced RLS, Migration `0013` (`security_invoker` alias views, `audit_logs` TRUNCATE trigger, `outbox_due_tenant_ids`), atomic `IdempotencyGate`, AES-256-GCM envelope encryption, Temporal approvals, ADR 007 4-tier `ModelGateway`.
+- **Stage 3 (Milestone A Connectors + Pass 2 Hardening)**: Google Workspace connectors (Gmail, Sheets, Drive, Calendar), 13 `@mcp_guardrail` FastMCP tools, durable 401 circuit-breaker persistence across HTTP & MCP, `Asia/Karachi` timezone standardization (`app.core.timezones`), and enterprise Live/Standby Next.js 16 UI.
+- **Next Stage**: **Stage 4 (Milestone B — Phase 0: Onboarding Wizard, Employees & Encrypted Record Keeper)**.

@@ -7,59 +7,55 @@ import type {
   ConnectDirectRequest,
   ReadOnlyToggleRequest,
 } from "@agentic-hr/contracts";
+import { ApiHttpError, apiRequest } from "@/lib/api-request";
+import { getAuthHeader } from "@/lib/auth-header";
+import { API_BASE_URL } from "@/lib/platform";
 import { DEFAULT_MOCK_CONNECTOR, useConnectorStore } from "@/stores/connector-store";
 
 export { DEFAULT_MOCK_CONNECTOR };
 
-async function getAuthHeader(
-  getToken: () => Promise<string | null>,
-  isLoaded: boolean,
-  isSignedIn: boolean | undefined
-): Promise<string> {
-  let token: string | null = null;
-  if (isLoaded && isSignedIn) {
-    try {
-      token = await getToken();
-    } catch {
-      // Fallback
-    }
+export interface ConnectorMutationResult<T> {
+  data: T;
+  source: "live" | "simulated";
+}
+
+function buildHeaders(authHeader: string | null): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (authHeader) {
+    headers.Authorization = authHeader;
   }
-  return token
-    ? `Bearer ${token}`
-    : "Bearer mock:agentic.hr.test.ubaid.owner@gmail.com:org_acme_tech_01";
+  return headers;
 }
 
 export function useConnectors() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-  const currentConnector = useConnectorStore((s) => s.connector);
 
   return useQuery<ConnectorResponse[], Error>({
     queryKey: ["connectors"],
     queryFn: async () => {
-      try {
-        const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
-        const res = await fetch(`${apiUrl}/api/v1/connectors`, {
-          headers: {
-            Authorization: authHeader,
-            "Content-Type": "application/json",
-          },
-        });
+      const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
+      const res = await apiRequest<ConnectorResponse[]>(
+        `${API_BASE_URL}/api/v1/connectors`,
+        { headers: buildHeaders(authHeader) },
+        "Failed to load connectors"
+      );
 
-        if (res.ok) {
-          const data = (await res.json()) as ConnectorResponse[];
-          if (data && data.length > 0) {
-            useConnectorStore.getState().setConnector(data[0]);
-            return data;
-          }
+      if (res.kind === "live") {
+        if (res.data && res.data.length > 0) {
+          useConnectorStore.getState().setConnector(res.data[0]);
+          return res.data;
         }
-      } catch {
-        // Fallback to local store when backend is unreachable or in standalone dev
+        return [];
       }
+
+      if (res.kind === "http_error") {
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
+      }
+
+      // Network / offline standby fallback ONLY
       return [useConnectorStore.getState().connector];
     },
-    initialData: () => [currentConnector],
-    staleTime: 1000 * 30, // 30 seconds
+    staleTime: 1000 * 30,
     retry: false,
   });
 }
@@ -67,50 +63,53 @@ export function useConnectors() {
 export function useToggleReadOnly() {
   const queryClient = useQueryClient();
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  return useMutation<ConnectorResponse, Error, { credentialId: string; isReadOnly: boolean }>({
+  return useMutation<
+    ConnectorMutationResult<ConnectorResponse>,
+    Error,
+    { credentialId: string; isReadOnly: boolean }
+  >({
     mutationFn: async ({ credentialId, isReadOnly }) => {
-      let updated: ConnectorResponse | null = null;
-      try {
-        const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
-        const payload: ReadOnlyToggleRequest = { is_read_only: isReadOnly };
-        const res = await fetch(`${apiUrl}/api/v1/connectors/${credentialId}/read-only`, {
+      const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
+      const payload: ReadOnlyToggleRequest = { is_read_only: isReadOnly };
+      const res = await apiRequest<ConnectorResponse>(
+        `${API_BASE_URL}/api/v1/connectors/${credentialId}/read-only`,
+        {
           method: "PATCH",
-          headers: {
-            Authorization: authHeader,
-            "Content-Type": "application/json",
-          },
+          headers: buildHeaders(authHeader),
           body: JSON.stringify(payload),
-        });
+        },
+        "Failed to toggle Read-Only Mode"
+      );
 
-        if (res.ok) {
-          updated = (await res.json()) as ConnectorResponse;
-        }
-      } catch {
-        // Fallback
+      if (res.kind === "http_error") {
+        useConnectorStore.getState().setBannerMessage(null);
+        useConnectorStore.getState().setErrorMessage(res.message);
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
       }
 
-      if (!updated) {
-        const current = useConnectorStore.getState().connector;
-        updated = {
-          ...current,
-          id: credentialId,
-          is_read_only: isReadOnly,
-          updated_at: new Date().toISOString(),
-        };
-      }
+      const isSimulated = res.kind === "offline";
+      const updated: ConnectorResponse =
+        res.kind === "live"
+          ? res.data
+          : {
+              ...useConnectorStore.getState().connector,
+              id: credentialId,
+              is_read_only: isReadOnly,
+              updated_at: new Date().toISOString(),
+            };
+
+      const suffix = isSimulated ? " (simulated)" : "";
+      const msg = updated.is_read_only
+        ? `Read-Only Mode enabled. Outbound write operations (send email) are blocked.${suffix}`
+        : `Read-Only Mode disabled. Outbound write operations are active.${suffix}`;
 
       useConnectorStore.getState().setConnector(updated);
-      queryClient.setQueryData<ConnectorResponse[]>(["connectors"], () => [updated!]);
+      useConnectorStore.getState().setErrorMessage(null);
+      useConnectorStore.getState().setBannerMessage(msg);
+      queryClient.setQueryData<ConnectorResponse[]>(["connectors"], () => [updated]);
 
-      return updated;
-    },
-    onSuccess: (data) => {
-      if (data) {
-        useConnectorStore.getState().setConnector(data);
-        queryClient.setQueryData<ConnectorResponse[]>(["connectors"], () => [data]);
-      }
+      return { data: updated, source: isSimulated ? "simulated" : "live" };
     },
   });
 }
@@ -118,51 +117,63 @@ export function useToggleReadOnly() {
 export function useRefreshConnector() {
   const queryClient = useQueryClient();
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  return useMutation<ConnectorResponse, Error, string>({
+  return useMutation<ConnectorMutationResult<ConnectorResponse>, Error, string>({
     mutationFn: async (credentialId: string) => {
-      let updated: ConnectorResponse | null = null;
-      try {
-        const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
-        const res = await fetch(`${apiUrl}/api/v1/connectors/${credentialId}/refresh`, {
+      const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
+      const res = await apiRequest<ConnectorResponse>(
+        `${API_BASE_URL}/api/v1/connectors/${credentialId}/refresh`,
+        {
           method: "POST",
-          headers: {
-            Authorization: authHeader,
-            "Content-Type": "application/json",
-          },
-        });
+          headers: buildHeaders(authHeader),
+        },
+        "Failed to refresh OAuth token"
+      );
 
-        if (res.ok) {
-          updated = (await res.json()) as ConnectorResponse;
+      if (res.kind === "http_error") {
+        useConnectorStore.getState().setBannerMessage(null);
+        useConnectorStore.getState().setErrorMessage(res.message);
+        if (res.status === 401 || res.message.includes("CONNECTOR_AUTH_EXPIRED")) {
+          // Reflect tripped circuit breaker immediately and refresh server state
+          const current = useConnectorStore.getState().connector;
+          const tripped: ConnectorResponse = {
+            ...current,
+            id: credentialId,
+            status: "needs_reconnect",
+            jobs_paused: true,
+            error_message: res.message,
+            updated_at: new Date().toISOString(),
+          };
+          useConnectorStore.getState().setConnector(tripped);
+          queryClient.setQueryData<ConnectorResponse[]>(["connectors"], () => [tripped]);
+          queryClient.invalidateQueries({ queryKey: ["connectors"] });
         }
-      } catch {
-        // Fallback
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
       }
 
-      if (!updated) {
-        const current = useConnectorStore.getState().connector;
-        updated = {
-          ...current,
-          id: credentialId,
-          status: "connected",
-          jobs_paused: false,
-          error_message: null,
-          token_expiry: new Date(Date.now() + 3600 * 1000).toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-      }
+      const isSimulated = res.kind === "offline";
+      const updated: ConnectorResponse =
+        res.kind === "live"
+          ? res.data
+          : {
+              ...useConnectorStore.getState().connector,
+              id: credentialId,
+              status: "connected",
+              jobs_paused: false,
+              error_message: null,
+              token_expiry: new Date(Date.now() + 3600 * 1000).toISOString(),
+              updated_at: new Date().toISOString(),
+            };
 
+      const suffix = isSimulated ? " (simulated)" : "";
       useConnectorStore.getState().setConnector(updated);
-      queryClient.setQueryData<ConnectorResponse[]>(["connectors"], () => [updated!]);
+      useConnectorStore.getState().setErrorMessage(null);
+      useConnectorStore
+        .getState()
+        .setBannerMessage(`OAuth access token refreshed successfully (+1h expiry).${suffix}`);
+      queryClient.setQueryData<ConnectorResponse[]>(["connectors"], () => [updated]);
 
-      return updated;
-    },
-    onSuccess: (data) => {
-      if (data) {
-        useConnectorStore.getState().setConnector(data);
-        queryClient.setQueryData<ConnectorResponse[]>(["connectors"], () => [data]);
-      }
+      return { data: updated, source: isSimulated ? "simulated" : "live" };
     },
   });
 }
@@ -170,23 +181,26 @@ export function useRefreshConnector() {
 export function useRevokeConnector() {
   const queryClient = useQueryClient();
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  return useMutation<{ status: string; id: string }, Error, string>({
+  return useMutation<ConnectorMutationResult<{ status: string; id: string }>, Error, string>({
     mutationFn: async (credentialId: string) => {
-      try {
-        const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
-        await fetch(`${apiUrl}/api/v1/connectors/${credentialId}`, {
+      const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
+      const res = await apiRequest<{ status: string; id: string }>(
+        `${API_BASE_URL}/api/v1/connectors/${credentialId}`,
+        {
           method: "DELETE",
-          headers: {
-            Authorization: authHeader,
-            "Content-Type": "application/json",
-          },
-        });
-      } catch {
-        // Fallback
+          headers: buildHeaders(authHeader),
+        },
+        "Failed to disconnect connector"
+      );
+
+      if (res.kind === "http_error") {
+        useConnectorStore.getState().setBannerMessage(null);
+        useConnectorStore.getState().setErrorMessage(res.message);
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
       }
 
+      const isSimulated = res.kind === "offline";
       const current = useConnectorStore.getState().connector;
       const updated: ConnectorResponse = {
         ...current,
@@ -196,14 +210,20 @@ export function useRevokeConnector() {
         updated_at: new Date().toISOString(),
       };
 
+      const suffix = isSimulated ? " (simulated)" : "";
       useConnectorStore.getState().setConnector(updated);
+      useConnectorStore.getState().setErrorMessage(null);
+      useConnectorStore
+        .getState()
+        .setBannerMessage(
+          `Google Workspace connector disconnected. Status set to Revoked.${suffix}`
+        );
       queryClient.setQueryData<ConnectorResponse[]>(["connectors"], () => [updated]);
 
-      return { status: "revoked", id: credentialId };
-    },
-    onSuccess: () => {
-      const current = useConnectorStore.getState().connector;
-      queryClient.setQueryData<ConnectorResponse[]>(["connectors"], () => [current]);
+      return {
+        data: { status: "revoked", id: credentialId },
+        source: isSimulated ? "simulated" : "live",
+      };
     },
   });
 }
@@ -211,75 +231,87 @@ export function useRevokeConnector() {
 export function useReconnectConnector() {
   const queryClient = useQueryClient();
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  return useMutation<ConnectorResponse, Error, string>({
+  return useMutation<ConnectorMutationResult<ConnectorResponse>, Error, string>({
     mutationFn: async (credentialId: string) => {
-      let updated: ConnectorResponse | null = null;
-      try {
-        const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
-        const res = await fetch(`${apiUrl}/api/v1/connectors/${credentialId}/reconnect`, {
+      const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
+      const res = await apiRequest<ConnectorResponse>(
+        `${API_BASE_URL}/api/v1/connectors/${credentialId}/reconnect`,
+        {
           method: "POST",
-          headers: {
-            Authorization: authHeader,
-            "Content-Type": "application/json",
-          },
-        });
+          headers: buildHeaders(authHeader),
+        },
+        "Failed to reconnect connector"
+      );
 
-        if (res.ok) {
-          updated = (await res.json()) as ConnectorResponse;
+      if (res.kind === "http_error") {
+        // Live mode 409 OAUTH_REAUTH_REQUIRED -> redirect browser to fresh Google OAuth consent
+        const authUrl =
+          typeof res.body?.authorization_url === "string"
+            ? res.body.authorization_url
+            : typeof (res.body?.error as Record<string, unknown> | undefined)?.authorization_url ===
+                "string"
+              ? String((res.body?.error as Record<string, unknown>).authorization_url)
+              : null;
+
+        if (res.status === 409 && res.code === "OAUTH_REAUTH_REQUIRED" && authUrl) {
+          if (typeof window !== "undefined") {
+            window.location.assign(authUrl);
+          }
+          throw new ApiHttpError(res.status, res.code, res.message, res.body);
         }
-      } catch {
-        // Fallback
+
+        useConnectorStore.getState().setBannerMessage(null);
+        useConnectorStore.getState().setErrorMessage(res.message);
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
       }
 
-      if (!updated) {
-        const current = useConnectorStore.getState().connector;
-        updated = {
-          ...current,
-          id: credentialId,
-          status: "connected",
-          jobs_paused: false,
-          error_message: null,
-          token_expiry: new Date(Date.now() + 3600 * 1000).toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-      }
+      const isSimulated = res.kind === "offline";
+      const updated: ConnectorResponse =
+        res.kind === "live"
+          ? res.data
+          : {
+              ...useConnectorStore.getState().connector,
+              id: credentialId,
+              status: "connected",
+              jobs_paused: false,
+              error_message: null,
+              token_expiry: new Date(Date.now() + 3600 * 1000).toISOString(),
+              updated_at: new Date().toISOString(),
+            };
 
+      const suffix = isSimulated ? " (simulated)" : "";
       useConnectorStore.getState().setConnector(updated);
-      queryClient.setQueryData<ConnectorResponse[]>(["connectors"], () => [updated!]);
+      useConnectorStore.getState().setErrorMessage(null);
+      useConnectorStore
+        .getState()
+        .setBannerMessage(`Google Workspace connector reconnected successfully.${suffix}`);
+      queryClient.setQueryData<ConnectorResponse[]>(["connectors"], () => [updated]);
 
-      return updated;
-    },
-    onSuccess: (data) => {
-      if (data) {
-        useConnectorStore.getState().setConnector(data);
-        queryClient.setQueryData<ConnectorResponse[]>(["connectors"], () => [data]);
-      }
+      return { data: updated, source: isSimulated ? "simulated" : "live" };
     },
   });
 }
 
 export function useGoogleAuthorize() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return useMutation<{ authorization_url: string }, Error, void>({
     mutationFn: async () => {
       const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
-      const res = await fetch(`${apiUrl}/api/v1/connectors/google/oauth/authorize`, {
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await apiRequest<{ authorization_url: string }>(
+        `${API_BASE_URL}/api/v1/connectors/google/oauth/authorize`,
+        { headers: buildHeaders(authHeader) },
+        "Failed to get authorization URL"
+      );
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.detail || `Failed to get authorization URL: ${res.status}`);
+      if (res.kind === "live") {
+        return res.data;
       }
-
-      return (await res.json()) as { authorization_url: string };
+      if (res.kind === "http_error") {
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
+      }
+      throw new Error("FastAPI backend is offline; cannot start OAuth authorization.");
     },
   });
 }
@@ -287,26 +319,27 @@ export function useGoogleAuthorize() {
 export function useConnectDirect() {
   const queryClient = useQueryClient();
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   return useMutation<ConnectorResponse, Error, ConnectDirectRequest>({
     mutationFn: async (payload: ConnectDirectRequest) => {
       const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
-      const res = await fetch(`${apiUrl}/api/v1/connectors/google/connect`, {
-        method: "POST",
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
+      const res = await apiRequest<ConnectorResponse>(
+        `${API_BASE_URL}/api/v1/connectors/google/connect`,
+        {
+          method: "POST",
+          headers: buildHeaders(authHeader),
+          body: JSON.stringify(payload),
         },
-        body: JSON.stringify(payload),
-      });
+        "Failed to connect credentials"
+      );
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        throw new Error(errorData?.detail || `Failed to connect credentials: ${res.status}`);
+      if (res.kind === "live") {
+        return res.data;
       }
-
-      return (await res.json()) as ConnectorResponse;
+      if (res.kind === "http_error") {
+        throw new ApiHttpError(res.status, res.code, res.message, res.body);
+      }
+      throw new Error("FastAPI backend is offline; cannot connect credentials.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["connectors"] });
