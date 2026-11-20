@@ -125,6 +125,7 @@ Agentic HR Infrastructure""",
     <div style="background-color: #F8F9FD; border-left: 4px solid #2A5BDB; padding: 12px; margin: 16px 0;">
         <p style="margin: 4px 0;"><strong>Document:</strong> {document_name}</p>
         <p style="margin: 4px 0;"><strong>Expiration Date:</strong> {expiry_date}</p>
+        <p style="margin: 4px 0;"><strong>Days Remaining:</strong> {days_until_expiry}</p>
         <p style="margin: 4px 0;"><strong>Action Required:</strong> Please submit updated credentials before this date.</p>
     </div>
     <p><a href="{action_url}" style="background-color: #2A5BDB; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">Upload Document</a></p>
@@ -136,11 +137,39 @@ This is an important reminder regarding your mandatory compliance documentation.
 
 Document: {document_name}
 Expiration Date: {expiry_date}
+Days Remaining: {days_until_expiry}
 Action Required: Please submit updated credentials before this date.
 Upload URL: {action_url}
 
 Best regards,
 {company_name} Compliance Team""",
+    },
+    "onboarding_invitation": {
+        "subject": "Welcome to {company_name} on Agentic HR",
+        "html": """<div style="font-family: Arial, sans-serif; color: #102C54; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #2A5BDB;">Welcome to {company_name}</h2>
+    <p>Hello {employee_name},</p>
+    <p>Your HR workspace for <strong>{company_name}</strong> is now live on <strong>Agentic HR Core</strong>.</p>
+    <div style="background-color: #F8F9FD; border-left: 4px solid #2A5BDB; padding: 12px; margin: 16px 0;">
+        <p style="margin: 4px 0;"><strong>Role:</strong> {job_title}</p>
+        <p style="margin: 4px 0;"><strong>Department:</strong> {department_name}</p>
+        <p style="margin: 4px 0;"><strong>Workspace Portal:</strong> <a href="{portal_url}" style="color: #2A5BDB;">{portal_url}</a></p>
+    </div>
+    <p>Sign in with your company email to view your profile, company policies, and team directory.</p>
+    <p>Warm regards,<br/><strong>{company_name} People Operations</strong></p>
+</div>""",
+        "text": """Hello {employee_name},
+
+Your HR workspace for {company_name} is now live on Agentic HR Core.
+
+Role: {job_title}
+Department: {department_name}
+Workspace Portal: {portal_url}
+
+Sign in with your company email to view your profile, company policies, and team directory.
+
+Warm regards,
+{company_name} People Operations""",
     },
 }
 

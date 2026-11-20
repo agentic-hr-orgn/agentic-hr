@@ -180,10 +180,13 @@ async def test_02_sheets_drift_detection_and_postgres_authority(
         )
         await session.commit()
 
-    # 1. Inject drift into Google Sheet:
-    # Change EMP-004 (Zainab Ali) role from "Senior Full-Stack Engineer" to "Intern" in row 4
+    # Reset FakeSheetsService to a clean, synchronized baseline for fake_sheet_employee_directory
     sheets_service = get_sheets_service()
     assert isinstance(sheets_service, FakeSheetsService)
+    sheets_service.reset()
+
+    # 1. Inject drift into Google Sheet:
+    # Change EMP-004 (Zainab Ali) role from "Senior Full-Stack Engineer" to "Intern" in row 4
     # Row 4 in sheet is EMP-004 (header is 0, 1=EMP-001, 2=EMP-002, 3=EMP-003, 4=EMP-004)
     # Column 4 is Role
     sheets_service.inject_drift(
@@ -209,12 +212,13 @@ async def test_02_sheets_drift_detection_and_postgres_authority(
     assert rec_data["drifts_detected"] >= 1
     assert rec_data["reconciled_count"] >= 1
 
-    # 3. Verify sheets_drift_logs record was written to PostgreSQL
+    # 3. Verify sheets_drift_logs record was written to PostgreSQL for role drift
     async with AsyncSessionLocal() as session:
         await set_tenant_context(session, ctx.company_a.tenant_id, ctx.company_a.owner.user_id)
         stmt = select(SheetsDriftLog).where(
             SheetsDriftLog.tenant_id == uuid.UUID(ctx.company_a.tenant_id),
             SheetsDriftLog.entity_id == "EMP-004",
+            SheetsDriftLog.field_name == "role",
         )
         res = await session.execute(stmt)
         drift_entry = res.scalars().first()

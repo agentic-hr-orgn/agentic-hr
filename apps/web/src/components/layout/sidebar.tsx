@@ -14,6 +14,7 @@ import {
   X,
   Building2,
   CheckCircle2,
+  Rocket,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useBackendStatus } from "@/hooks/use-backend-status";
@@ -30,6 +31,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Overview", icon: LayoutDashboard, href: "/" },
+  { label: "Onboarding Wizard", icon: Rocket, href: "/onboarding", badge: "Setup" },
   { label: "Approvals", icon: CheckCircle2, href: "/approvals", badge: "Human Gate" },
   { label: "Candidates", icon: Users2, href: "/candidates", badge: "DocuVerify & Screener" },
   { label: "Code Tester", icon: TerminalSquare, href: "/assessments", badge: "E2B Sandbox" },

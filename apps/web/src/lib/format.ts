@@ -45,3 +45,39 @@ export function formatPKTTime(value: string | Date | null | undefined): string {
   if (Number.isNaN(date.getTime())) return "—";
   return `${PKT_TIME_SECONDS_FORMATTER.format(date)} PKT`;
 }
+
+const PKT_ISO_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Karachi",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * Returns the calendar date string (`YYYY-MM-DD`) in `Asia/Karachi` (PKT, UTC+05:00).
+ */
+export function getTodayPKTDateString(now: Date = new Date()): string {
+  return PKT_ISO_DATE_FORMATTER.format(now);
+}
+
+/**
+ * Computes whole calendar days between `referenceDatePkt` (defaults to today in Asia/Karachi)
+ * and `expiryDateIso` (`YYYY-MM-DD`). Negative values mean already expired.
+ */
+export function getPKTDaysUntil(
+  expiryDateIso: string | null | undefined,
+  referenceDatePkt?: string
+): number | null {
+  if (!expiryDateIso) return null;
+  const datePart = expiryDateIso.slice(0, 10);
+  const expMatch = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!expMatch) return null;
+
+  const refStr = referenceDatePkt ?? getTodayPKTDateString();
+  const refMatch = refStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!refMatch) return null;
+
+  const expUtc = Date.UTC(Number(expMatch[1]), Number(expMatch[2]) - 1, Number(expMatch[3]));
+  const refUtc = Date.UTC(Number(refMatch[1]), Number(refMatch[2]) - 1, Number(refMatch[3]));
+  return Math.round((expUtc - refUtc) / 86_400_000);
+}

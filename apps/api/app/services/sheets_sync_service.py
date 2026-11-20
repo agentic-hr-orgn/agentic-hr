@@ -392,12 +392,13 @@ class SheetsSyncService:
                 sheet_lookup[key] = (idx, row)
 
         # 4. Read Authoritative Data from PostgreSQL
-        # Join User, Membership, and Role for this tenant
+        # Join User, Membership, and Role for this tenant (deterministic ordering)
         stmt_users = (
             select(User, Role.role_key)
             .join(Membership, Membership.user_id == User.id)
             .join(Role, Role.id == Membership.role_id)
             .where(Membership.tenant_id == t_id)
+            .order_by(User.email.asc())
         )
         result_users = await session.execute(stmt_users)
         user_rows = result_users.all()
@@ -432,12 +433,15 @@ class SheetsSyncService:
 
         authoritative_employees: list[dict[str, Any]] = []
         if user_rows:
-            for idx, (usr, r_key) in enumerate(user_rows, start=1):
+            next_custom_idx = 101
+            for usr, r_key in user_rows:
                 email_lower = usr.email.lower()
                 if email_lower in synthetic_profiles:
                     emp_id, full_name, dept, job_title = synthetic_profiles[email_lower]
                 else:
-                    emp_id = f"EMP-00{idx}"
+                    # Never collide with reserved synthetic baseline IDs (EMP-001..EMP-006)
+                    emp_id = f"EMP-{next_custom_idx:03d}"
+                    next_custom_idx += 1
                     full_name = usr.name or usr.email.split("@")[0].title()
                     dept = "Engineering" if r_key in ("manager", "employee") else "Executive"
                     job_title = r_key.title()
