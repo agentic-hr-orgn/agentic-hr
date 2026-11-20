@@ -14,7 +14,13 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.core.clerk import verify_clerk_token
+from app.core.clerk import (
+    DEFAULT_DEV_CLERK_ORG_ID,
+    DEFAULT_DEV_OWNER_EMAIL,
+    require_active_organization_claim,
+    verify_clerk_token,
+)
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.membership import Membership
 from app.models.tenant import set_tenant_context
@@ -102,15 +108,14 @@ async def _resolve_authenticated_context(
 
     # Step 1: Verify token signature and claims
     claims = verify_clerk_token(token)
+    is_live_dev_fallback = bool(
+        settings.is_non_production
+        and settings.USE_FAKE_INTEGRATIONS
+        and claims.get("_live_clerk_dev_jwt")
+    )
 
     # Step 2: Enforce active organization claim and subject
-    org_id = claims.get("org_id")
-    if not org_id:
-        logger.warning(f"User {claims.get('sub')} attempted access without an active organization")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No active organization selected. Please select an organization to proceed.",
-        )
+    org_id = require_active_organization_claim(claims)
 
     sub = claims.get("sub")
     if not sub:
@@ -125,6 +130,18 @@ async def _resolve_authenticated_context(
         {"org_id": org_id},
     )
     tenant_id = res.scalar()
+    if not tenant_id and is_live_dev_fallback and org_id != DEFAULT_DEV_CLERK_ORG_ID:
+        logger.info(
+            f"Local dev Clerk org_id '{org_id}' not found in public.tenants; "
+            f"mapping to seeded demo tenant '{DEFAULT_DEV_CLERK_ORG_ID}'."
+        )
+        org_id = DEFAULT_DEV_CLERK_ORG_ID
+        res = await db.execute(
+            text("SELECT public.resolve_tenant_by_clerk_org(:org_id)"),
+            {"org_id": org_id},
+        )
+        tenant_id = res.scalar()
+
     if not tenant_id:
         logger.warning(f"Organization '{org_id}' not found or inactive in PostgreSQL")
         raise HTTPException(
@@ -160,6 +177,15 @@ async def _resolve_authenticated_context(
     # Step 6: Resolve User in local PostgreSQL records (permitted by users RLS under app.clerk_user_id)
     stmt_user = select(User).where((User.clerk_user_id == sub) | (User.email == sub))
     user = (await db.execute(stmt_user)).scalar_one_or_none()
+    if not user and is_live_dev_fallback:
+        logger.info(
+            f"Local dev Clerk user '{sub}' not found in public.users; "
+            f"mapping to seeded demo owner '{DEFAULT_DEV_OWNER_EMAIL}'."
+        )
+        await set_tenant_context(db, str(tenant_id), DEFAULT_DEV_OWNER_EMAIL)
+        stmt_demo_user = select(User).where(User.email == DEFAULT_DEV_OWNER_EMAIL)
+        user = (await db.execute(stmt_demo_user)).scalar_one_or_none()
+
     if not user:
         logger.warning(f"User '{sub}' not found in local PostgreSQL users")
         raise HTTPException(
@@ -177,6 +203,21 @@ async def _resolve_authenticated_context(
         )
     )
     membership = (await db.execute(stmt_membership)).scalar_one_or_none()
+    if not membership and is_live_dev_fallback and user.email != DEFAULT_DEV_OWNER_EMAIL:
+        await set_tenant_context(db, str(tenant_id), DEFAULT_DEV_OWNER_EMAIL)
+        stmt_demo_user = select(User).where(User.email == DEFAULT_DEV_OWNER_EMAIL)
+        demo_user = (await db.execute(stmt_demo_user)).scalar_one_or_none()
+        if demo_user:
+            user = demo_user
+            stmt_demo_mem = (
+                select(Membership)
+                .options(joinedload(Membership.role))
+                .where(
+                    Membership.tenant_id == tenant.id,
+                    Membership.user_id == user.id,
+                )
+            )
+            membership = (await db.execute(stmt_demo_mem)).scalar_one_or_none()
     if not membership:
         logger.warning(f"User '{user.email}' lacks membership in tenant '{tenant.name}'")
         raise HTTPException(

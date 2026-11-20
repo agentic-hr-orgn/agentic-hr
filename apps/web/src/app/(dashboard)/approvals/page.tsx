@@ -68,7 +68,10 @@ export default function ApprovalsPage() {
   const approvedCount = approvals.filter((a) => a.status === "approved").length;
   const rejectedCount = approvals.filter((a) => a.status === "rejected").length;
 
-  const isOfflineOrError = isBackendStandby || !!error;
+  const isOfflineStandby = isBackendStandby || (!!error && error.message.startsWith("OFFLINE:"));
+  const isHttpAuthOrApiError = !!error && !isOfflineStandby;
+  const isOfflineOrError = isOfflineStandby || isHttpAuthOrApiError;
+  const cleanErrorMessage = error ? error.message.replace(/\.+$/, "") : "";
 
   const handleApprove = async (id: string) => {
     setActionError(null);
@@ -238,18 +241,42 @@ export default function ApprovalsPage() {
         </div>
       </div>
 
-      {/* Read-Only Standby Banner when FastAPI is offline or errored */}
-      {isOfflineOrError && (
+      {/* Read-Only Standby Banner ONLY when FastAPI is actually offline */}
+      {isOfflineStandby && (
         <StandbyBanner
           title="Approvals Inbox in Read-Only Standby"
-          message={
-            error && !error.message.startsWith("OFFLINE:")
-              ? `Could not load approvals: ${error.message}. Governance decisions are disabled until connection is restored.`
-              : "FastAPI backend is offline. Governance records are never fabricated in standby mode and decision actions are disabled."
-          }
+          message="FastAPI backend is offline. Governance records are never fabricated in standby mode and decision actions are disabled."
           onRetry={() => refetch()}
           isRetrying={isFetching}
         />
+      )}
+
+      {/* Explicit Authentication / Organization / API Error Alert when FastAPI is online */}
+      {isHttpAuthOrApiError && (
+        <div
+          role="alert"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-medium border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-900 shadow-sm"
+        >
+          <div className="flex items-start sm:items-center gap-2.5">
+            <ShieldAlert className="h-4 w-4 text-rose-600 flex-shrink-0 mt-0.5 sm:mt-0" />
+            <div>
+              <span className="font-bold text-rose-950 mr-1.5">
+                Authentication / Organization Required:
+              </span>
+              <span>{cleanErrorMessage}. Governance decisions are disabled until resolved.</span>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="text-xs h-7 px-3 border-rose-300 bg-white text-rose-800 hover:bg-rose-100 shrink-0"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isFetching ? "animate-spin" : ""}`} />
+            Retry
+          </Button>
+        </div>
       )}
 
       {/* Summary KPI Badges */}
@@ -377,7 +404,7 @@ export default function ApprovalsPage() {
                   <div key={idx} className="h-24 rounded-lg border border-slate-200 bg-slate-100" />
                 ))}
               </div>
-            ) : isOfflineOrError ? (
+            ) : isOfflineStandby ? (
               <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-8 text-center">
                 <AlertTriangle className="mx-auto h-8 w-8 text-amber-500" />
                 <p className="mt-2 text-sm font-semibold text-navy">
@@ -395,6 +422,24 @@ export default function ApprovalsPage() {
                 >
                   <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isFetching ? "animate-spin" : ""}`} />
                   Retry Connection
+                </Button>
+              </div>
+            ) : isHttpAuthOrApiError ? (
+              <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-8 text-center">
+                <ShieldAlert className="mx-auto h-8 w-8 text-rose-500" />
+                <p className="mt-2 text-sm font-semibold text-navy">
+                  Authentication / Organization Required
+                </p>
+                <p className="mt-1 text-xs text-rose-900">{cleanErrorMessage}.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetch()}
+                  disabled={isFetching}
+                  className="mt-4"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isFetching ? "animate-spin" : ""}`} />
+                  Retry
                 </Button>
               </div>
             ) : approvals.length === 0 ? (

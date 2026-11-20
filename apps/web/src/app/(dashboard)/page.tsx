@@ -121,14 +121,14 @@ export default function DashboardPage() {
               Workspace connectors.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 shrink-0">
             <Button
               variant="primary"
               onClick={handleTestEmail}
               disabled={isSending}
-              className="bg-white text-navy hover:bg-slate-100 font-semibold shadow-button text-xs md:text-sm"
+              className="bg-white text-navy hover:bg-slate-100 font-semibold shadow-button text-xs md:text-sm whitespace-nowrap shrink-0"
             >
-              <Mail className="h-4 w-4 mr-2 text-primary" />
+              <Mail className="h-4 w-4 mr-2 text-primary shrink-0" />
               {isSending ? "Simulating..." : "Test Fake Email"}
             </Button>
           </div>

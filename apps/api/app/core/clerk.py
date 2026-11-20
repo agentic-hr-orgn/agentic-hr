@@ -16,6 +16,10 @@ from app.core.config import settings
 
 logger = logging.getLogger("agentic_hr.clerk")
 
+# Default seeded demo tenant and owner account for local development fallback
+DEFAULT_DEV_CLERK_ORG_ID = "org_acme_tech_01"
+DEFAULT_DEV_OWNER_EMAIL = "agentic.hr.test.ubaid.owner@gmail.com"
+
 # Global PyJWKClient cache
 _jwks_client: PyJWKClient | None = None
 _jwks_override_keys: dict[str, Any] = {}
@@ -117,7 +121,8 @@ def verify_clerk_token(token: str) -> dict[str, Any]:
 
     # 3. Resolve signing key
     key: Any = None
-    if kid and kid in _jwks_override_keys:
+    used_test_override_key = bool(kid and kid in _jwks_override_keys)
+    if used_test_override_key:
         key = _jwks_override_keys[kid]
     else:
         try:
@@ -188,4 +193,39 @@ def verify_clerk_token(token: str) -> dict[str, Any]:
                 detail="Authentication token authorized party mismatch.",
             )
 
+    # Mark live Clerk JWKS tokens (distinguishing live browser Clerk dev sessions from offline unit test tokens)
+    if not used_test_override_key:
+        payload["_live_clerk_dev_jwt"] = True
+
     return payload
+
+
+def require_active_organization_claim(claims: dict[str, Any]) -> str:
+    """
+    Enforces presence of an active Clerk organization claim (org_id).
+    - In production (not settings.is_non_production), strictly fails closed with HTTP 403.
+    - In local development (settings.is_non_production and settings.USE_FAKE_INTEGRATIONS),
+      when a valid live Clerk dev JWT has no org_id claim (Personal Account), maps it cleanly
+      to the seeded default demo tenant (DEFAULT_DEV_CLERK_ORG_ID = 'org_acme_tech_01').
+    """
+    org_id = claims.get("org_id")
+    if org_id and str(org_id).strip():
+        return str(org_id).strip()
+
+    if (
+        settings.is_non_production
+        and settings.USE_FAKE_INTEGRATIONS
+        and claims.get("_live_clerk_dev_jwt")
+    ):
+        logger.info(
+            f"Local dev Clerk session (sub='{claims.get('sub')}') has no active org_id; "
+            f"mapping to seeded demo tenant '{DEFAULT_DEV_CLERK_ORG_ID}'."
+        )
+        claims["org_id"] = DEFAULT_DEV_CLERK_ORG_ID
+        return DEFAULT_DEV_CLERK_ORG_ID
+
+    logger.warning(f"User {claims.get('sub')} attempted access without an active organization")
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="No active organization selected. Please select an organization to proceed.",
+    )

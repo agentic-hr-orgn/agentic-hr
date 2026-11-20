@@ -294,3 +294,70 @@ async def test_09_mock_token_authentication(async_client: httpx.AsyncClient):
     data = response.json()
     assert data["role"] == "owner"
     assert data["tenant_name"] == "Acme Tech Solutions"
+
+
+@pytest.mark.asyncio
+async def test_10_live_clerk_dev_session_fallback_and_production_fail_closed(
+    async_client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """
+    Verifies live Clerk dev browser session handling (e.g. Clerk Personal Account with no org_id
+    or an unseeded Clerk dev org_id/user_id):
+    1. In local development (is_non_production and USE_FAKE_INTEGRATIONS), maps cleanly to
+       the seeded demo tenant ('Acme Tech Solutions' / owner context) without 403 loops.
+    2. In production (ENVIRONMENT='production'), strictly fails closed with HTTP 403.
+    """
+    import app.core.clerk as clerk_mod
+
+    class _FakeSigningKey:
+        key = _public_key
+
+    class _FakeJWKSClient:
+        def get_signing_key_from_jwt(self, _token: str) -> _FakeSigningKey:
+            return _FakeSigningKey()
+
+    monkeypatch.setattr(clerk_mod, "get_jwks_client", lambda: _FakeJWKSClient())
+
+    # Sign a token with a kid NOT in _jwks_override_keys so it goes through the live JWKS path
+    live_no_org_token = create_signed_token(
+        sub="user_2clerk_personal_alex_halam",
+        org_id=None,
+        kid="live-clerk-jwks-kid-01",
+    )
+    live_unseeded_org_token = create_signed_token(
+        sub="user_2clerk_personal_alex_halam",
+        org_id="org_2clerk_dev_unseeded_99",
+        kid="live-clerk-jwks-kid-01",
+    )
+
+    # 1a. Local dev: Personal Account (no org_id) maps to Acme Tech Solutions owner
+    resp_no_org = await async_client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {live_no_org_token}"},
+    )
+    assert resp_no_org.status_code == 200, resp_no_org.text
+    data_no_org = resp_no_org.json()
+    assert data_no_org["tenant_name"] == "Acme Tech Solutions"
+    assert data_no_org["clerk_org_id"] == "org_acme_tech_01"
+    assert data_no_org["role"] == "owner"
+
+    # 1b. Local dev: Unseeded Clerk dev org_id also maps to Acme Tech Solutions owner
+    resp_unseeded_org = await async_client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {live_unseeded_org_token}"},
+    )
+    assert resp_unseeded_org.status_code == 200, resp_unseeded_org.text
+    assert resp_unseeded_org.json()["tenant_name"] == "Acme Tech Solutions"
+
+    # 2. Production: strictly fails closed with HTTP 403 (never falls back to demo tenant)
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    resp_prod = await async_client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {live_no_org_token}"},
+    )
+    assert resp_prod.status_code == 403
+    assert (
+        resp_prod.json()["error"]["message"]
+        == "No active organization selected. Please select an organization to proceed."
+    )

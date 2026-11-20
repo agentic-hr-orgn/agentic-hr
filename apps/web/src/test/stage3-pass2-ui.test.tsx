@@ -109,17 +109,62 @@ describe("Stage 3 Pass 2 — Enterprise UI, Standby States & Helpers", () => {
     expect(screen.queryByText(/No approval requests found/i)).not.toBeInTheDocument();
   });
 
-  it("EmployeesPage renders loading skeleton first and standby sample badge when offline", () => {
+  it("ApprovalsPage separates live HTTP 403 auth/org errors from offline standby and avoids double periods", () => {
+    vi.spyOn(backendStatusHook, "useBackendStatus").mockReturnValue({
+      status: "live",
+      health: null,
+      isLive: true,
+      isStandby: false,
+      isChecking: false,
+      useFakeIntegrations: true,
+      refetch: vi.fn(),
+      isFetching: false,
+    } as any);
+
+    vi.spyOn(approvalsHook, "useApprovals").mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: new Error(
+        "No active organization selected. Please select an organization to proceed."
+      ),
+      refetch: vi.fn(),
+      isFetching: false,
+    } as any);
+    vi.spyOn(approvalsHook, "useApproveMutation").mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any);
+    vi.spyOn(approvalsHook, "useRejectMutation").mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any);
+    vi.spyOn(approvalsHook, "useRequestChangesMutation").mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any);
+
+    const { container } = render(<ApprovalsPage />);
+
+    expect(
+      screen.getAllByText(/Authentication \/ Organization Required/i).length
+    ).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/Governance Inbox Unavailable \(Standby\)/i)).not.toBeInTheDocument();
+    expect(container.textContent).not.toContain("proceed..");
+  });
+
+  it("EmployeesPage renders loading skeleton first, Reloading... feedback, and Last reloaded PKT timestamp", () => {
     vi.spyOn(employeesHook, "useEmployees").mockReturnValue({
       data: undefined,
       isLoading: true,
       isFetching: true,
+      dataUpdatedAt: 0,
       error: null,
       refetch: vi.fn(),
     } as any);
 
     const { rerender } = render(<EmployeesPage />);
     expect(document.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.getByRole("button", { name: /Reloading\.\.\./i })).toBeDisabled();
 
     vi.spyOn(employeesHook, "useEmployees").mockReturnValue({
       data: {
@@ -131,12 +176,14 @@ describe("Stage 3 Pass 2 — Enterprise UI, Standby States & Helpers", () => {
             department: "Executive",
             role: "Company Owner & Admin",
             status: "Active",
+            is_test_account: true,
           },
         ],
         source: "standby",
       },
       isLoading: false,
       isFetching: false,
+      dataUpdatedAt: Date.now(),
       error: null,
       refetch: vi.fn(),
     } as any);
@@ -144,5 +191,7 @@ describe("Stage 3 Pass 2 — Enterprise UI, Standby States & Helpers", () => {
     rerender(<EmployeesPage />);
     expect(screen.getByText("Standby Sample")).toBeInTheDocument();
     expect(screen.getByText("Ubaid Qureshi (Owner)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Reload Postgres Data/i })).not.toBeDisabled();
+    expect(screen.getByTestId("last-reloaded-pkt")).toHaveTextContent(/Last reloaded:.*PKT/);
   });
 });

@@ -42,8 +42,11 @@ export function useConnectors() {
 
       if (res.kind === "live") {
         if (res.data && res.data.length > 0) {
-          useConnectorStore.getState().setConnector(res.data[0]);
-          return res.data;
+          const primary =
+            res.data.find((c) => c.account_email === "agentic.hr.test.ubaid.owner@gmail.com") ||
+            res.data[0];
+          useConnectorStore.getState().setConnector(primary);
+          return [primary, ...res.data.filter((c) => c.id !== primary.id)];
         }
         return [];
       }

@@ -62,7 +62,10 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (connectors && connectors.length > 0) {
-      setConnector(connectors[0]);
+      const primary =
+        connectors.find((c) => c.account_email === "agentic.hr.test.ubaid.owner@gmail.com") ||
+        connectors[0];
+      setConnector(primary);
     }
   }, [connectors, setConnector]);
 

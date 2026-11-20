@@ -84,7 +84,7 @@ async def test_t1_mcp_401_persists_circuit_breaker_and_audit(
         headers=headers,
         json={
             "provider": "google",
-            "account_email": f"mcp401_{uuid.uuid4().hex[:8]}@gmail.com",
+            "account_email": "agentic.hr.test.ubaid.owner@gmail.com",
             "scopes": ["gmail.send", "drive.file", "calendar.events"],
             "access_token": "ya29.mcp_valid_token",
             "refresh_token": "valid_refresh_token",
@@ -176,7 +176,7 @@ async def test_t2_refresh_endpoint_401_persists_circuit_breaker(
         headers=headers,
         json={
             "provider": "google",
-            "account_email": f"refresh401_{uuid.uuid4().hex[:8]}@gmail.com",
+            "account_email": "agentic.hr.test.ubaid.owner@gmail.com",
             "scopes": ["gmail.send", "drive.file", "calendar.events"],
             "access_token": "ya29.expired_token",
             "refresh_token": "invalid_grant_revoked_token",
@@ -279,7 +279,7 @@ async def test_t4_sheets_batch_no_double_counting_and_429_preserves_retries(
         headers=headers,
         json={
             "provider": "google",
-            "account_email": f"sheetsbatch_{uuid.uuid4().hex[:8]}@gmail.com",
+            "account_email": "agentic.hr.test.ubaid.owner@gmail.com",
             "scopes": ["gmail.send", "drive.file", "calendar.events"],
             "access_token": "ya29.sheets_batch_token",
             "refresh_token": "valid_refresh_sheets",
@@ -448,7 +448,7 @@ async def test_t6_karachi_timezone_normalization(
         headers=headers,
         json={
             "provider": "google",
-            "account_email": f"pkt_{uuid.uuid4().hex[:8]}@gmail.com",
+            "account_email": "agentic.hr.test.ubaid.owner@gmail.com",
             "scopes": ["gmail.send", "drive.file", "calendar.events"],
             "access_token": "ya29.pkt_test_token",
             "refresh_token": "valid_refresh_pkt",
@@ -562,7 +562,7 @@ async def test_t7_reconnect_requires_oauth_in_live_mode(
         headers=headers,
         json={
             "provider": "google",
-            "account_email": f"reconn_{uuid.uuid4().hex[:8]}@gmail.com",
+            "account_email": "agentic.hr.test.ubaid.owner@gmail.com",
             "scopes": ["gmail.send", "drive.file", "calendar.events"],
             "access_token": "ya29.reconn_token",
         },

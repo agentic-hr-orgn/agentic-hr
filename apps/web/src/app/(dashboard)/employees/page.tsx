@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Users, ArrowLeft, RefreshCw, Database } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,13 +10,26 @@ import { StandbyBanner } from "@/components/ui/standby-banner";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useEmployees } from "@/hooks/use-employees";
+import { formatPKTTime } from "@/lib/format";
 
 export default function EmployeesPage() {
   const { data: currentUser } = useCurrentUser();
   const { useFakeIntegrations } = useBackendStatus();
   const tenantSlug = currentUser?.clerk_org_id || "acme-tech-01";
-  const { data, isLoading, isFetching, error, refetch } = useEmployees(tenantSlug);
+  const { data, isLoading, isFetching, error, refetch, dataUpdatedAt } = useEmployees(tenantSlug);
   const [showAll, setShowAll] = useState(false);
+  const [lastReloadedAt, setLastReloadedAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (dataUpdatedAt) {
+      setLastReloadedAt(formatPKTTime(new Date(dataUpdatedAt)));
+    }
+  }, [dataUpdatedAt]);
+
+  const handleReload = async () => {
+    await refetch();
+    setLastReloadedAt(formatPKTTime(new Date()));
+  };
 
   const employees = data?.employees ?? [];
   const isStandby = data?.source === "standby" || !!error;
@@ -116,13 +129,23 @@ export default function EmployeesPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => refetch()}
+              onClick={handleReload}
               disabled={isFetching}
-              className="w-full text-xs"
+              className="w-full text-xs whitespace-nowrap"
             >
-              <RefreshCw className={`h-3.5 w-3.5 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-              {isFetching ? "Refreshing..." : "Reload Postgres Data"}
+              <RefreshCw
+                className={`h-3.5 w-3.5 mr-2 shrink-0 ${isFetching ? "animate-spin" : ""}`}
+              />
+              {isFetching ? "Reloading..." : "Reload Postgres Data"}
             </Button>
+            {lastReloadedAt && (
+              <p
+                data-testid="last-reloaded-pkt"
+                className="text-[11px] text-textMuted font-mono text-center"
+              >
+                Last reloaded: {lastReloadedAt}
+              </p>
+            )}
             <div className="text-[11px] text-textSecondary space-y-1">
               <p>• Tenant: {tenantSlug}</p>
               <p>• Mode: USE_FAKE_INTEGRATIONS={String(useFakeIntegrations)}</p>
