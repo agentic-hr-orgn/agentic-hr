@@ -9,11 +9,13 @@ import EmployeesPage from "@/app/(dashboard)/employees/page";
 import * as approvalsHook from "@/hooks/use-approvals";
 import * as backendStatusHook from "@/hooks/use-backend-status";
 import * as currentUserHook from "@/hooks/use-current-user";
+import * as departmentsHook from "@/hooks/use-departments";
 import * as employeesHook from "@/hooks/use-employees";
 
 vi.mock("@/hooks/use-approvals");
 vi.mock("@/hooks/use-backend-status");
 vi.mock("@/hooks/use-current-user");
+vi.mock("@/hooks/use-departments");
 vi.mock("@/hooks/use-employees");
 
 describe("Stage 3 Pass 2 — Enterprise UI, Standby States & Helpers", () => {
@@ -153,6 +155,15 @@ describe("Stage 3 Pass 2 — Enterprise UI, Standby States & Helpers", () => {
   });
 
   it("EmployeesPage renders loading skeleton first, Reloading... feedback, and Last reloaded PKT timestamp", () => {
+    vi.spyOn(departmentsHook, "useDepartments").mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+    } as any);
+    vi.spyOn(employeesHook, "useCreateEmployee").mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any);
     vi.spyOn(employeesHook, "useEmployees").mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -168,18 +179,26 @@ describe("Stage 3 Pass 2 — Enterprise UI, Standby States & Helpers", () => {
 
     vi.spyOn(employeesHook, "useEmployees").mockReturnValue({
       data: {
-        employees: [
+        items: [
           {
-            employee_id: "EMP-001",
-            name: "Ubaid Qureshi (Owner)",
+            id: "emp-001",
+            tenant_id: "tenant-01",
+            employee_code: "EMP-001",
+            full_name: "Ubaid Qureshi (Owner)",
             email: "agentic.hr.test.ubaid.owner@gmail.com",
-            department: "Executive",
-            role: "Company Owner & Admin",
-            status: "Active",
-            is_test_account: true,
+            department_name: "Executive",
+            job_title: "Company Owner & Admin",
+            employment_type: "full_time",
+            join_date: "2024-01-01",
+            status: "active",
+            created_at: "2026-11-20T10:00:00+05:00",
+            updated_at: "2026-11-20T10:00:00+05:00",
           },
         ],
-        source: "standby",
+        total: 1,
+        page: 1,
+        page_size: 15,
+        total_pages: 1,
       },
       isLoading: false,
       isFetching: false,

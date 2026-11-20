@@ -15,6 +15,7 @@ import {
   Cpu,
   ArrowRight,
   FolderGit2,
+  Rocket,
   Settings,
   Activity,
   AlertTriangle,
@@ -260,7 +261,21 @@ export default function DashboardPage() {
       )}
 
       {/* Quick Navigation Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <Link
+          href="/onboarding"
+          className="flex flex-col justify-between p-3.5 rounded-medium border border-appBorder bg-surface hover:border-primary/60 hover:shadow-sm transition-all"
+        >
+          <div className="flex items-center justify-between text-primary mb-2">
+            <Rocket className="h-4 w-4" />
+            <ArrowRight className="h-3.5 w-3.5 text-textSecondary" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-textPrimary leading-none">Onboarding</p>
+            <p className="text-[10px] text-textSecondary mt-1">5-Step Wizard</p>
+          </div>
+        </Link>
+
         <Link
           href="/approvals"
           className="flex flex-col justify-between p-3.5 rounded-medium border border-appBorder bg-surface hover:border-primary/60 hover:shadow-sm transition-all"

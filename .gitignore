@@ -44,6 +44,9 @@ temporaldata/
 # Temporal local dev data
 .temporal/
 
+# Tenant-scoped local file uploads
+.local_storage/
+
 # OpenAPI intermediate exports
 packages/contracts/openapi.json
 

@@ -28,6 +28,19 @@ export class ApiHttpError extends Error {
   }
 }
 
+export class ApiOfflineError extends Error {
+  constructor(message = "OFFLINE: FastAPI backend is currently unreachable.") {
+    super(message);
+    this.name = "ApiOfflineError";
+  }
+}
+
+export function isOfflineError(err: unknown): boolean {
+  return (
+    err instanceof ApiOfflineError || (err instanceof Error && err.message.startsWith("OFFLINE:"))
+  );
+}
+
 export function extractApiError(
   body: Record<string, unknown> | null,
   status: number,
@@ -81,6 +94,87 @@ export async function apiRequest<T>(
 
   if (res.ok) {
     return { kind: "live", status: res.status, data: parsedBody as T };
+  }
+
+  const bodyObj =
+    parsedBody && typeof parsedBody === "object" ? (parsedBody as Record<string, unknown>) : null;
+  const { code, message } = extractApiError(bodyObj, res.status, fallbackPrefix);
+
+  return {
+    kind: "http_error",
+    status: res.status,
+    code,
+    message,
+    body: bodyObj,
+  };
+}
+
+function parseContentDispositionFilename(headerVal: string | null): string | null {
+  if (!headerVal) return null;
+  const utfMatch = headerVal.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utfMatch?.[1]) {
+    try {
+      return decodeURIComponent(utfMatch[1].trim());
+    } catch {
+      return utfMatch[1].trim();
+    }
+  }
+  const plainMatch = headerVal.match(/filename="?([^";]+)"?/i);
+  return plainMatch?.[1]?.trim() || null;
+}
+
+/**
+ * Triggers a client-side file download from a Blob and immediately revokes the
+ * temporary object URL inside `finally` to prevent memory leaks.
+ */
+export function triggerBrowserBlobDownload(blob: Blob, filename: string): void {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return;
+  }
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+/**
+ * Executes a binary download request against FastAPI with identical discriminated
+ * live / http_error / offline semantics (never fabricates success on 4xx/5xx).
+ */
+export async function apiDownloadBlob(
+  url: string,
+  init?: RequestInit,
+  fallbackPrefix = "Download failed"
+): Promise<ApiRequestResult<{ blob: Blob; filename: string | null }>> {
+  let res: Response;
+  try {
+    res = await fetch(url, init);
+  } catch (err: unknown) {
+    return { kind: "offline", error: err };
+  }
+
+  if (res.ok) {
+    const blob = await res.blob();
+    const filename = parseContentDispositionFilename(
+      typeof res.headers?.get === "function" ? res.headers.get("content-disposition") : null
+    );
+    return { kind: "live", status: res.status, data: { blob, filename } };
+  }
+
+  let parsedBody: unknown = null;
+  try {
+    if (typeof res.json === "function") {
+      parsedBody = await res.json();
+    }
+  } catch {
+    parsedBody = null;
   }
 
   const bodyObj =

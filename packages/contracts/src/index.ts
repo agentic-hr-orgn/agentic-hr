@@ -21,6 +21,33 @@ export type SheetsSyncResponse = components["schemas"]["SheetsSyncResponse"];
 export type SheetsDriftLogResponse = components["schemas"]["SheetsDriftLogResponse"];
 export type SheetsReconcileResponse = components["schemas"]["SheetsReconcileResponse"];
 
+// Stage 4 Onboarding, Employees, Org Chart, Document Vault, Bulk Import & Notifications DTOs
+export type OnboardingState = components["schemas"]["OnboardingStateResponse"];
+export type ReadinessChecklist = components["schemas"]["OnboardingReadinessResponse"];
+export type Department = components["schemas"]["DepartmentResponse"];
+export type EmployeeSummary = components["schemas"]["EmployeeListItem"];
+export type EmployeeListResponse = components["schemas"]["EmployeeListResponse"];
+export type EmployeeProfile = components["schemas"]["EmployeeProfileResponse"];
+export type OrgChartNode = components["schemas"]["OrgChartNode"];
+export type OrgChartResponse = components["schemas"]["OrgChartResponse"];
+export type EmployeeDocument = components["schemas"]["EmployeeDocumentResponse"];
+export type ImportValidationResult = components["schemas"]["ImportValidationResult"];
+export type NotificationItem = components["schemas"]["NotificationItem"];
+export type NotificationListResponse = components["schemas"]["NotificationListResponse"];
+export type ExpiryScanSummary = components["schemas"]["ExpiryScanSummary"];
+export type PolicyDocumentItem = components["schemas"]["PolicyDocumentResponse"];
+export type OnboardingStepSaveRequest = components["schemas"]["OnboardingStepSaveRequest"];
+export type OnboardingLaunchResponse = components["schemas"]["OnboardingLaunchResponse"];
+export type DepartmentCreateRequest = components["schemas"]["DepartmentCreateRequest"];
+export type DepartmentUpdateRequest = components["schemas"]["DepartmentUpdateRequest"];
+export type ImportCommitResponse = components["schemas"]["ImportCommitResponse"];
+export type ImportPreviewRow = components["schemas"]["ImportPreviewRow"];
+export type ImportRowError = components["schemas"]["ImportRowError"];
+export type EmployeeCreateRequest = components["schemas"]["EmployeeCreateRequest"];
+export type EmployeeUpdateRequest = components["schemas"]["EmployeeUpdateRequest"];
+export type MarkAllReadResponse = components["schemas"]["MarkAllReadResponse"];
+export type TriggerExpiryScanRequest = components["schemas"]["TriggerExpiryScanRequest"];
+
 // Google Drive DTOs
 export interface DriveFolderEnsureRequest {
   folder_name?: string;

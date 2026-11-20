@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Activity, ShieldCheck, Menu, Building2 } from "lucide-react";
 import { OrganizationSwitcher, UserButton, useAuth } from "@clerk/nextjs";
 import { Badge } from "@/components/ui/badge";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { getApiHostLabel, PLATFORM_STAGE } from "@/lib/platform";
@@ -15,6 +16,11 @@ interface HeaderProps {
 }
 
 const routeTitles: Array<{ prefix: string; title: string; subtitle: string }> = [
+  {
+    prefix: "/onboarding",
+    title: "Onboarding Wizard",
+    subtitle: "5-Step Workspace Setup & Launch",
+  },
   {
     prefix: "/approvals/",
     title: "Approval Correction",
@@ -188,6 +194,9 @@ export function Header({ onMenuClick }: HeaderProps) {
           <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
           <span>Tenant Isolated (ADR 002)</span>
         </div>
+
+        {/* Global Notification Bell */}
+        <NotificationBell />
 
         {/* User Account / Profile */}
         <div className="flex items-center gap-2 pl-2 border-l border-appBorder shrink-0">

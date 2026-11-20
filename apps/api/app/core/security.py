@@ -346,6 +346,22 @@ async def require_hr_head(
     return current_user
 
 
+async def require_owner_manager_or_hr_head(
+    current_user: AuthenticatedUserContext = Depends(get_current_user),
+) -> AuthenticatedUserContext:
+    """Dependency allowing Owner, Manager, or HR Head roles (blocks standard employee role)."""
+    if not (current_user.role in ("owner", "manager") or current_user.is_hr_head):
+        logger.warning(
+            f"User {current_user.email} with role '{current_user.role}' "
+            "denied access (required: owner, manager, or hr_head)"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: Owner, Manager, or HR Head privileges required.",
+        )
+    return current_user
+
+
 async def require_payroll_admin(
     current_user: AuthenticatedUserContext = Depends(get_current_user),
 ) -> AuthenticatedUserContext:

@@ -1,6 +1,7 @@
 """
 Temporal Background Worker Entrypoint for Agentic HR Core.
-Orchestrates durable background workflows (DocuVerify, Screener, Sheets sync, approval gates).
+Orchestrates durable background workflows (DocuVerify, Screener, Sheets sync, approval gates,
+and daily 09:00 Asia/Karachi document expiry scanning).
 Connects to Temporal Server and listens on configured task queue.
 """
 
@@ -9,13 +10,25 @@ import logging
 import signal
 import sys
 
-from temporalio.client import Client
+from temporalio.client import (
+    Client,
+    Schedule,
+    ScheduleActionStartWorkflow,
+    ScheduleAlreadyRunningError,
+    ScheduleOverlapPolicy,
+    SchedulePolicy,
+    ScheduleSpec,
+    ScheduleUpdate,
+    ScheduleUpdateInput,
+)
 from temporalio.worker import Worker
 
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.services.outbox_publisher import OutboxPublisherWorker
 from app.workflows import (
+    DocumentExpiryScanInput,
+    DocumentExpiryScanWorkflow,
     DummyApprovalWorkflow,
     HumanApprovalWorkflow,
     SampleOnboardingWorkflow,
@@ -24,10 +37,13 @@ from app.workflows import (
     execute_dummy_rejected_action_activity,
     get_approval_decision_activity,
     greeting_activity,
+    list_active_tenant_ids_activity,
     notify_approval_decision_activity,
     notify_changes_requested_activity,
     notify_resubmitted_activity,
+    scan_tenant_expiring_documents_activity,
     schedule_interview_activity,
+    send_tenant_email_activity,
     send_welcome_notification,
     verify_approval_record_activity,
 )
@@ -37,6 +53,58 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] [temporal-worker] %(message)s",
 )
 logger = logging.getLogger("agentic_hr.worker")
+
+DAILY_DOCUMENT_EXPIRY_SCHEDULE_ID = "daily-document-expiry-scan"
+DAILY_DOCUMENT_EXPIRY_CRON = "0 9 * * *"
+DAILY_DOCUMENT_EXPIRY_TZ = "Asia/Karachi"
+
+
+def build_daily_document_expiry_schedule() -> Schedule:
+    """Builds the canonical Temporal Schedule definition (09:00 Asia/Karachi / 04:00 UTC)."""
+    return Schedule(
+        action=ScheduleActionStartWorkflow(
+            DocumentExpiryScanWorkflow.run,
+            DocumentExpiryScanInput(),
+            id="document-expiry-scan",
+            task_queue=settings.TEMPORAL_TASK_QUEUE,
+        ),
+        spec=ScheduleSpec(
+            cron_expressions=[DAILY_DOCUMENT_EXPIRY_CRON],
+            time_zone_name=DAILY_DOCUMENT_EXPIRY_TZ,
+        ),
+        policy=SchedulePolicy(overlap=ScheduleOverlapPolicy.SKIP),
+    )
+
+
+async def ensure_daily_document_expiry_schedule(client: Client) -> str:
+    """
+    Idempotently creates or updates the daily `daily-document-expiry-scan` Temporal Schedule
+    at 09:00 Asia/Karachi (04:00 UTC).
+    """
+    desired_schedule = build_daily_document_expiry_schedule()
+    try:
+        await client.create_schedule(DAILY_DOCUMENT_EXPIRY_SCHEDULE_ID, desired_schedule)
+        logger.info(
+            "Created Temporal Schedule '%s' (%s %s).",
+            DAILY_DOCUMENT_EXPIRY_SCHEDULE_ID,
+            DAILY_DOCUMENT_EXPIRY_CRON,
+            DAILY_DOCUMENT_EXPIRY_TZ,
+        )
+        return "created"
+    except ScheduleAlreadyRunningError:
+        handle = client.get_schedule_handle(DAILY_DOCUMENT_EXPIRY_SCHEDULE_ID)
+
+        async def _updater(_input: ScheduleUpdateInput) -> ScheduleUpdate:
+            return ScheduleUpdate(schedule=desired_schedule)
+
+        await handle.update(_updater)
+        logger.info(
+            "Updated existing Temporal Schedule '%s' (%s %s).",
+            DAILY_DOCUMENT_EXPIRY_SCHEDULE_ID,
+            DAILY_DOCUMENT_EXPIRY_CRON,
+            DAILY_DOCUMENT_EXPIRY_TZ,
+        )
+        return "updated"
 
 
 async def run_worker() -> None:
@@ -57,6 +125,15 @@ async def run_worker() -> None:
         )
         sys.exit(1)
 
+    try:
+        await ensure_daily_document_expiry_schedule(client)
+    except Exception as exc:
+        logger.warning(
+            "Could not register Temporal Schedule '%s' at startup (continuing worker): %s",
+            DAILY_DOCUMENT_EXPIRY_SCHEDULE_ID,
+            exc,
+        )
+
     worker = Worker(
         client,
         task_queue=settings.TEMPORAL_TASK_QUEUE,
@@ -65,6 +142,7 @@ async def run_worker() -> None:
             HumanApprovalWorkflow,
             DummyApprovalWorkflow,
             WaitForApprovalWorkflow,
+            DocumentExpiryScanWorkflow,
         ],
         activities=[
             greeting_activity,
@@ -77,6 +155,9 @@ async def run_worker() -> None:
             get_approval_decision_activity,
             execute_dummy_approved_action_activity,
             execute_dummy_rejected_action_activity,
+            send_tenant_email_activity,
+            list_active_tenant_ids_activity,
+            scan_tenant_expiring_documents_activity,
         ],
     )
 
@@ -84,10 +165,8 @@ async def run_worker() -> None:
 
     logger.info(f"Worker registered for task queue '{settings.TEMPORAL_TASK_QUEUE}'.")
     logger.info(
-        "Registered Workflows: SampleOnboardingWorkflow, HumanApprovalWorkflow, DummyApprovalWorkflow, WaitForApprovalWorkflow"
-    )
-    logger.info(
-        "Registered Activities: greeting, notifications, interview scheduling, approval decisions, verification, reconciliation, dummy actions"
+        "Registered Workflows: SampleOnboardingWorkflow, HumanApprovalWorkflow, "
+        "DummyApprovalWorkflow, WaitForApprovalWorkflow, DocumentExpiryScanWorkflow"
     )
 
     stop_event = asyncio.Event()

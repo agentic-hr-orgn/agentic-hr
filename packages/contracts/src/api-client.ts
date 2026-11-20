@@ -433,6 +433,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connectors/google/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Google Oauth Authorize
+         * @description Generates an offline-access Google OAuth URL with a signed CSRF state token.
+         */
+        get: operations["google_oauth_authorize_api_v1_connectors_google_authorize_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connectors/google/oauth/callback": {
         parameters: {
             query?: never;
@@ -446,6 +466,27 @@ export interface paths {
          *     verifies scopes against prohibited list, and stores encrypted credentials.
          */
         get: operations["google_oauth_callback_api_v1_connectors_google_oauth_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/google/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Google Oauth Callback
+         * @description Handles Google OAuth redirect, validates CSRF state, exchanges authorization code,
+         *     verifies scopes against prohibited list, and stores encrypted credentials.
+         */
+        get: operations["google_oauth_callback_api_v1_connectors_google_callback_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -514,26 +555,6 @@ export interface paths {
         patch: operations["toggle_connector_read_only_api_v1_connectors__id__read_only_patch"];
         trace?: never;
     };
-    "/api/v1/connectors/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Revoke Connector
-         * @description Revokes a connector credential (restricted strictly to Owners).
-         */
-        delete: operations["revoke_connector_api_v1_connectors__id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/connectors/{id}/refresh": {
         parameters: {
             query?: never;
@@ -554,6 +575,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/connectors/google/reconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reconnect Connector
+         * @description Restores status to connected and unpauses jobs in fake/sandbox mode.
+         *     When USE_FAKE_INTEGRATIONS=false, returns HTTP 409 OAUTH_REAUTH_REQUIRED with a
+         *     signed Google OAuth authorization_url so real grants are never restored without consent.
+         */
+        post: operations["reconnect_connector_api_v1_connectors_google_reconnect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/{id}/reconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reconnect Connector
+         * @description Restores status to connected and unpauses jobs in fake/sandbox mode.
+         *     When USE_FAKE_INTEGRATIONS=false, returns HTTP 409 OAUTH_REAUTH_REQUIRED with a
+         *     signed Google OAuth authorization_url so real grants are never restored without consent.
+         */
+        post: operations["reconnect_connector_api_v1_connectors__id__reconnect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Connector
+         * @description Revokes a connector credential (restricted strictly to Owners).
+         */
+        delete: operations["revoke_connector_api_v1_connectors__id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/connectors/email/send": {
         parameters: {
             query?: never;
@@ -565,8 +650,8 @@ export interface paths {
         put?: never;
         /**
          * Send Email
-         * @description Dispatches an outbound email through the tenant's connected Google Workspace connector.
-         *     Enforces per-tenant rate limit, client-side read-only switch, and at-most-once idempotency.
+         * @description Sends an outbound email via Gmail least-privilege send connector.
+         *     Enforces per-tenant rate limits, read-only switch, and IdempotencyGate.
          */
         post: operations["send_email_api_v1_connectors_email_send_post"];
         delete?: never;
@@ -586,8 +671,8 @@ export interface paths {
         put?: never;
         /**
          * Record Email Bounce
-         * @description Synchronously marks an email delivery as bounced/failed without inbox polling.
-         *     Updates the matching sent_messages record and enqueues an immutable audit log.
+         * @description Records an incoming bounce or delivery failure synchronously.
+         *     Complies with ADR 006: marks status without requiring inbox-reading scopes.
          */
         post: operations["record_email_bounce_api_v1_connectors_email_bounces_post"];
         delete?: never;
@@ -605,9 +690,29 @@ export interface paths {
         };
         /**
          * List Sent Messages
-         * @description Lists all outbound emails dispatched by the active tenant.
+         * @description Lists all outbound sent messages for the active tenant.
          */
         get: operations["list_sent_messages_api_v1_connectors_email_sent_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/email/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Email Messages
+         * @description Lists sent messages with status filtering and pagination for active tenant.
+         */
+        get: operations["list_email_messages_api_v1_connectors_email_messages_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -678,6 +783,651 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/drive/folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ensure Drive Folder
+         * @description Finds or creates a dedicated tenant root folder in Google Drive under drive.file.
+         */
+        post: operations["ensure_drive_folder_api_v1_connectors_drive_folders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/drive/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Drive File
+         * @description Uploads a file to Google Drive strictly inside the tenant folder with MIME/size validation.
+         */
+        post: operations["upload_drive_file_api_v1_connectors_drive_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/drive/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Drive Files
+         * @description Lists files owned by the tenant in Google Drive.
+         */
+        get: operations["list_drive_files_api_v1_connectors_drive_files_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/drive/files/{file_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Drive File
+         * @description Downloads binary file bytes from Google Drive.
+         */
+        get: operations["download_drive_file_api_v1_connectors_drive_files__file_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/calendar/free-busy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Query Calendar Free Busy
+         * @description Queries free/busy windows for calendar IDs in Asia/Karachi timezone.
+         */
+        post: operations["query_calendar_free_busy_api_v1_connectors_calendar_free_busy_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/calendar/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Calendar Event
+         * @description Creates a calendar event with Meet link in Asia/Karachi timezone.
+         */
+        post: operations["create_calendar_event_api_v1_connectors_calendar_events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/connectors/calendar/events/{event_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Cancel Calendar Event
+         * @description Cancels/deletes an existing calendar event.
+         */
+        delete: operations["cancel_calendar_event_api_v1_connectors_calendar_events__event_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Calendar Event
+         * @description Updates/reschedules an existing calendar event in Asia/Karachi timezone.
+         */
+        patch: operations["update_calendar_event_api_v1_connectors_calendar_events__event_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/onboarding/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Onboarding State
+         * @description Returns the current tenant's resumable onboarding wizard state.
+         */
+        get: operations["get_onboarding_state_api_v1_onboarding_state_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/steps/{step}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save Onboarding Step
+         * @description Persists step 1..5 onboarding configuration and advances wizard progress.
+         */
+        put: operations["save_onboarding_step_api_v1_onboarding_steps__step__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Onboarding Readiness
+         * @description Deterministically evaluates the Step 5 launch readiness checklist.
+         */
+        get: operations["get_onboarding_readiness_api_v1_onboarding_readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/onboarding/launch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Launch Tenant Workspace
+         * @description Marks the tenant live, queues employee directory Sheets sync, writes audit logs,
+         *     commits domain state BEFORE external connector calls, and dispatches idempotent
+         *     employee invitation emails. Restricted to Owner or HR Head.
+         */
+        post: operations["launch_tenant_workspace_api_v1_onboarding_launch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/departments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Departments
+         * @description Lists all departments for the caller's tenant.
+         */
+        get: operations["list_departments_api_v1_departments_get"];
+        put?: never;
+        /**
+         * Create Department
+         * @description Creates a new department in the caller's tenant.
+         */
+        post: operations["create_department_api_v1_departments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/departments/{department_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Department
+         * @description Deletes a department. Blocks deletion with HTTP 409 if employees belong to the department
+         *     unless reassign_to_department_id or force_null_reassign=true is provided.
+         */
+        delete: operations["delete_department_api_v1_departments__department_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Department
+         * @description Updates an existing department in the caller's tenant.
+         */
+        patch: operations["update_department_api_v1_departments__department_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Policy Documents
+         * @description Lists all uploaded policy documents for the active tenant.
+         */
+        get: operations["list_policy_documents_api_v1_policies_get"];
+        put?: never;
+        /**
+         * Upload Policy Document
+         * @description Accepts PDF/DOCX/TXT policy files up to 10MB via multipart/form-data, stores via
+         *     tenant-scoped StorageHelper, persists `policy_documents` with `ingestion_status='queued_stub'`,
+         *     and emits transactional outbox event `policy.uploaded.stub`.
+         */
+        post: operations["upload_policy_document_api_v1_policies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/policies/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Policy Document
+         * @description Accepts PDF/DOCX/TXT policy files up to 10MB via multipart/form-data, stores via
+         *     tenant-scoped StorageHelper, persists `policy_documents` with `ingestion_status='queued_stub'`,
+         *     and emits transactional outbox event `policy.uploaded.stub`.
+         */
+        post: operations["upload_policy_document_api_v1_policies_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/policies/{policy_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Policy Document
+         * @description Deletes a policy document for the active tenant.
+         */
+        delete: operations["delete_policy_document_api_v1_policies__policy_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/import/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Employee Import Template
+         * @description Generates and returns a tenant-customized `.xlsx` employee import template.
+         */
+        get: operations["download_employee_import_template_api_v1_employees_import_template_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/import/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Employee Import Xlsx
+         * @description Parses and validates every row in an uploaded `.xlsx` workbook without stopping on first error,
+         *     stages encrypted PII in Redis (30-min TTL), and returns masked preview rows + per-row errors.
+         */
+        post: operations["validate_employee_import_xlsx_api_v1_employees_import_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/import/{batch_id}/error-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Employee Import Error Report
+         * @description Returns a downloadable `.xlsx` highlighting invalid rows and their validation errors.
+         */
+        get: operations["download_employee_import_error_report_api_v1_employees_import__batch_id__error_report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/import/{batch_id}/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Commit Employee Import Batch
+         * @description Commits a clean validated import batch (`invalid_count == 0`) using a two-pass insert
+         *     (Pass 1: insert employees with AES-256-GCM 4-field AAD PII; Pass 2: link manager_id),
+         *     enqueues `sheets_sync_queue`, writes `audit_logs`, and clears the staging key.
+         */
+        post: operations["commit_employee_import_batch_api_v1_employees_import__batch_id__commit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Employees
+         * @description Paginated employee directory queried strictly from `public.pub_employees`.
+         *     Never selects or returns encrypted CNIC or bank account fields.
+         */
+        get: operations["list_employees_api_v1_employees_get"];
+        put?: never;
+        /**
+         * Create Employee
+         * @description Creates an employee record in the caller's tenant.
+         *     CNIC and bank account fields are restricted to owner, hr_head, and payroll_admin.
+         */
+        post: operations["create_employee_api_v1_employees_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/org-chart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Org Chart
+         * @description Returns a cycle-safe hierarchical org chart built from `public.pub_employees`.
+         */
+        get: operations["get_org_chart_api_v1_employees_org_chart_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{employee_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Employee Profile
+         * @description Returns full employee profile with strict role-based encrypted PII decryption.
+         *     Commits `employee.sensitive_viewed` audit log whenever encrypted PII is decrypted.
+         */
+        get: operations["get_employee_profile_api_v1_employees__employee_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Employee
+         * @description Updates an employee record. Prevents self-parenting/cycles in manager hierarchy
+         *     and enforces role-based guards on CNIC and bank account modifications.
+         */
+        patch: operations["update_employee_api_v1_employees__employee_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/employees/{employee_id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Employee Documents
+         * @description Lists all documents in an employee's document vault.
+         */
+        get: operations["list_employee_documents_api_v1_employees__employee_id__documents_get"];
+        put?: never;
+        /**
+         * Upload Employee Document
+         * @description Uploads a per-employee document (PDF, PNG, JPEG, DOCX up to 10MB) with optional expiry date.
+         */
+        post: operations["upload_employee_document_api_v1_employees__employee_id__documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{employee_id}/documents/{document_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Employee Document
+         * @description Downloads a per-employee document with hardened headers and checksum integrity.
+         */
+        get: operations["download_employee_document_api_v1_employees__employee_id__documents__document_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{employee_id}/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Employee Document
+         * @description Deletes a per-employee document. Restricted strictly to Owner and HR Head.
+         */
+        delete: operations["delete_employee_document_api_v1_employees__employee_id__documents__document_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Notifications
+         * @description Lists visible in-app notifications for the caller's tenant along with total and unread_count.
+         *     Owners and HR Heads see all tenant notifications; other users see only their own.
+         */
+        get: operations["list_notifications_api_v1_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark All Notifications Read
+         * @description Marks all unread notifications visible to the caller as read.
+         */
+        post: operations["mark_all_notifications_read_api_v1_notifications_read_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/trigger-expiry-scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger Expiry Scan
+         * @description Manually runs the 30/7/1-day document expiry scan in-process for the caller's tenant.
+         *     Restricted to Owner and HR Head. Optional `reference_date` override is honored ONLY
+         *     when `ENVIRONMENT != 'production'`.
+         */
+        post: operations["trigger_expiry_scan_api_v1_notifications_trigger_expiry_scan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Mark Notification Read
+         * @description Marks a single visible notification as read.
+         */
+        patch: operations["mark_notification_read_api_v1_notifications__notification_id__read_patch"];
         trace?: never;
     };
     "/api/synthetic/company": {
@@ -1022,12 +1772,150 @@ export interface components {
              */
             is_tenant_suspended: boolean;
         };
+        /** Body_upload_employee_document_api_v1_employees__employee_id__documents_post */
+        Body_upload_employee_document_api_v1_employees__employee_id__documents_post: {
+            /** File */
+            file: string;
+            /** Document Type */
+            document_type: string;
+            /** Title */
+            title?: string | null;
+            /** Expiry Date */
+            expiry_date?: string | null;
+        };
+        /** Body_upload_policy_document_api_v1_policies_post */
+        Body_upload_policy_document_api_v1_policies_post: {
+            /** File */
+            file: string;
+            /** Title */
+            title?: string | null;
+            /**
+             * Storage Provider
+             * @default local
+             */
+            storage_provider: string;
+        };
+        /** Body_upload_policy_document_api_v1_policies_upload_post */
+        Body_upload_policy_document_api_v1_policies_upload_post: {
+            /** File */
+            file: string;
+            /** Title */
+            title?: string | null;
+            /**
+             * Storage Provider
+             * @default local
+             */
+            storage_provider: string;
+        };
+        /** Body_validate_employee_import_xlsx_api_v1_employees_import_validate_post */
+        Body_validate_employee_import_xlsx_api_v1_employees_import_validate_post: {
+            /** File */
+            file: string;
+        };
         /** BounceWebhookRequest */
         BounceWebhookRequest: {
             /** Provider Message Id */
             provider_message_id: string;
             /** Error Message */
             error_message: string;
+        };
+        /** CalendarEventCreateRequest */
+        CalendarEventCreateRequest: {
+            /** Title */
+            title: string;
+            /**
+             * Start Time
+             * Format: date-time
+             */
+            start_time: string;
+            /**
+             * End Time
+             * Format: date-time
+             */
+            end_time: string;
+            /** Attendees */
+            attendees?: string[];
+            /** Description */
+            description?: string | null;
+            /**
+             * Location
+             * @default Google Meet
+             */
+            location: string | null;
+            /**
+             * Calendar Id
+             * @default primary
+             */
+            calendar_id: string;
+            /**
+             * Timezone
+             * @default Asia/Karachi
+             */
+            timezone: string;
+        };
+        /** CalendarEventResponse */
+        CalendarEventResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Google Event Id */
+            google_event_id: string;
+            /** Title */
+            title: string;
+            /**
+             * Start Time
+             * Format: date-time
+             */
+            start_time: string;
+            /**
+             * End Time
+             * Format: date-time
+             */
+            end_time: string;
+            /** Timezone */
+            timezone: string;
+            /** Attendees */
+            attendees: string[];
+            /** Description */
+            description?: string | null;
+            /** Location */
+            location?: string | null;
+            /** Hangout Link */
+            hangout_link?: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** CalendarEventUpdateRequest */
+        CalendarEventUpdateRequest: {
+            /** Title */
+            title?: string | null;
+            /** Start Time */
+            start_time?: string | null;
+            /** End Time */
+            end_time?: string | null;
+            /** Attendees */
+            attendees?: string[] | null;
+            /** Description */
+            description?: string | null;
+            /** Location */
+            location?: string | null;
         };
         /** CompanyProfile */
         CompanyProfile: {
@@ -1125,6 +2013,398 @@ export interface components {
             /** Pgvector Enabled */
             pgvector_enabled: boolean;
         };
+        /**
+         * DepartmentCreateRequest
+         * @description Request payload for creating a department.
+         */
+        DepartmentCreateRequest: {
+            /** Name */
+            name: string;
+            /** Code */
+            code?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Head Employee Id */
+            head_employee_id?: string | null;
+        };
+        /**
+         * DepartmentResponse
+         * @description Serialized department response with employee count.
+         */
+        DepartmentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Name */
+            name: string;
+            /** Code */
+            code?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Head Employee Id */
+            head_employee_id?: string | null;
+            /**
+             * Employee Count
+             * @default 0
+             */
+            employee_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * DepartmentUpdateRequest
+         * @description Request payload for updating a department.
+         */
+        DepartmentUpdateRequest: {
+            /** Name */
+            name?: string | null;
+            /** Code */
+            code?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Head Employee Id */
+            head_employee_id?: string | null;
+        };
+        /** DriveFileListResponse */
+        DriveFileListResponse: {
+            /** Files */
+            files: components["schemas"]["DriveFileResponse"][];
+            /** Total */
+            total: number;
+        };
+        /** DriveFileResponse */
+        DriveFileResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Drive File Id */
+            drive_file_id: string;
+            /** Folder Id */
+            folder_id?: string | null;
+            /** Name */
+            name: string;
+            /** Mime Type */
+            mime_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Web View Link */
+            web_view_link?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** DriveFolderEnsureRequest */
+        DriveFolderEnsureRequest: {
+            /**
+             * Folder Name
+             * @default Agentic HR Documents
+             */
+            folder_name: string;
+            /** Parent Folder Id */
+            parent_folder_id?: string | null;
+        };
+        /** DriveFolderResponse */
+        DriveFolderResponse: {
+            /** Folder Id */
+            folder_id: string;
+            /** Name */
+            name: string;
+            /** Web View Link */
+            web_view_link?: string | null;
+            /** Parent Folder Id */
+            parent_folder_id?: string | null;
+        };
+        /** DriveUploadRequest */
+        DriveUploadRequest: {
+            /** Name */
+            name: string;
+            /**
+             * Content Base64
+             * @description Base64 encoded file content
+             */
+            content_base64: string;
+            /** Mime Type */
+            mime_type: string;
+            /** Folder Id */
+            folder_id?: string | null;
+        };
+        /**
+         * EmployeeCreateRequest
+         * @description Request payload for creating an employee record.
+         */
+        EmployeeCreateRequest: {
+            /** Full Name */
+            full_name: string;
+            /** Email */
+            email: string;
+            /** Phone */
+            phone?: string | null;
+            /** Employee Code */
+            employee_code?: string | null;
+            /** User Id */
+            user_id?: string | null;
+            /** Department Id */
+            department_id?: string | null;
+            /** Manager Id */
+            manager_id?: string | null;
+            /** Job Title */
+            job_title: string;
+            /**
+             * Employment Type
+             * @default full_time
+             * @enum {string}
+             */
+            employment_type: "full_time" | "part_time" | "contract" | "intern";
+            /**
+             * Join Date
+             * Format: date
+             */
+            join_date: string;
+            /** Leaving Date */
+            leaving_date?: string | null;
+            /**
+             * Status
+             * @default active
+             * @enum {string}
+             */
+            status: "active" | "invited" | "on_leave" | "terminated" | "resigned";
+            /** Cnic */
+            cnic?: string | null;
+            /** Bank Account */
+            bank_account?: string | null;
+        };
+        /**
+         * EmployeeDocumentResponse
+         * @description Serialized per-employee document vault record.
+         */
+        EmployeeDocumentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Document Type */
+            document_type: string;
+            /** Title */
+            title: string;
+            /** File Name */
+            file_name: string;
+            /** Mime Type */
+            mime_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Storage Provider */
+            storage_provider: string;
+            /** Storage Key */
+            storage_key: string;
+            /** Web View Link */
+            web_view_link?: string | null;
+            /** Expiry Date */
+            expiry_date?: string | null;
+            /** Uploaded By */
+            uploaded_by?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * EmployeeListItem
+         * @description Non-sensitive employee directory item projected strictly from `public.pub_employees`.
+         *     Never contains CNIC or bank account fields.
+         */
+        EmployeeListItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** User Id */
+            user_id?: string | null;
+            /** Employee Code */
+            employee_code?: string | null;
+            /** Full Name */
+            full_name: string;
+            /** Email */
+            email: string;
+            /** Phone */
+            phone?: string | null;
+            /** Department Id */
+            department_id?: string | null;
+            /** Department Name */
+            department_name?: string | null;
+            /** Manager Id */
+            manager_id?: string | null;
+            /** Manager Name */
+            manager_name?: string | null;
+            /** Job Title */
+            job_title: string;
+            /** Employment Type */
+            employment_type: string;
+            /**
+             * Join Date
+             * Format: date
+             */
+            join_date: string;
+            /** Leaving Date */
+            leaving_date?: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * EmployeeListResponse
+         * @description Paginated employee directory response.
+         */
+        EmployeeListResponse: {
+            /** Items */
+            items: components["schemas"]["EmployeeListItem"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total Pages */
+            total_pages: number;
+        };
+        /**
+         * EmployeeProfileResponse
+         * @description Detailed employee profile response with strict role-based PII fields.
+         *     `cnic` and `bank_account` are populated ONLY when `can_view_sensitive` is True.
+         */
+        EmployeeProfileResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** User Id */
+            user_id?: string | null;
+            /** Employee Code */
+            employee_code?: string | null;
+            /** Full Name */
+            full_name: string;
+            /** Email */
+            email: string;
+            /** Phone */
+            phone?: string | null;
+            /** Department Id */
+            department_id?: string | null;
+            /** Department Name */
+            department_name?: string | null;
+            /** Manager Id */
+            manager_id?: string | null;
+            /** Manager Name */
+            manager_name?: string | null;
+            /** Job Title */
+            job_title: string;
+            /** Employment Type */
+            employment_type: string;
+            /**
+             * Join Date
+             * Format: date
+             */
+            join_date: string;
+            /** Leaving Date */
+            leaving_date?: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Manager Email */
+            manager_email?: string | null;
+            /**
+             * Can View Sensitive
+             * @default false
+             */
+            can_view_sensitive: boolean;
+            /**
+             * Can Edit Sensitive
+             * @default false
+             */
+            can_edit_sensitive: boolean;
+            /** Cnic */
+            cnic?: string | null;
+            /** Bank Account */
+            bank_account?: string | null;
+            /** Cnic Masked */
+            cnic_masked?: string | null;
+            /** Bank Account Masked */
+            bank_account_masked?: string | null;
+        };
         /** EmployeeRecord */
         EmployeeRecord: {
             /** Employee Id */
@@ -1147,6 +2427,85 @@ export interface components {
              * @default false
              */
             is_test_account: boolean;
+        };
+        /**
+         * EmployeeUpdateRequest
+         * @description Request payload for partially updating an employee record.
+         */
+        EmployeeUpdateRequest: {
+            /** Full Name */
+            full_name?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Employee Code */
+            employee_code?: string | null;
+            /** User Id */
+            user_id?: string | null;
+            /** Department Id */
+            department_id?: string | null;
+            /** Manager Id */
+            manager_id?: string | null;
+            /** Job Title */
+            job_title?: string | null;
+            /** Employment Type */
+            employment_type?: ("full_time" | "part_time" | "contract" | "intern") | null;
+            /** Join Date */
+            join_date?: string | null;
+            /** Leaving Date */
+            leaving_date?: string | null;
+            /** Status */
+            status?: ("active" | "invited" | "on_leave" | "terminated" | "resigned") | null;
+            /** Cnic */
+            cnic?: string | null;
+            /** Bank Account */
+            bank_account?: string | null;
+        };
+        /**
+         * ExpiryScanSummary
+         * @description Structured summary of a tenant document expiry scan.
+         */
+        ExpiryScanSummary: {
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Reference Date */
+            reference_date: string;
+            /** Documents Matched */
+            documents_matched: number;
+            /** Alerts Created */
+            alerts_created: number;
+            /** Alerts Deduplicated */
+            alerts_deduplicated: number;
+            /** Emails Sent */
+            emails_sent: number;
+            /** Emails Skipped */
+            emails_skipped: number;
+        };
+        /** FreeBusyQueryRequest */
+        FreeBusyQueryRequest: {
+            /** Calendar Ids */
+            calendar_ids?: string[];
+            /**
+             * Time Min
+             * Format: date-time
+             */
+            time_min: string;
+            /**
+             * Time Max
+             * Format: date-time
+             */
+            time_max: string;
+        };
+        /** FreeBusyQueryResponse */
+        FreeBusyQueryResponse: {
+            /** Calendars */
+            calendars: {
+                [key: string]: components["schemas"]["TimeSlotSchema"][];
+            };
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1180,6 +2539,97 @@ export interface components {
             models: components["schemas"]["ModelRoutingInfo"];
             /** Request Id */
             request_id?: string | null;
+        };
+        /**
+         * ImportCommitResponse
+         * @description Response returned by POST /api/v1/employees/import/{batch_id}/commit.
+         */
+        ImportCommitResponse: {
+            /** Status */
+            status: string;
+            /** Import Batch Id */
+            import_batch_id: string;
+            /** Committed Count */
+            committed_count: number;
+            /** Sheets Queued */
+            sheets_queued: number;
+            /** Employee Ids */
+            employee_ids: string[];
+        };
+        /**
+         * ImportPreviewRow
+         * @description Sanitized preview of an uploaded Excel row.
+         *     Exposes only masked CNIC and masked bank account values (never plaintext PII).
+         */
+        ImportPreviewRow: {
+            /** Row Number */
+            row_number: number;
+            /** Full Name */
+            full_name: string;
+            /** Email */
+            email: string;
+            /** Phone */
+            phone?: string | null;
+            /** Department */
+            department: string;
+            /** Manager Email */
+            manager_email?: string | null;
+            /** Job Title */
+            job_title: string;
+            /** Employment Type */
+            employment_type: string;
+            /** Join Date */
+            join_date: string;
+            /** Cnic Masked */
+            cnic_masked?: string | null;
+            /** Bank Account Masked */
+            bank_account_masked?: string | null;
+            /** Is Valid */
+            is_valid: boolean;
+            /** Errors */
+            errors?: string[];
+        };
+        /**
+         * ImportRowError
+         * @description Single validation failure on a specific row and column.
+         */
+        ImportRowError: {
+            /** Row Number */
+            row_number: number;
+            /** Field */
+            field: string;
+            /** Message */
+            message: string;
+        };
+        /**
+         * ImportValidationResult
+         * @description Deterministic validation result returned by POST /api/v1/employees/import/validate.
+         */
+        ImportValidationResult: {
+            /** Import Batch Id */
+            import_batch_id: string;
+            /** File Name */
+            file_name: string;
+            /** Total Rows */
+            total_rows: number;
+            /** Valid Count */
+            valid_count: number;
+            /** Invalid Count */
+            invalid_count: number;
+            /** Can Commit */
+            can_commit: boolean;
+            /** Preview Rows */
+            preview_rows: components["schemas"]["ImportPreviewRow"][];
+            /** Errors */
+            errors: components["schemas"]["ImportRowError"][];
+        };
+        /**
+         * MarkAllReadResponse
+         * @description Result of marking all visible notifications as read.
+         */
+        MarkAllReadResponse: {
+            /** Updated */
+            updated: number;
         };
         /** MembershipResponse */
         MembershipResponse: {
@@ -1216,6 +2666,218 @@ export interface components {
             /** Embedding */
             embedding: string;
         };
+        /**
+         * NotificationItem
+         * @description Serialized in-app notification record with Asia/Karachi timestamps.
+         */
+        NotificationItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Recipient User Id */
+            recipient_user_id?: string | null;
+            /** Recipient Email */
+            recipient_email?: string | null;
+            /** Category */
+            category: string;
+            /** Severity */
+            severity: string;
+            /** Title */
+            title: string;
+            /** Message */
+            message: string;
+            /** Entity Type */
+            entity_type?: string | null;
+            /** Entity Id */
+            entity_id?: string | null;
+            /** Dedupe Key */
+            dedupe_key?: string | null;
+            /** Is Read */
+            is_read: boolean;
+            /** Read At */
+            read_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * NotificationListResponse
+         * @description Paginated notification list with unread count.
+         */
+        NotificationListResponse: {
+            /** Items */
+            items: components["schemas"]["NotificationItem"][];
+            /** Total */
+            total: number;
+            /** Unread Count */
+            unread_count: number;
+        };
+        /**
+         * OnboardingLaunchResponse
+         * @description Response payload returned by POST /api/v1/onboarding/launch.
+         */
+        OnboardingLaunchResponse: {
+            /** Status */
+            status: string;
+            /** Is Live */
+            is_live: boolean;
+            /** Launched At */
+            launched_at: string;
+            /** Invitations Sent */
+            invitations_sent: number;
+            /** Invitations Skipped */
+            invitations_skipped: number;
+            /** Sheets Queued */
+            sheets_queued: number;
+            readiness: components["schemas"]["OnboardingReadinessResponse"];
+        };
+        /**
+         * OnboardingReadinessCounts
+         * @description Entity counts backing the Step 5 launch readiness checklist.
+         */
+        OnboardingReadinessCounts: {
+            /** Connectors */
+            connectors: number;
+            /** Policies */
+            policies: number;
+            /** Departments */
+            departments: number;
+            /** Employees */
+            employees: number;
+        };
+        /**
+         * OnboardingReadinessResponse
+         * @description Deterministic Step 5 readiness checklist response.
+         */
+        OnboardingReadinessResponse: {
+            /** Connectors Ok */
+            connectors_ok: boolean;
+            /** Policies Ok */
+            policies_ok: boolean;
+            /** Departments Ok */
+            departments_ok: boolean;
+            /** Employees Ok */
+            employees_ok: boolean;
+            /** Can Go Live */
+            can_go_live: boolean;
+            counts: components["schemas"]["OnboardingReadinessCounts"];
+            /** Missing Items */
+            missing_items: string[];
+        };
+        /**
+         * OnboardingStateResponse
+         * @description Serialized onboarding wizard state returned by GET /state and PUT /steps/{step}.
+         */
+        OnboardingStateResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Current Step */
+            current_step: number;
+            /** Completed Steps */
+            completed_steps: number[];
+            /** Business Type */
+            business_type?: string | null;
+            /** Structure Config */
+            structure_config: {
+                [key: string]: unknown;
+            };
+            /** Is Live */
+            is_live: boolean;
+            /** Launched At */
+            launched_at?: string | null;
+            /** Updated By */
+            updated_by?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * OnboardingStepSaveRequest
+         * @description Payload accepted by PUT /api/v1/onboarding/steps/{step}.
+         */
+        OnboardingStepSaveRequest: {
+            /** Business Type */
+            business_type?: string | null;
+            /** Structure Config */
+            structure_config?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Advance Step
+             * @default true
+             */
+            advance_step: boolean;
+            /** Current Step */
+            current_step?: number | null;
+        };
+        /**
+         * OrgChartNode
+         * @description Recursive node in the tenant organizational chart.
+         */
+        OrgChartNode: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Employee Code */
+            employee_code?: string | null;
+            /** Full Name */
+            full_name: string;
+            /** Job Title */
+            job_title: string;
+            /** Department Name */
+            department_name?: string | null;
+            /** Status */
+            status: string;
+            /** Email */
+            email: string;
+            /** Manager Id */
+            manager_id?: string | null;
+            /**
+             * Direct Reports Count
+             * @default 0
+             */
+            direct_reports_count: number;
+            /** Children */
+            children?: components["schemas"]["OrgChartNode"][];
+        };
+        /**
+         * OrgChartResponse
+         * @description Cycle-safe organizational chart hierarchy built from `public.pub_employees`.
+         */
+        OrgChartResponse: {
+            /** Total Employees */
+            total_employees: number;
+            /** Roots */
+            roots: components["schemas"]["OrgChartNode"][];
+            /** Unassigned */
+            unassigned: components["schemas"]["OrgChartNode"][];
+        };
         /** PolicyDocument */
         PolicyDocument: {
             /** Title */
@@ -1226,6 +2888,48 @@ export interface components {
             category: string;
             /** Summary */
             summary: string;
+        };
+        /**
+         * PolicyDocumentResponse
+         * @description Serialized policy document metadata response.
+         */
+        PolicyDocumentResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Title */
+            title: string;
+            /** File Name */
+            file_name: string;
+            /** Mime Type */
+            mime_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Storage Provider */
+            storage_provider: string;
+            /** Storage Key */
+            storage_key: string;
+            /** Ingestion Status */
+            ingestion_status: string;
+            /** Uploaded By */
+            uploaded_by?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** ReadOnlyToggleRequest */
         ReadOnlyToggleRequest: {
@@ -1248,8 +2952,11 @@ export interface components {
             } | null;
             /** Credential Id */
             credential_id?: string | null;
-            /** Force Retry */
-            force_retry?: boolean;
+            /**
+             * Force Retry
+             * @default false
+             */
+            force_retry: boolean;
         };
         /** SentMessageResponse */
         SentMessageResponse: {
@@ -1447,6 +3154,28 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** TimeSlotSchema */
+        TimeSlotSchema: {
+            /**
+             * Start Time
+             * Format: date-time
+             */
+            start_time: string;
+            /**
+             * End Time
+             * Format: date-time
+             */
+            end_time: string;
+        };
+        /**
+         * TriggerExpiryScanRequest
+         * @description Optional request payload for manual expiry scan trigger.
+         *     `reference_date` override is honored ONLY when ENVIRONMENT != 'production'.
+         */
+        TriggerExpiryScanRequest: {
+            /** Reference Date */
+            reference_date?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -2118,7 +3847,64 @@ export interface operations {
             };
         };
     };
+    google_oauth_authorize_api_v1_connectors_google_authorize_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
     google_oauth_callback_api_v1_connectors_google_oauth_callback_get: {
+        parameters: {
+            query: {
+                code: string;
+                state: string;
+                error?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    google_oauth_callback_api_v1_connectors_google_callback_get: {
         parameters: {
             query: {
                 code: string;
@@ -2241,6 +4027,99 @@ export interface operations {
             };
         };
     };
+    refresh_connector_token_api_v1_connectors__id__refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reconnect_connector_api_v1_connectors_google_reconnect_post: {
+        parameters: {
+            query?: {
+                id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reconnect_connector_api_v1_connectors__id__reconnect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     revoke_connector_api_v1_connectors__id__delete: {
         parameters: {
             query?: never;
@@ -2274,41 +4153,11 @@ export interface operations {
             };
         };
     };
-    refresh_connector_token_api_v1_connectors__id__refresh_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConnectorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     send_email_api_v1_connectors_email_send_post: {
         parameters: {
             query?: never;
             header?: {
+                "Idempotency-Key"?: string | null;
                 "X-Idempotency-Key"?: string | null;
             };
             path?: never;
@@ -2397,6 +4246,40 @@ export interface operations {
             };
         };
     };
+    list_email_messages_api_v1_connectors_email_messages_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                recipient?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentMessageResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     sync_sheets_queue_api_v1_connectors_sheets_sync_post: {
         parameters: {
             query?: never;
@@ -2470,6 +4353,1145 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SheetsReconcileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ensure_drive_folder_api_v1_connectors_drive_folders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DriveFolderEnsureRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriveFolderResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_drive_file_api_v1_connectors_drive_upload_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+                "X-Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DriveUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriveFileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_drive_files_api_v1_connectors_drive_files_get: {
+        parameters: {
+            query?: {
+                folder_id?: string | null;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriveFileListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_drive_file_api_v1_connectors_drive_files__file_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    query_calendar_free_busy_api_v1_connectors_calendar_free_busy_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FreeBusyQueryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FreeBusyQueryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_calendar_event_api_v1_connectors_calendar_events_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+                "X-Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarEventCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarEventResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_calendar_event_api_v1_connectors_calendar_events__event_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_calendar_event_api_v1_connectors_calendar_events__event_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarEventUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarEventResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_onboarding_state_api_v1_onboarding_state_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingStateResponse"];
+                };
+            };
+        };
+    };
+    save_onboarding_step_api_v1_onboarding_steps__step__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                step: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnboardingStepSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingStateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_onboarding_readiness_api_v1_onboarding_readiness_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingReadinessResponse"];
+                };
+            };
+        };
+    };
+    launch_tenant_workspace_api_v1_onboarding_launch_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+                "X-Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingLaunchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_departments_api_v1_departments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartmentResponse"][];
+                };
+            };
+        };
+    };
+    create_department_api_v1_departments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepartmentCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartmentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_department_api_v1_departments__department_id__delete: {
+        parameters: {
+            query?: {
+                reassign_to_department_id?: string | null;
+                force_null_reassign?: boolean;
+            };
+            header?: never;
+            path: {
+                department_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_department_api_v1_departments__department_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                department_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepartmentUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepartmentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_policy_documents_api_v1_policies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyDocumentResponse"][];
+                };
+            };
+        };
+    };
+    upload_policy_document_api_v1_policies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_policy_document_api_v1_policies_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyDocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_policy_document_api_v1_policies_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_policy_document_api_v1_policies_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyDocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_policy_document_api_v1_policies__policy_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                policy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_employee_import_template_api_v1_employees_import_template_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    validate_employee_import_xlsx_api_v1_employees_import_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_validate_employee_import_xlsx_api_v1_employees_import_validate_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportValidationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_employee_import_error_report_api_v1_employees_import__batch_id__error_report_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commit_employee_import_batch_api_v1_employees_import__batch_id__commit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportCommitResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_employees_api_v1_employees_get: {
+        parameters: {
+            query?: {
+                search?: string | null;
+                department_id?: string | null;
+                status?: string | null;
+                employment_type?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_employee_api_v1_employees_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmployeeCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_org_chart_api_v1_employees_org_chart_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgChartResponse"];
+                };
+            };
+        };
+    };
+    get_employee_profile_api_v1_employees__employee_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_employee_api_v1_employees__employee_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmployeeUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_employee_documents_api_v1_employees__employee_id__documents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeDocumentResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_employee_document_api_v1_employees__employee_id__documents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_employee_document_api_v1_employees__employee_id__documents_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmployeeDocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_employee_document_api_v1_employees__employee_id__documents__document_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_employee_document_api_v1_employees__employee_id__documents__document_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notifications_api_v1_notifications_get: {
+        parameters: {
+            query?: {
+                unread_only?: boolean;
+                category?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_all_notifications_read_api_v1_notifications_read_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkAllReadResponse"];
+                };
+            };
+        };
+    };
+    trigger_expiry_scan_api_v1_notifications_trigger_expiry_scan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TriggerExpiryScanRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpiryScanSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_notification_read_api_v1_notifications__notification_id__read_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationItem"];
                 };
             };
             /** @description Validation Error */

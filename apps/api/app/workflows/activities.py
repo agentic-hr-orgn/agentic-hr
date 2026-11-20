@@ -4,7 +4,8 @@ Encapsulates durable execution tasks using fake integration adapters (Gmail, Cal
 Enforces ADR 006: strictly zero real external API calls under USE_FAKE_INTEGRATIONS=true.
 """
 
-from datetime import UTC, datetime, timedelta
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -14,10 +15,17 @@ from temporalio.exceptions import ApplicationError
 
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal
-from app.integrations.base import CalendarEvent, EmailMessage
+from app.integrations.base import CalendarEvent, EmailMessage, GmailDeliveryError
 from app.integrations.factory import get_calendar_service, get_email_service
 from app.models.approval import Approval
 from app.models.tenant import set_tenant_context
+from app.services.connector_service import (
+    ConnectorAuthExpiredError,
+    CredentialNotFoundError,
+    ReadOnlyConnectorError,
+)
+from app.services.document_expiry_service import DocumentExpiryService
+from app.services.email_delivery_service import EmailDeliveryService, RecipientBlockedError
 
 
 def _require_fake_integrations(activity_name: str) -> None:
@@ -350,3 +358,117 @@ async def execute_dummy_rejected_action_activity(approval_id: str) -> dict[str, 
         "approval_id": approval_id,
         "executed_at": datetime.now(UTC).isoformat(),
     }
+
+
+# ==============================================================================
+# Stage 4 Prompt 5: Tenant-Scoped Email Dispatch & Document Expiry Activities
+# (Closes Pass 2 B2 handoff for Stage 4+ workflows)
+# ==============================================================================
+
+
+@dataclass
+class TenantEmailRequest:
+    """Tenant-scoped outbound email payload routed through EmailDeliveryService."""
+
+    tenant_id: str
+    to_email: str
+    template_name: str
+    template_variables: dict[str, Any]
+    idempotency_key: str
+    actor_id: str | None = None
+
+
+@dataclass
+class TenantExpiryScanRequest:
+    """Tenant-scoped document expiry scan parameters."""
+
+    tenant_id: str
+    reference_date_iso: str | None = None
+    send_emails: bool = True
+
+
+@activity.defn
+async def send_tenant_email_activity(req: TenantEmailRequest) -> dict[str, Any]:
+    """
+    Sends a tenant-scoped outbound email via `EmailDeliveryService.send_email()`
+    (enforcing `execute_connector_call`, RLS, read-only mode, rate limits, and
+    IdempotencyGate for onboarding invitations and expiry alerts).
+    """
+    try:
+        t_id = UUID(str(req.tenant_id).strip())
+    except ValueError as exc:
+        raise ApplicationError(
+            f"Invalid tenant_id UUID for send_tenant_email_activity: {req.tenant_id}",
+            non_retryable=True,
+        ) from exc
+
+    async with AsyncSessionLocal() as session:
+        await set_tenant_context(session, str(t_id))
+        try:
+            result = await EmailDeliveryService.send_email(
+                session=session,
+                tenant_id=t_id,
+                to_email=req.to_email,
+                template_name=req.template_name,
+                template_variables=req.template_variables,
+                idempotency_key=req.idempotency_key,
+                actor_id=req.actor_id,
+            )
+            await session.commit()
+            return result
+        except ConnectorAuthExpiredError as exc:
+            await session.commit()
+            return {"status": "skipped", "reason": "auth_expired", "detail": str(exc)}
+        except GmailDeliveryError as exc:
+            await session.commit()
+            return {"status": "skipped", "reason": "delivery_error", "detail": str(exc)}
+        except (ReadOnlyConnectorError, CredentialNotFoundError, RecipientBlockedError) as exc:
+            await session.rollback()
+            return {"status": "skipped", "reason": type(exc).__name__, "detail": str(exc)}
+
+
+@activity.defn
+async def list_active_tenant_ids_activity(limit: int = 500) -> list[str]:
+    """
+    Discovers all active, non-suspended tenant UUIDs using the narrow SECURITY DEFINER
+    function `public.document_scan_tenant_ids(integer)`.
+    """
+    async with AsyncSessionLocal() as session:
+        tenant_ids = await DocumentExpiryService.list_active_tenant_ids(session, limit=limit)
+        return [str(tid) for tid in tenant_ids]
+
+
+@activity.defn
+async def scan_tenant_expiring_documents_activity(
+    req: TenantExpiryScanRequest,
+) -> dict[str, Any]:
+    """
+    Scans a single tenant for documents expiring in 30, 7, or 1 days (PKT),
+    persists deduped in-app notifications, and dispatches idempotent Gmail alerts.
+    """
+    try:
+        t_id = UUID(str(req.tenant_id).strip())
+    except ValueError as exc:
+        raise ApplicationError(
+            f"Invalid tenant_id UUID for scan_tenant_expiring_documents_activity: {req.tenant_id}",
+            non_retryable=True,
+        ) from exc
+
+    ref_date: date | None = None
+    if req.reference_date_iso:
+        try:
+            ref_date = date.fromisoformat(req.reference_date_iso)
+        except ValueError as exc:
+            raise ApplicationError(
+                f"Invalid reference_date_iso '{req.reference_date_iso}'",
+                non_retryable=True,
+            ) from exc
+
+    async with AsyncSessionLocal() as session:
+        summary = await DocumentExpiryService.scan_expiring_documents_for_tenant(
+            session=session,
+            tenant_id=t_id,
+            reference_date_pkt=ref_date,
+            send_emails=req.send_emails,
+        )
+        return summary.model_dump(mode="json")
