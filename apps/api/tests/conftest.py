@@ -3,12 +3,15 @@ Pytest Fixtures for Agentic HR Core Backend Testing.
 Provides HTTPX AsyncClient and FastAPI TestClient instances.
 """
 
+import os
 from collections.abc import AsyncGenerator
 
 import httpx
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
+
+os.environ.setdefault("INGEST_INLINE", "true")
 
 from app.main import app
 from tests.isolation_harness import MultiTenantTestContext, load_multi_tenant_context

@@ -1,20 +1,29 @@
 "use client";
 
 import React, { useId, useRef, useState } from "react";
+import Link from "next/link";
 import {
+  Archive,
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  ExternalLink,
   FileText,
-  Trash2,
   UploadCloud,
   XCircle,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useDeletePolicy, usePolicies, useUploadPolicy } from "@/hooks/use-policies";
+import {
+  IngestionStatusBadge,
+  LifecycleStatusBadge,
+  VisibilityBadge,
+  canManagePolicies,
+  formatBytes,
+  formatDocType,
+} from "@/components/policies/policy-status-badges";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useDeletePolicy, usePolicies, useUploadPolicy } from "@/hooks/use-policies";
 import { isOfflineError } from "@/lib/api-request";
 
 interface Step2UploadPoliciesProps {
@@ -26,18 +35,15 @@ interface Step2UploadPoliciesProps {
 const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".txt"];
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-}
-
 export function Step2UploadPolicies({
   isSavingStep,
   onBack,
   onSaveAndContinue,
 }: Step2UploadPoliciesProps) {
   const titleInputId = useId();
+  const docTypeInputId = useId();
+  const visibilityInputId = useId();
+  const languageInputId = useId();
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -47,14 +53,14 @@ export function Step2UploadPolicies({
   const deleteMutation = useDeletePolicy();
 
   const [policyTitle, setPolicyTitle] = useState("");
+  const [docType, setDocType] = useState("company_policy");
+  const [visibility, setVisibility] = useState("all");
+  const [language, setLanguage] = useState("auto");
   const [isDragActive, setIsDragActive] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const userRole = currentUser?.role?.toLowerCase() || "owner";
-  const canManage =
-    userRole === "owner" || userRole === "manager" || currentUser?.is_hr_head === true;
-
+  const canManage = canManagePolicies(currentUser);
   const liveListError = listError && !isOfflineError(listError) ? listError.message : null;
 
   const handleFileSelected = async (file: File | undefined | null) => {
@@ -83,9 +89,14 @@ export function Step2UploadPolicies({
       const uploaded = await uploadMutation.mutateAsync({
         file,
         title: policyTitle.trim() || undefined,
+        docType,
+        visibility,
+        language: language === "auto" ? undefined : language,
       });
       setPolicyTitle("");
-      setSuccessMessage(`Uploaded '${uploaded.title}' (${formatBytes(uploaded.size_bytes)}).`);
+      setSuccessMessage(
+        `Uploaded '${uploaded.title}' (${formatBytes(uploaded.size_bytes)}) — status: ${uploaded.ingestion_status}.`
+      );
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -94,15 +105,15 @@ export function Step2UploadPolicies({
     }
   };
 
-  const handleDelete = async (policyId: string, title: string) => {
+  const handleArchive = async (policyId: string, title: string) => {
     if (!canManage) return;
     setErrorMessage(null);
     setSuccessMessage(null);
     try {
       await deleteMutation.mutateAsync(policyId);
-      setSuccessMessage(`Removed policy '${title}'.`);
+      setSuccessMessage(`Archived policy '${title}'.`);
     } catch (err: unknown) {
-      setErrorMessage(err instanceof Error ? err.message : "Failed to delete policy document.");
+      setErrorMessage(err instanceof Error ? err.message : "Failed to archive policy document.");
     }
   };
 
@@ -148,25 +159,94 @@ export function Step2UploadPolicies({
           </CardTitle>
           <CardDescription className="text-xs text-textSecondary">
             Upload your Employee Handbook, Leave Policy, or Code of Conduct (PDF, DOCX, TXT up to
-            10MB). Documents are stored securely and queued for Stage 5 Policy Brain AI indexing.
+            10MB). Documents are parsed, normalized, and indexed in PostgreSQL pgvector immediately.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          {/* Optional Custom Title */}
-          <div className="max-w-md space-y-1.5">
-            <label htmlFor={titleInputId} className="block text-xs font-semibold text-textPrimary">
-              Document Title (Optional)
-            </label>
-            <input
-              id={titleInputId}
-              name="policy_title"
-              type="text"
-              value={policyTitle}
-              onChange={(e) => setPolicyTitle(e.target.value)}
-              placeholder="e.g. Employee Leave & Attendance Handbook 2026"
-              disabled={!canManage || uploadMutation.isPending}
-              className="w-full rounded-small border border-slate-300 bg-white px-3 py-2 text-xs text-textPrimary placeholder:text-slate-400 focus:border-[#2A5BDB] focus:outline-none focus:ring-2 focus:ring-[#2A5BDB]/20"
-            />
+          {/* Metadata Controls */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="md:col-span-1 space-y-1">
+              <label
+                htmlFor={titleInputId}
+                className="block text-xs font-semibold text-textPrimary"
+              >
+                Document Title (Optional)
+              </label>
+              <input
+                id={titleInputId}
+                name="policy_title"
+                type="text"
+                value={policyTitle}
+                onChange={(e) => setPolicyTitle(e.target.value)}
+                placeholder="e.g. Leave Handbook 2026"
+                disabled={!canManage || uploadMutation.isPending}
+                className="w-full rounded-small border border-slate-300 bg-white px-3 py-2 text-xs text-textPrimary placeholder:text-slate-400 focus:border-[#2A5BDB] focus:outline-none focus:ring-2 focus:ring-[#2A5BDB]/20"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label
+                htmlFor={docTypeInputId}
+                className="block text-xs font-semibold text-textPrimary"
+              >
+                Document Type
+              </label>
+              <select
+                id={docTypeInputId}
+                name="doc_type"
+                value={docType}
+                onChange={(e) => setDocType(e.target.value)}
+                disabled={!canManage || uploadMutation.isPending}
+                className="w-full rounded-small border border-slate-300 bg-white px-2.5 py-2 text-xs text-textPrimary focus:border-[#2A5BDB] focus:outline-none focus:ring-2 focus:ring-[#2A5BDB]/20"
+              >
+                <option value="company_policy">Company Policy</option>
+                <option value="labour_law">Labour Law</option>
+                <option value="helpdesk_knowledge">Helpdesk Knowledge</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label
+                htmlFor={visibilityInputId}
+                className="block text-xs font-semibold text-textPrimary"
+              >
+                Visibility
+              </label>
+              <select
+                id={visibilityInputId}
+                name="visibility"
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value)}
+                disabled={!canManage || uploadMutation.isPending}
+                className="w-full rounded-small border border-slate-300 bg-white px-2.5 py-2 text-xs text-textPrimary focus:border-[#2A5BDB] focus:outline-none focus:ring-2 focus:ring-[#2A5BDB]/20"
+              >
+                <option value="all">All Employees</option>
+                <option value="managers">Managers+</option>
+                <option value="hr_only">HR Only</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label
+                htmlFor={languageInputId}
+                className="block text-xs font-semibold text-textPrimary"
+              >
+                Language
+              </label>
+              <select
+                id={languageInputId}
+                name="language"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                disabled={!canManage || uploadMutation.isPending}
+                className="w-full rounded-small border border-slate-300 bg-white px-2.5 py-2 text-xs text-textPrimary focus:border-[#2A5BDB] focus:outline-none focus:ring-2 focus:ring-[#2A5BDB]/20"
+              >
+                <option value="auto">Auto-detect (EN / UR)</option>
+                <option value="en">English (en)</option>
+                <option value="ur">Urdu (ur)</option>
+                <option value="mixed">Bilingual (mixed)</option>
+              </select>
+            </div>
           </div>
 
           {/* Drag-and-Drop / File Picker */}
@@ -247,28 +327,42 @@ export function Step2UploadPolicies({
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-small bg-[#102C54]/5 text-[#102C54]">
                         <FileText className="h-4 w-4" aria-hidden="true" />
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-[#102C54] truncate">{doc.title}</p>
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="text-xs font-bold text-[#102C54] truncate">
+                          {doc.title}{" "}
+                          <span className="font-mono text-[10px]">v{doc.version ?? 1}</span>
+                        </p>
                         <p className="text-[11px] text-textSecondary truncate">
-                          {doc.file_name} • {formatBytes(doc.size_bytes)} • Storage:{" "}
-                          <span className="font-mono">{doc.storage_provider}</span>
+                          {doc.file_name} • {formatBytes(doc.size_bytes)} •{" "}
+                          {formatDocType(doc.doc_type)}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="primary" className="text-[11px]">
-                        Queued for Stage 5 AI Ingestion
-                      </Badge>
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <VisibilityBadge visibility={doc.visibility} />
+                      <IngestionStatusBadge
+                        status={doc.ingestion_status}
+                        progressPct={doc.progress_pct}
+                        progressStage={doc.progress_stage}
+                      />
+                      <LifecycleStatusBadge status={doc.lifecycle_status} />
+                      <Link
+                        href={`/policies/${doc.id}/preview`}
+                        className="inline-flex items-center gap-1 rounded-small border border-appBorder bg-[#F8F9FD] px-2.5 py-1 text-[11px] font-semibold text-[#102C54] hover:border-[#2A5BDB] hover:text-[#2A5BDB]"
+                      >
+                        Preview &amp; Fix
+                        <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                      </Link>
                       {canManage && (
                         <button
                           type="button"
-                          onClick={() => void handleDelete(doc.id, doc.title)}
+                          onClick={() => void handleArchive(doc.id, doc.title)}
                           disabled={deleteMutation.isPending}
-                          aria-label={`Delete policy ${doc.title}`}
+                          aria-label={`Archive policy ${doc.title}`}
                           className="inline-flex items-center gap-1 rounded-small border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-50"
                         >
-                          <Trash2 className="h-3 w-3" aria-hidden="true" />
-                          Delete
+                          <Archive className="h-3 w-3" aria-hidden="true" />
+                          Archive
                         </button>
                       )}
                     </div>

@@ -20,7 +20,7 @@ import random
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
@@ -28,8 +28,12 @@ from pydantic import BaseModel, ValidationError
 os.environ["LITELLM_LOCAL_MODEL_COST_MAP"] = "True"
 
 from app.core.config import settings
-from app.core.fake_model import fake_model_provider
+from app.core.fake_model import fake_model_provider, l2_normalize
 from app.core.untrusted import wrap_untrusted_text
+
+EmbeddingTaskType = Literal["RETRIEVAL_DOCUMENT", "RETRIEVAL_QUERY"]
+DEFAULT_STAGE5_EMBEDDING_MODEL = "gemini-embedding-001"
+PRIVATE_EMBEDDING_MODEL_ID = "bge-m3"
 
 logger = logging.getLogger("agentic_hr.model_gateway")
 
@@ -107,6 +111,21 @@ class ModelResponse(Generic[T]):
     cost_usd: float | None = None
     retry_count: int = 0
     repair_attempts: int = 0
+
+
+@dataclass
+class EmbeddingBatchResult:
+    """Strongly-typed envelope for batched L2-normalized embedding responses (ADR 008)."""
+
+    embeddings: list[list[float]]
+    model: str
+    dim: int
+    task_type: EmbeddingTaskType
+    batch_count: int
+    token_estimate: int
+    latency_ms: float
+    provider: str = "gemini"
+    retry_count: int = 0
 
 
 # -------------------------------------------------------------------------
@@ -260,6 +279,263 @@ class ModelGateway:
             )
 
         return provider, model_id, api_key, endpoint
+
+    @staticmethod
+    def resolve_embedding_model(model: str | None = None) -> str:
+        """
+        Resolves the authoritative Stage 5 embedding model identifier (ADR 008).
+        Normalizes legacy Stage 1 `.env` placeholder `'gemini-embedding-2'` to
+        `'gemini-embedding-001'` while preserving explicit custom overrides (e.g. `'bge-m3'`).
+        """
+        candidate = (model or settings.EMBEDDING_MODEL or "").strip()
+        if not candidate or candidate == "gemini-embedding-2":
+            return DEFAULT_STAGE5_EMBEDDING_MODEL
+        return candidate
+
+    async def embed_texts(
+        self,
+        texts: list[str],
+        *,
+        task_type: EmbeddingTaskType,
+        tenant_id: str,
+        model: str | None = None,
+        dim: int = 768,
+        route: str | ModelRoute | None = None,
+    ) -> EmbeddingBatchResult:
+        """
+        Generates L2-normalized embeddings for `texts` in batches of `EMBEDDING_BATCH_SIZE`:
+        - Supports `RETRIEVAL_DOCUMENT` (chunk indexing) and `RETRIEVAL_QUERY` (search).
+        - Reserves a fail-closed `'private'` (`bge-m3`) route stub for on-prem VPC deployments.
+        - Routes to deterministic bilingual fake embedder when `USE_FAKE_INTEGRATIONS=True`
+          or `ENVIRONMENT == 'test'`.
+        - Calls Gemini `batchEmbedContents` (`outputDimensionality=dim`) in live mode.
+        - Applies mandatory `l2_normalize()` and records usage-only telemetry.
+        """
+        if task_type not in ("RETRIEVAL_DOCUMENT", "RETRIEVAL_QUERY"):
+            raise ValueError(
+                f"Invalid embedding task_type '{task_type}'. "
+                "Expected 'RETRIEVAL_DOCUMENT' or 'RETRIEVAL_QUERY'."
+            )
+        if dim <= 0:
+            raise ValueError(f"Embedding dimension must be positive, got {dim}.")
+
+        route_str = (
+            str(route.value if isinstance(route, ModelRoute) else route).lower().strip()
+            if route is not None
+            else ""
+        )
+        resolved_model = self.resolve_embedding_model(model)
+
+        # Reserved fail-closed "private" route stub (bge-m3 on-prem VPC endpoint, ADR 007 & ADR 008)
+        if route_str == ModelRoute.PRIVATE.value or resolved_model == PRIVATE_EMBEDDING_MODEL_ID:
+            if not settings.PRIVATE_MODEL_ENDPOINT:
+                raise ModelRouteUnavailableError(
+                    "Private embedding route ('bge-m3') is not configured or unavailable. "
+                    "Requires PRIVATE_MODEL_ENDPOINT; never falls back to public Gemini APIs."
+                )
+            resolved_model = PRIVATE_EMBEDDING_MODEL_ID
+            provider = settings.PRIVATE_MODEL_PROVIDER or "private"
+        else:
+            provider = (
+                "fake"
+                if (
+                    settings.USE_FAKE_INTEGRATIONS or settings.ENVIRONMENT.strip().lower() == "test"
+                )
+                else "gemini"
+            )
+
+        if not texts:
+            return EmbeddingBatchResult(
+                embeddings=[],
+                model=resolved_model,
+                dim=dim,
+                task_type=task_type,
+                batch_count=0,
+                token_estimate=0,
+                latency_ms=0.0,
+                provider=provider,
+                retry_count=0,
+            )
+
+        batch_size = max(1, int(settings.EMBEDDING_BATCH_SIZE or 32))
+        batches = [texts[i : i + batch_size] for i in range(0, len(texts), batch_size)]
+
+        all_embeddings: list[list[float]] = []
+        total_retries = 0
+        start_time = time.perf_counter()
+
+        for batch in batches:
+            batch_vecs, retries = await self._embed_batch_with_retries(
+                batch=batch,
+                task_type=task_type,
+                model=resolved_model,
+                dim=dim,
+                provider=provider,
+            )
+            total_retries += retries
+            for raw_vec in batch_vecs:
+                if len(raw_vec) != dim:
+                    raise ModelProviderError(
+                        f"Embedding dimension mismatch: expected {dim}, got {len(raw_vec)}."
+                    )
+                norm_vec = l2_normalize(raw_vec)
+                all_embeddings.append(norm_vec)
+
+        latency_ms = (time.perf_counter() - start_time) * 1000.0
+        token_estimate = sum(max(1, len(t.split()) * 2) for t in texts)
+
+        # Record privacy-preserving usage-only telemetry (zero raw text logged)
+        self.trace_sink.trace(
+            name="model_gateway_embed",
+            metadata={
+                "route": route_str or "embedding",
+                "model_id": resolved_model,
+                "provider": provider,
+                "dim": dim,
+                "task_type": task_type,
+                "batch_count": len(batches),
+                "text_count": len(texts),
+                "token_estimate": token_estimate,
+                "tenant_id": str(tenant_id),
+                "latency_ms": latency_ms,
+                "retry_count": total_retries,
+                "privacy_mode": "usage_only_redacted",
+            },
+            input="[REDACTED_PRIVACY_BOUNDARY: Usage-only tracing mode active]",
+            output="[REDACTED_PRIVACY_BOUNDARY: Usage-only tracing mode active]",
+        )
+
+        return EmbeddingBatchResult(
+            embeddings=all_embeddings,
+            model=resolved_model,
+            dim=dim,
+            task_type=task_type,
+            batch_count=len(batches),
+            token_estimate=token_estimate,
+            latency_ms=latency_ms,
+            provider=provider,
+            retry_count=total_retries,
+        )
+
+    async def _embed_batch_with_retries(
+        self,
+        *,
+        batch: list[str],
+        task_type: EmbeddingTaskType,
+        model: str,
+        dim: int,
+        provider: str,
+    ) -> tuple[list[list[float]], int]:
+        """Executes a single embedding batch with bounded retries for transient errors."""
+        attempts = 0
+        max_attempts = 1 + self.max_retries
+        use_fake = (
+            settings.USE_FAKE_INTEGRATIONS
+            or settings.ENVIRONMENT.strip().lower() == "test"
+            or provider == "fake"
+        )
+
+        while attempts < max_attempts:
+            attempts += 1
+            try:
+                if use_fake:
+                    vecs = await fake_model_provider.embed_texts(
+                        batch,
+                        task_type=task_type,
+                        model=model,
+                        dim=dim,
+                    )
+                    return vecs, attempts - 1
+
+                import httpx
+
+                api_key = settings.EMBEDDING_MODEL_API_KEY or settings.GOOGLE_API_KEY
+                if not api_key:
+                    raise ModelRouteUnavailableError(
+                        "Embedding API key is not configured "
+                        "(EMBEDDING_MODEL_API_KEY or GOOGLE_API_KEY missing)."
+                    )
+
+                url = (
+                    f"https://generativelanguage.googleapis.com/v1beta/models/"
+                    f"{model}:batchEmbedContents"
+                )
+                payload = {
+                    "requests": [
+                        {
+                            "model": f"models/{model}",
+                            "content": {"parts": [{"text": t}]},
+                            "taskType": task_type,
+                            "outputDimensionality": dim,
+                        }
+                        for t in batch
+                    ]
+                }
+                async with httpx.AsyncClient(timeout=self.timeout) as client:
+                    resp = await client.post(
+                        url,
+                        params={"key": api_key},
+                        json=payload,
+                    )
+                if resp.status_code == 429:
+                    raise ModelRateLimitError(f"Gemini embedding rate limit 429: {resp.text}")
+                if resp.status_code >= 500:
+                    raise RuntimeError(f"Service unavailable ({resp.status_code}): {resp.text}")
+                if resp.status_code >= 400:
+                    raise ModelProviderError(
+                        f"Gemini embedding error ({resp.status_code}): {resp.text}"
+                    )
+                body = resp.json()
+                raw_embeddings = [
+                    [float(v) for v in item.get("values", [])]
+                    for item in body.get("embeddings", [])
+                ]
+                if len(raw_embeddings) != len(batch):
+                    raise ModelProviderError(
+                        f"Expected {len(batch)} embeddings from provider, got {len(raw_embeddings)}."
+                    )
+                return raw_embeddings, attempts - 1
+
+            except TimeoutError as exc:
+                if attempts >= max_attempts:
+                    raise ModelTimeoutError(
+                        f"Embedding request timed out after {attempts} attempts."
+                    ) from exc
+            except ModelRouteUnavailableError:
+                raise
+            except Exception as exc:
+                err_str = str(exc).lower()
+                is_rate_limit = (
+                    isinstance(exc, ModelRateLimitError)
+                    or "429" in err_str
+                    or "rate limit" in err_str
+                )
+                is_transient = (
+                    is_rate_limit
+                    or "503" in err_str
+                    or "service unavailable" in err_str
+                    or "connection" in err_str
+                )
+                if not is_transient:
+                    if isinstance(exc, ModelProviderError):
+                        raise
+                    raise ModelProviderError(
+                        f"Non-transient embedding provider error: {exc}"
+                    ) from exc
+                if attempts >= max_attempts:
+                    if is_rate_limit:
+                        raise ModelRateLimitError(
+                            f"Embedding rate limit exceeded after {attempts} attempts: {exc}"
+                        ) from exc
+                    raise ModelProviderError(
+                        f"Transient embedding error persisted after {attempts} attempts: {exc}"
+                    ) from exc
+
+            jitter = random.uniform(0.001, 0.005)
+            backoff_delay = (self.base_delay * (2 ** (attempts - 1))) + jitter
+            await asyncio.sleep(backoff_delay)
+
+        raise ModelGatewayError("Embedding batch failed after maximum retry attempts.")
 
     async def generate(
         self,

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import Link from "next/link";
 import { CheckCircle2, Info, X, XCircle } from "lucide-react";
 import { useToastStore } from "@/stores/toast-store";
 
@@ -61,6 +62,15 @@ export function ToastProvider() {
               <p className="font-bold leading-snug">{toast.title}</p>
               {toast.description && (
                 <p className="mt-0.5 text-[11px] opacity-85 break-words">{toast.description}</p>
+              )}
+              {toast.actionHref && toast.actionLabel && (
+                <Link
+                  href={toast.actionHref}
+                  onClick={() => dismissToast(toast.id)}
+                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#2A5BDB] underline underline-offset-2 hover:text-[#102C54]"
+                >
+                  {toast.actionLabel}
+                </Link>
               )}
             </div>
             <button

@@ -54,3 +54,4 @@ def setup_logging(log_level: str = "INFO") -> None:
     # Adjust third-party chatty loggers
     logging.getLogger("uvicorn.access").handlers = [handler]
     logging.getLogger("uvicorn.access").propagate = False
+    logging.getLogger("pdfminer").setLevel(logging.WARNING)

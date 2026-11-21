@@ -1,4 +1,4 @@
-export const PLATFORM_STAGE = "Stage 4 ✓ · Stage 5 next";
+export const PLATFORM_STAGE = "Stage 5 ✓ · Stage 6 next";
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 

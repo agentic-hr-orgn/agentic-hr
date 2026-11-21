@@ -27,7 +27,7 @@ async def test_get_health_httpx(async_client: httpx.AsyncClient) -> None:
     assert "models" in data
     assert data["models"]["strong"] == "gemini-3.8-flash"
     assert data["models"]["cheap"] == "gemini-3.5-flash-lite"
-    assert data["models"]["embedding"] == "gemini-embedding-2"
+    assert data["models"]["embedding"] in {"gemini-embedding-001", "gemini-embedding-2"}
 
     # Request ID in body must match X-Request-ID response header
     assert data["request_id"] is not None

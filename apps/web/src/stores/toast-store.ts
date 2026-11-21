@@ -9,6 +9,8 @@ export interface ToastMessage {
   variant: ToastVariant;
   title: string;
   description?: string;
+  actionLabel?: string;
+  actionHref?: string;
 }
 
 interface ToastState {

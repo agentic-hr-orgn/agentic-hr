@@ -100,12 +100,28 @@ class PolicyExceptionPayload(BaseModel):
     impact_assessment: str = Field(..., min_length=5, max_length=500)
 
 
+class PolicyPublishPayload(BaseModel):
+    """Payload schema for Stage 5 corporate policy publish governance approvals."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    document_id: str = Field(..., min_length=1)
+    title: str = Field(..., min_length=1, max_length=255)
+    version: int = Field(..., ge=1)
+    visibility: Literal["all", "managers", "hr_only"]
+    doc_type: Literal["company_policy", "labour_law", "helpdesk_knowledge"]
+    supersedes_document_id: str | None = None
+    chunk_count: int = Field(default=0, ge=0)
+    has_prompt_injection_warning: bool = False
+
+
 # Payload Schema Registry
 APPROVAL_PAYLOAD_SCHEMAS: dict[str, type[BaseModel]] = {
     "leave_request": LeaveRequestPayload,
     "candidate_offer": CandidateOfferPayload,
     "payroll_override": PayrollOverridePayload,
     "policy_exception": PolicyExceptionPayload,
+    "policy.publish": PolicyPublishPayload,
 }
 
 
@@ -127,7 +143,11 @@ class ApprovalCreateRequest(BaseModel):
     """DTO for submitting a new human approval request."""
 
     approval_type: Literal[
-        "leave_request", "candidate_offer", "payroll_override", "policy_exception"
+        "leave_request",
+        "candidate_offer",
+        "payroll_override",
+        "policy_exception",
+        "policy.publish",
     ] = Field(..., description="Type of approval being requested")
     payload: dict[str, Any] = Field(
         ..., description="Domain-specific payload matching the approval_type"

@@ -239,7 +239,10 @@ class OnboardingService:
         policies_count = int(
             (
                 await session.execute(
-                    select(func.count(PolicyDocument.id)).where(PolicyDocument.tenant_id == t_id)
+                    select(func.count(PolicyDocument.id)).where(
+                        PolicyDocument.tenant_id == t_id,
+                        PolicyDocument.lifecycle_status != "archived",
+                    )
                 )
             ).scalar()
             or 0

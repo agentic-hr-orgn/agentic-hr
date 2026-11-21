@@ -12,12 +12,12 @@ Seven Rules:
 6. Untrusted data - CVs/emails never give instructions
 7. No secrets in git - synthetic data till pilot
 
-Status: Stages 1–4 COMPLETE (Stage 4 Milestone B — Phase 0: Resumable 5-Step Onboarding Wizard,
-        Excel Bulk Importer, Employee Directory & Encrypted PII Vault, Cycle-Safe Org Chart,
-        Daily PKT 30/7/1-Day Document Expiry Temporal Schedule & In-App Notifications).
-        Tag target: v0.4-stage4-hardened | Verification: docs/stage-4-verification.md.
-Next Stage: Stage 5 (Recruitment Agents — DocuVerify & Screener).
-Active ADRs: 001–007 (ADR 007 = 4-tier model routing: cheap/strong/reasoning/private; real PII -> private route only).
+Status: Stages 1–5 COMPLETE (Stage 5: Bilingual Urdu/English Policy Ingestion, 768D pgvector HNSW,
+        Sandboxed Temporal Indexing, Stage 2 `policy.publish` Versioning, Hybrid RRF Search,
+        Next.js 16 Policy Library & Preview/Fix UI, 18-Q Gold Set Recall@5 >= 90%).
+        Tag target: v0.5-stage5-rag-verified | Verification: docs/stage-5-verification.md.
+Next Stage: Stage 6 (Leave, Attendance & Payroll Determinism).
+Active ADRs: 001–008 (ADR 007 = 4-tier model routing; ADR 008 = Stage 5 embeddings & parsing).
 Decisions: One DB with forced RLS + security_invoker views (Migration 0013); Sheets is synced view (ADR 005).
 
 Hardening Invariants:

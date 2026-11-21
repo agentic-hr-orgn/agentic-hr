@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from pydantic import model_validator
@@ -41,11 +42,14 @@ class Settings(BaseSettings):
     TEMPORAL_ADDRESS: str = "localhost:7233"
     TEMPORAL_TASK_QUEUE: str = "agentic-hr-task-queue"
 
-    # ADR 003 & ADR 007: Model Routing Tiers (cheap, strong, reasoning, private)
+    # ADR 003, ADR 007 & ADR 008: Model Routing Tiers & Stage 5 Embeddings
     STRONG_MODEL: str = "gemini-3.8-flash"
     CHEAP_MODEL: str = "gemini-3.5-flash-lite"
     REASONING_MODEL: str = "claude-opus-5-5"
-    EMBEDDING_MODEL: str = "gemini-embedding-2"
+    EMBEDDING_MODEL: str = "gemini-embedding-001"
+    EMBEDDING_DIM: int = 768
+    EMBEDDING_BATCH_SIZE: int = 32
+    INGEST_INLINE: bool = False
     STRONG_MODEL_API_KEY: str | None = None
     CHEAP_MODEL_API_KEY: str | None = None
     REASONING_MODEL_API_KEY: str | None = None
@@ -105,10 +109,23 @@ class Settings(BaseSettings):
     RATE_LIMIT_DEFAULT_WINDOW_SECONDS: int = 60
     RATE_LIMIT_FAIL_OPEN: bool = True
 
+    # Stage 5: Policy Parsing & Optional Local OCR (ADR 008)
+    ENABLE_LOCAL_OCR: bool = False
+    OCR_LANGUAGES: str = "urd+eng"
+
     @property
     def is_non_production(self) -> bool:
         """Returns True strictly when running in development, test, local, or CI environments."""
         return self.ENVIRONMENT.strip().lower() in ("development", "test", "local", "ci")
+
+    @property
+    def should_ingest_inline(self) -> bool:
+        """Returns True when policy ingestion should execute synchronously in-process."""
+        return (
+            bool(self.INGEST_INLINE)
+            or self.ENVIRONMENT.strip().lower() == "test"
+            or bool(os.environ.get("PYTEST_CURRENT_TEST"))
+        )
 
     @model_validator(mode="after")
     def _enforce_production_security_guards(self) -> "Settings":
