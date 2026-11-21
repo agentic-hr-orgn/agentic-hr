@@ -92,6 +92,12 @@ async def test_01_sheets_sync_queue_batch_processing(
         await session.execute(
             delete(SheetsSyncQueue).where(
                 SheetsSyncQueue.tenant_id == uuid.UUID(ctx.company_a.tenant_id),
+                SheetsSyncQueue.status == "pending",
+            )
+        )
+        await session.execute(
+            delete(SheetsSyncQueue).where(
+                SheetsSyncQueue.tenant_id == uuid.UUID(ctx.company_a.tenant_id),
                 SheetsSyncQueue.entity_id.in_(["EMP-SYNC-001", "EMP-SYNC-002", "EMP-SYNC-003"]),
             )
         )

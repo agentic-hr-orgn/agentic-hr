@@ -30,6 +30,7 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rate_limit import RateLimiter
 from app.core.security import (
     AuthenticatedUserContext,
     get_current_user,
@@ -47,7 +48,11 @@ from app.schemas.employee import (
 )
 from app.services.employee_document_service import EmployeeDocumentService
 from app.services.employee_service import EmployeeService
-from app.services.storage_helper import sanitize_filename
+from app.services.storage_helper import (
+    MAX_UPLOAD_SIZE_BYTES,
+    read_upload_bytes_limited,
+    sanitize_filename,
+)
 
 router = APIRouter()
 
@@ -172,6 +177,9 @@ async def list_employee_documents(
     "/{employee_id}/documents",
     response_model=EmployeeDocumentResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(RateLimiter(requests=60, window_seconds=60, scope="employee_documents.upload"))
+    ],
 )
 async def upload_employee_document(
     employee_id: UUID,
@@ -195,7 +203,11 @@ async def upload_employee_document(
                 detail=f"Invalid expiry_date '{expiry_date}'. Expected ISO format YYYY-MM-DD.",
             ) from exc
 
-    file_bytes = await file.read()
+    file_bytes = await read_upload_bytes_limited(
+        file,
+        MAX_UPLOAD_SIZE_BYTES,
+        error_code="DOCUMENT_FILE_TOO_LARGE",
+    )
     result = await EmployeeDocumentService.upload_document(
         session=db,
         tenant_id=current_user.tenant_id,

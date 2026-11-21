@@ -519,7 +519,7 @@ async def send_email(
 @router.post("/email/bounces")
 async def record_email_bounce(
     request: BounceWebhookRequest,
-    current_user: AuthenticatedUserContext = Depends(get_current_user),
+    current_user: AuthenticatedUserContext = Depends(require_role(["owner", "manager"])),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
     """

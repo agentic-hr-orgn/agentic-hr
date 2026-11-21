@@ -52,6 +52,11 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
             duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
             response.headers["X-Request-ID"] = request_id
+            response.headers.setdefault("X-Content-Type-Options", "nosniff")
+            response.headers.setdefault("X-Frame-Options", "DENY")
+            response.headers.setdefault("Referrer-Policy", "no-referrer")
+            if request.url.path.startswith("/api/"):
+                response.headers.setdefault("Cache-Control", "no-store")
 
             logger.info(
                 f"{request.method} {request.url.path} -> {response.status_code} ({duration_ms}ms)",

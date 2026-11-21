@@ -179,7 +179,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                   : "text-slate-400"
             }`}
           />
-          <span className="hidden sm:inline">FastAPI:</span>
+          <span className="hidden xl:inline">FastAPI:</span>
           <span>
             {backendStatus === "live"
               ? `Online (${apiHost})`
@@ -190,7 +190,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         </div>
 
         {/* Multi-Tenant Security indicator */}
-        <div className="hidden lg:flex items-center gap-1.5 text-xs text-textSecondary border border-appBorder rounded-small px-2.5 py-1 bg-appBg whitespace-nowrap shrink-0">
+        <div className="hidden xl:flex items-center gap-1.5 text-xs text-textSecondary border border-appBorder rounded-small px-2.5 py-1 bg-appBg whitespace-nowrap shrink-0">
           <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
           <span>Tenant Isolated (ADR 002)</span>
         </div>

@@ -51,7 +51,7 @@ async def create_approval(
     except Exception as exc:
         logger.warning(f"Payload validation failed for {request.approval_type}: {exc}")
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Invalid payload for approval_type '{request.approval_type}': {exc}",
         ) from exc
 
@@ -177,7 +177,7 @@ async def decide_approval(
     """
     if decision not in ("approved", "rejected"):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Invalid decision '{decision}'. Must be 'approved' or 'rejected'.",
         )
 
@@ -211,7 +211,7 @@ async def decide_approval(
     clean_reason = reason.strip() if reason else None
     if decision == "rejected" and not clean_reason:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Decision reason is strictly required when rejecting an approval request.",
         )
 
@@ -323,7 +323,7 @@ async def request_changes_on_approval(
     clean_reason = reason.strip() if reason else ""
     if not clean_reason or len(clean_reason) < 3:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Correction instructions (minimum 3 characters) are strictly required when requesting changes.",
         )
 
@@ -480,7 +480,7 @@ async def resubmit_approval(
         validated_payload = validate_approval_payload(approval.approval_type, resubmit_req.payload)
     except Exception as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Invalid corrected payload for approval_type '{approval.approval_type}': {exc}",
         ) from exc
 

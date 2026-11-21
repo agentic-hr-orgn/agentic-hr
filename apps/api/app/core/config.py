@@ -124,11 +124,33 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _enforce_production_security_guards(self) -> "Settings":
-        """Prevents USE_FAKE_INTEGRATIONS=true from ever being active in production."""
-        if self.ENVIRONMENT.strip().lower() == "production" and self.USE_FAKE_INTEGRATIONS:
-            raise ValueError(
-                "USE_FAKE_INTEGRATIONS=true is strictly forbidden when ENVIRONMENT=production."
-            )
+        """Enforces strict fail-closed configuration guards outside non-production environments."""
+        if not self.is_non_production:
+            if self.USE_FAKE_INTEGRATIONS:
+                raise ValueError(
+                    "USE_FAKE_INTEGRATIONS=true is strictly forbidden when ENVIRONMENT=production."
+                )
+            if self.DEBUG:
+                raise ValueError(
+                    "DEBUG=true is strictly forbidden in production/staging environments."
+                )
+            default_secret = "agentic-hr-development-secret-key-at-least-32-bytes-long"
+            if (
+                not self.SECRET_KEY
+                or self.SECRET_KEY.strip() == default_secret
+                or len(self.SECRET_KEY.strip()) < 32
+            ):
+                raise ValueError(
+                    "A strong non-default SECRET_KEY (>= 32 characters) is required in production."
+                )
+            if not self.FIELD_ENCRYPTION_KEY or not self.FIELD_ENCRYPTION_KEY.strip():
+                raise ValueError(
+                    "FIELD_ENCRYPTION_KEY is required in production for AES-256-GCM PII encryption."
+                )
+            if self.RATE_LIMIT_FAIL_OPEN:
+                raise ValueError(
+                    "RATE_LIMIT_FAIL_OPEN=true is strictly forbidden in production; rate limiting must fail closed."
+                )
         return self
 
 

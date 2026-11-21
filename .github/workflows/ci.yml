@@ -37,7 +37,8 @@ jobs:
           --health-retries 5
 
     env:
-      APP_ENV: development
+      ENVIRONMENT: test
+      APP_ENV: test
       USE_FAKE_INTEGRATIONS: "true"
       DATABASE_URL: postgresql+asyncpg://agentic_hr_app:agentic_hr_app_secret@localhost:5432/agentic_hr
       MIGRATION_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/agentic_hr
@@ -75,7 +76,7 @@ jobs:
           version: "latest"
 
       - name: Install Node Dependencies
-        run: pnpm install --frozen-lockfile=false
+        run: pnpm install --frozen-lockfile
 
       - name: Install Python Dependencies
         run: uv sync
@@ -93,8 +94,14 @@ jobs:
       - name: Run Ruff (Lint & Format Check)
         run: |
           cd apps/api
-          uv run ruff check app tests
-          uv run ruff format --check app tests
+          uv run ruff check app tests scripts
+          uv run ruff format --check app tests scripts
+
+      - name: Verify Zero OpenAPI Contract Drift
+        run: |
+          uv run --package agentic-hr-api python apps/api/scripts/export_openapi.py
+          pnpm --filter @agentic-hr/contracts generate
+          git diff --exit-code packages/contracts/src/
 
       - name: Run Prettier Formatting Checks
         run: pnpm format:check

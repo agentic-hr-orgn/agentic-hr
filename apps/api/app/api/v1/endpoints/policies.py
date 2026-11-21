@@ -12,6 +12,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rate_limit import RateLimiter
 from app.core.security import (
     AuthenticatedUserContext,
     get_current_user,
@@ -20,6 +21,7 @@ from app.core.security import (
 from app.db.session import get_db
 from app.schemas.policy import PolicyDocumentResponse
 from app.services.policy_stub_service import PolicyStubService
+from app.services.storage_helper import MAX_UPLOAD_SIZE_BYTES, read_upload_bytes_limited
 
 router = APIRouter()
 
@@ -36,8 +38,18 @@ async def list_policy_documents(
     )
 
 
-@router.post("", response_model=PolicyDocumentResponse, status_code=status.HTTP_201_CREATED)
-@router.post("/upload", response_model=PolicyDocumentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=PolicyDocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RateLimiter(requests=60, window_seconds=60, scope="policies.upload"))],
+)
+@router.post(
+    "/upload",
+    response_model=PolicyDocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RateLimiter(requests=60, window_seconds=60, scope="policies.upload"))],
+)
 async def upload_policy_document(
     file: UploadFile = File(...),
     title: str | None = Form(None),
@@ -50,7 +62,11 @@ async def upload_policy_document(
     tenant-scoped StorageHelper, persists `policy_documents` with `ingestion_status='queued_stub'`,
     and emits transactional outbox event `policy.uploaded.stub`.
     """
-    content = await file.read()
+    content = await read_upload_bytes_limited(
+        file,
+        MAX_UPLOAD_SIZE_BYTES,
+        error_code="POLICY_FILE_TOO_LARGE",
+    )
     result = await PolicyStubService.upload_policy_stub(
         session=db,
         tenant_id=current_user.tenant_id,

@@ -1,8 +1,9 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.core.config import settings
 from app.core.security import TenantContext, get_current_tenant
 from app.integrations.base import CalendarEvent, EmailMessage
 from app.integrations.factory import (
@@ -13,7 +14,21 @@ from app.integrations.factory import (
 from app.models.synthetic import CompanyProfile, EmployeeRecord
 from app.services.synthetic_service import SyntheticDataService
 
-router = APIRouter(prefix="/synthetic", tags=["synthetic"])
+
+def _require_non_production_synthetic() -> None:
+    """Blocks synthetic helper routes outside non-production environments."""
+    if not settings.is_non_production:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Synthetic endpoints are disabled in production.",
+        )
+
+
+router = APIRouter(
+    prefix="/synthetic",
+    tags=["synthetic"],
+    dependencies=[Depends(_require_non_production_synthetic)],
+)
 
 
 @router.get("/company", response_model=CompanyProfile)

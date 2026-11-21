@@ -16,7 +16,11 @@ from app.models.policy_document import PolicyDocument
 from app.schemas.policy import PolicyDocumentResponse
 from app.services.audit_service import write_audit
 from app.services.outbox_service import enqueue_outbox_event
-from app.services.storage_helper import MAX_UPLOAD_SIZE_BYTES, StorageHelper
+from app.services.storage_helper import (
+    MAX_UPLOAD_SIZE_BYTES,
+    StorageHelper,
+    validate_file_magic_bytes,
+)
 
 ALLOWED_POLICY_EXTENSIONS: dict[str, str] = {
     ".pdf": "application/pdf",
@@ -114,6 +118,12 @@ class PolicyStubService:
                 ),
             )
 
+        validate_file_magic_bytes(
+            content,
+            resolved_mime,
+            error_code="INVALID_POLICY_FILE_TYPE",
+        )
+
         try:
             stored = await StorageHelper.store_file(
                 tenant_id=t_id,
@@ -136,52 +146,57 @@ class PolicyStubService:
         ).strip()
         actor_uuid = UUID(str(actor_id)) if actor_id else None
 
-        doc = PolicyDocument(
-            tenant_id=t_id,
-            title=resolved_title[:255],
-            file_name=clean_file_name[:255],
-            mime_type=resolved_mime,
-            size_bytes=stored.size_bytes,
-            storage_provider=stored.storage_provider,
-            storage_key=stored.storage_key,
-            ingestion_status="queued_stub",
-            uploaded_by=actor_uuid,
-        )
-        session.add(doc)
-        await session.flush()
+        try:
+            doc = PolicyDocument(
+                tenant_id=t_id,
+                title=resolved_title[:255],
+                file_name=clean_file_name[:255],
+                mime_type=resolved_mime,
+                size_bytes=stored.size_bytes,
+                storage_provider=stored.storage_provider,
+                storage_key=stored.storage_key,
+                ingestion_status="queued_stub",
+                uploaded_by=actor_uuid,
+            )
+            session.add(doc)
+            await session.flush()
 
-        await enqueue_outbox_event(
-            session=session,
-            tenant_id=t_id,
-            event_type="policy.uploaded.stub",
-            event_payload={
-                "policy_document_id": str(doc.id),
-                "title": doc.title,
-                "file_name": doc.file_name,
-                "mime_type": doc.mime_type,
-                "size_bytes": doc.size_bytes,
-                "storage_provider": doc.storage_provider,
-                "storage_key": doc.storage_key,
-                "ingestion_status": doc.ingestion_status,
-            },
-        )
+            await enqueue_outbox_event(
+                session=session,
+                tenant_id=t_id,
+                event_type="policy.uploaded.stub",
+                event_payload={
+                    "policy_document_id": str(doc.id),
+                    "title": doc.title,
+                    "file_name": doc.file_name,
+                    "mime_type": doc.mime_type,
+                    "size_bytes": doc.size_bytes,
+                    "storage_provider": doc.storage_provider,
+                    "storage_key": doc.storage_key,
+                    "ingestion_status": doc.ingestion_status,
+                },
+            )
 
-        await write_audit(
-            session,
-            action="policy_document.uploaded_stub",
-            target_type="policy_document",
-            target_id=doc.id,
-            details={
-                "title": doc.title,
-                "file_name": doc.file_name,
-                "mime_type": doc.mime_type,
-                "size_bytes": doc.size_bytes,
-                "storage_provider": doc.storage_provider,
-                "ingestion_status": doc.ingestion_status,
-            },
-            actor_id=actor_id,
-            tenant_id=t_id,
-        )
+            await write_audit(
+                session,
+                action="policy_document.uploaded_stub",
+                target_type="policy_document",
+                target_id=doc.id,
+                details={
+                    "title": doc.title,
+                    "file_name": doc.file_name,
+                    "mime_type": doc.mime_type,
+                    "size_bytes": doc.size_bytes,
+                    "storage_provider": doc.storage_provider,
+                    "ingestion_status": doc.ingestion_status,
+                },
+                actor_id=actor_id,
+                tenant_id=t_id,
+            )
+        except Exception:
+            if stored.storage_provider == "local":
+                StorageHelper.delete_local_file(tenant_id=t_id, storage_key=stored.storage_key)
+            raise
 
         return PolicyDocumentResponse.model_validate(doc)
 

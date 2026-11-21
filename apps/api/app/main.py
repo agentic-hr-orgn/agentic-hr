@@ -60,8 +60,18 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "Idempotency-Key",
+        "X-Idempotency-Key",
+        "X-Request-ID",
+        "X-Tenant-ID",
+        "X-E2E-Test",
+    ],
 )
 
 # 5. Register Unified Error Handlers (Consistent JSON error contract)
@@ -74,8 +84,9 @@ app.include_router(health_router)
 app.include_router(health_router, prefix="/api")
 # V1 API Routes: /api/v1/...
 app.include_router(api_router, prefix="/api/v1")
-# Preserved Stage 1 Synthetic Routes: /api/synthetic/...
-app.include_router(synthetic_router, prefix="/api")
+# Preserved Stage 1 Synthetic Routes: /api/synthetic/... (strictly non-production only)
+if settings.is_non_production:
+    app.include_router(synthetic_router, prefix="/api")
 
 
 @app.get("/")

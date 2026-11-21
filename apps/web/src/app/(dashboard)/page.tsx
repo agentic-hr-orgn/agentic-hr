@@ -30,6 +30,7 @@ import { ApiHttpError } from "@/lib/api-request";
 import { sendTestEmail, type TestEmailResult } from "@/lib/api-client";
 import { PLATFORM_STAGE } from "@/lib/platform";
 import { useBackendStatus } from "@/hooks/use-backend-status";
+import { useOnboardingReadiness } from "@/hooks/use-onboarding";
 
 type EmailOutcome =
   | { kind: "live"; payload: TestEmailResult }
@@ -43,6 +44,8 @@ export default function DashboardPage() {
 
   // Live backend telemetry powered by TanStack Query & generated OpenAPI client
   const { health, isStandby, useFakeIntegrations, refetch, isFetching } = useBackendStatus();
+  const { data: readiness } = useOnboardingReadiness();
+  const hasLiveCounts = !isStandby && Boolean(readiness?.counts);
 
   const handleTestEmail = async () => {
     setIsSending(true);
@@ -59,8 +62,8 @@ export default function DashboardPage() {
 
       const res = await sendTestEmail(
         "agentic.hr.test.ubaid.owner@gmail.com",
-        "Stage 3 Gmail Connector Test",
-        "Simulated system test email sent through Stage 3 Gmail connector with USE_FAKE_INTEGRATIONS=true.",
+        "Gmail Connector Test",
+        "Test email dispatched through the least-privilege Gmail connector (USE_FAKE_INTEGRATIONS).",
         token
       );
       setEmailOutcome({
@@ -516,44 +519,63 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Synthetic Dataset Overview */}
+      {/* Tenant Workspace Metrics (Live PostgreSQL with Standby Synthetic Fallback) */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <span>Synthetic Dataset (Acme Tech Solutions)</span>
-            <Badge variant="outline">Synthetic Kit (ADR 006)</Badge>
+            <span>
+              {hasLiveCounts
+                ? "Live Tenant Workforce Overview"
+                : "Synthetic Dataset (Acme Tech Solutions)"}
+            </span>
+            <Badge variant={hasLiveCounts ? "success" : "outline"}>
+              {hasLiveCounts ? "Live Postgres" : "Standby Preview (ADR 006)"}
+            </Badge>
           </CardTitle>
           <CardDescription className="text-xs">
-            Configured in accordance with docs/synthetic-data-plan.md and
-            docs/adr/006-workspace-workaround.md.
+            {hasLiveCounts
+              ? "Authoritative multi-tenant counts queried live from PostgreSQL 16 via /api/v1/onboarding/readiness."
+              : "Standby baseline matching docs/synthetic-data-plan.md and docs/adr/006-workspace-workaround.md."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
             <div className="p-3 bg-appBg rounded-small border border-appBorder">
               <span className="text-textSecondary block">Total Employees</span>
-              <span className="text-base font-bold text-textPrimary">40</span>
+              <span className="text-base font-bold text-textPrimary">
+                {hasLiveCounts ? readiness!.counts.employees : 40}
+              </span>
               <span className="text-[10px] text-textSecondary block">
-                HR(5), Eng(15), Sales(10), Ops(10)
+                {hasLiveCounts
+                  ? "PostgreSQL Active & Invited"
+                  : "HR(5), Eng(15), Sales(10), Ops(10)"}
               </span>
             </div>
             <div className="p-3 bg-appBg rounded-small border border-appBorder">
-              <span className="text-textSecondary block">Authorized Test Users</span>
-              <span className="text-base font-bold text-textPrimary">6 Accounts</span>
-              <span className="text-[10px] text-textSecondary block">Gmail test users</span>
+              <span className="text-textSecondary block">Departments</span>
+              <span className="text-base font-bold text-textPrimary">
+                {hasLiveCounts ? readiness!.counts.departments : 4}
+              </span>
+              <span className="text-[10px] text-textSecondary block">
+                {hasLiveCounts ? "Tenant Org Structure" : "HR, Engineering, Sales, Ops"}
+              </span>
             </div>
             <div className="p-3 bg-appBg rounded-small border border-appBorder">
               <span className="text-textSecondary block">Policy Documents</span>
-              <span className="text-base font-bold text-textPrimary">6 Policies</span>
+              <span className="text-base font-bold text-textPrimary">
+                {hasLiveCounts ? `${readiness!.counts.policies} Uploaded` : "6 Policies"}
+              </span>
               <span className="text-[10px] text-textSecondary block">
                 English & Urdu Leave, Code of Conduct
               </span>
             </div>
             <div className="p-3 bg-appBg rounded-small border border-appBorder">
-              <span className="text-textSecondary block">Testing CVs</span>
-              <span className="text-base font-bold text-textPrimary">10 Resumes</span>
+              <span className="text-textSecondary block">Google Connectors</span>
+              <span className="text-base font-bold text-textPrimary">
+                {hasLiveCounts ? `${readiness!.counts.connectors} Connected` : "6 Accounts"}
+              </span>
               <span className="text-[10px] text-textSecondary block">
-                5 Scanned OCR, 5 Native Text
+                Least-Privilege Scopes (ADR 006)
               </span>
             </div>
           </div>
