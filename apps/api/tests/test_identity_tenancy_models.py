@@ -6,7 +6,7 @@ Verifies models, constraints, multi-tenant user memberships, and cascade rules.
 import uuid
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -346,8 +346,21 @@ async def test_role_deletion_protection() -> None:
         session.add(mem)
         await session.commit()
 
+        role_id = custom_role.id
+        tenant_id = tenant.id
+        user_id = user.id
+        mem_id = mem.id
+
         # Attempt to delete custom_role -> should fail due to ondelete="RESTRICT"
-        with pytest.raises(IntegrityError):
-            await session.delete(custom_role)
+        try:
+            with pytest.raises(IntegrityError):
+                await session.delete(custom_role)
+                await session.commit()
+            await session.rollback()
+        finally:
+            await session.rollback()
+            await session.execute(delete(Membership).where(Membership.id == mem_id))
+            await session.execute(delete(Tenant).where(Tenant.id == tenant_id))
+            await session.execute(delete(User).where(User.id == user_id))
+            await session.execute(delete(Role).where(Role.id == role_id))
             await session.commit()
-        await session.rollback()

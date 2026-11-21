@@ -241,8 +241,15 @@ def test_05_settings_forbids_fake_integrations_in_production() -> None:
         exc_info.value
     )
 
-    # Confirm ENVIRONMENT='production' with USE_FAKE_INTEGRATIONS=False succeeds
-    prod_settings = Settings(ENVIRONMENT="production", USE_FAKE_INTEGRATIONS=False)
+    # Confirm ENVIRONMENT='production' with USE_FAKE_INTEGRATIONS=False and valid production secrets succeeds
+    prod_settings = Settings(
+        ENVIRONMENT="production",
+        USE_FAKE_INTEGRATIONS=False,
+        DEBUG=False,
+        SECRET_KEY="prod-secret-key-at-least-32-bytes-long-verified",
+        FIELD_ENCRYPTION_KEY="MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
+        RATE_LIMIT_FAIL_OPEN=False,
+    )
     assert prod_settings.is_non_production is False
 
 

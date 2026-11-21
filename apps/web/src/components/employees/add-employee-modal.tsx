@@ -6,6 +6,7 @@ import type { Department, EmployeeCreateRequest, EmployeeSummary } from "@agenti
 import { Button } from "@/components/ui/button";
 import { useCreateEmployee } from "@/hooks/use-employees";
 import { getTodayPKTDateString } from "@/lib/format";
+import { useToastStore } from "@/stores/toast-store";
 
 interface AddEmployeeModalProps {
   onClose: () => void;
@@ -33,6 +34,7 @@ export function AddEmployeeModal({
   const bankId = useId();
 
   const createEmployee = useCreateEmployee();
+  const pushToast = useToastStore((s) => s.pushToast);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -85,10 +87,17 @@ export function AddEmployeeModal({
     }
 
     try {
-      await createEmployee.mutateAsync(payload);
+      const created = await createEmployee.mutateAsync(payload);
+      pushToast({
+        variant: "success",
+        title: "Employee added",
+        description: `${created.full_name} saved in PostgreSQL & queued for Sheets sync.`,
+      });
       onClose();
     } catch (err: unknown) {
-      setErrorMessage(err instanceof Error ? err.message : "Failed to create employee record.");
+      const msg = err instanceof Error ? err.message : "Failed to create employee record.";
+      setErrorMessage(msg);
+      pushToast({ variant: "error", title: "Could not add employee", description: msg });
     }
   };
 

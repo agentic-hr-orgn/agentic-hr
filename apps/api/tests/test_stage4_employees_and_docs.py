@@ -29,7 +29,9 @@ Verifies:
 """
 
 import hashlib
+import io
 import uuid
+import zipfile
 from collections.abc import AsyncIterator
 
 import asyncpg
@@ -536,7 +538,11 @@ async def test_04_employee_document_vault_upload_download_checksum_rbac_and_isol
     # Upload 3 valid documents via local storage fallback (no Google connector active yet)
     cnic_bytes = b"\x89PNG\r\n\x1a\nFAKE_CNIC_IMAGE_PAYLOAD_1234567890"
     contract_bytes = b"%PDF-1.4\n%FAKE_EMPLOYMENT_CONTRACT_BYTES_9876543210\n%%EOF"
-    cert_bytes = b"PK\x03\x04FAKE_DOCX_CERTIFICATE_BYTES_ABCDEF123456"
+    docx_buf = io.BytesIO()
+    with zipfile.ZipFile(docx_buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("[Content_Types].xml", '<?xml version="1.0"?><Types></Types>')
+        zf.writestr("word/document.xml", "<w:document>AWS Solutions Architect</w:document>")
+    cert_bytes = docx_buf.getvalue()
 
     uploads = [
         ("cnic", "CNIC Front Scan", "2028-12-31", "cnic_front.png", cnic_bytes, "image/png"),

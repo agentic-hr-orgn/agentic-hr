@@ -14,6 +14,7 @@ from fastapi import APIRouter, Body, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.rate_limit import RateLimiter
 from app.core.security import (
     AuthenticatedUserContext,
     get_current_user,
@@ -72,7 +73,13 @@ async def mark_all_notifications_read(
     return MarkAllReadResponse(updated=updated)
 
 
-@router.post("/trigger-expiry-scan", response_model=ExpiryScanSummary)
+@router.post(
+    "/trigger-expiry-scan",
+    response_model=ExpiryScanSummary,
+    dependencies=[
+        Depends(RateLimiter(requests=30, window_seconds=60, scope="notifications.expiry_scan"))
+    ],
+)
 async def trigger_expiry_scan(
     payload: TriggerExpiryScanRequest | None = Body(default=None),
     current_user: AuthenticatedUserContext = Depends(require_hr_head),

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -60,6 +60,21 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       setSidebarOpen(false);
     }
   };
+
+  useEffect(() => {
+    if (!activeIsOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (onClose) {
+          onClose();
+        } else {
+          setSidebarOpen(false);
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeIsOpen, onClose, setSidebarOpen]);
 
   const userRole = currentUser?.role || "owner";
 

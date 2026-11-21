@@ -3,6 +3,7 @@
 import React from "react";
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
+import { ToastProvider } from "@/components/ui/toast-provider";
 import { useUIStore } from "@/stores/ui-store";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -30,6 +31,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* Global Toast Stack */}
+      <ToastProvider />
     </div>
   );
 }

@@ -5,11 +5,12 @@ FastAPI endpoints for initiating and monitoring Temporal workflows.
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
 from temporalio.client import Client
 
 from app.core.config import settings
+from app.core.security import AuthenticatedUserContext, require_role
 from app.workflows import SampleOnboardingWorkflow
 
 router = APIRouter(prefix="/workflows", tags=["Workflows"])
@@ -36,7 +37,16 @@ class WorkflowTriggerResponse(BaseModel):
     summary="Trigger sample onboarding workflow",
     description="Dispatches SampleOnboardingWorkflow to Temporal and returns the execution result.",
 )
-async def trigger_sample_workflow(payload: WorkflowTriggerRequest) -> WorkflowTriggerResponse:
+async def trigger_sample_workflow(
+    payload: WorkflowTriggerRequest,
+    current_user: AuthenticatedUserContext = Depends(require_role(["owner"])),
+) -> WorkflowTriggerResponse:
+    if not settings.is_non_production:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sample workflow trigger is disabled in production.",
+        )
+
     workflow_id = f"sample-onboarding-{uuid.uuid4().hex[:8]}"
 
     try:
