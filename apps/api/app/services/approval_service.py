@@ -11,13 +11,14 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.security import AuthenticatedUserContext
 from app.models.approval import Approval
 from app.models.approval_revision import ApprovalRevision
+from app.models.policy_document import PolicyDocument
 from app.schemas.approval import (
     ApprovalCreateRequest,
     ApprovalResubmitRequest,
@@ -25,6 +26,11 @@ from app.schemas.approval import (
 )
 from app.services.audit_service import write_audit
 from app.services.outbox_service import enqueue_outbox_event
+from app.services.policy_lifecycle import (
+    PolicyLifecycleStatus,
+    PolicyTransitionError,
+    assert_lifecycle_transition,
+)
 
 logger = logging.getLogger("agentic_hr.approvals")
 
@@ -40,6 +46,8 @@ async def create_approval(
     db: AsyncSession,
     current_user: AuthenticatedUserContext,
     request: ApprovalCreateRequest,
+    *,
+    commit: bool = True,
 ) -> Approval:
     """
     Submits a new human approval request within the active tenant (Revision 1).
@@ -116,7 +124,8 @@ async def create_approval(
     stmt = select(Approval).options(*APPROVAL_EAGER_LOAD).where(Approval.id == approval.id)
     loaded_approval = (await db.execute(stmt)).unique().scalar_one()
 
-    await db.commit()
+    if commit:
+        await db.commit()
     return loaded_approval
 
 
@@ -253,7 +262,16 @@ async def decide_approval(
         current_rev.decision_reason = clean_reason
         current_rev.decided_at = datetime.now(UTC)
 
-    # 8. Write transactional audit log
+    # 8. Domain side-effects (atomic within the same DB transaction)
+    if approval.approval_type == "policy.publish":
+        await _apply_policy_publish_decision(
+            db,
+            approval=approval,
+            decision=decision,
+            actor_id=current_user.user_id,
+        )
+
+    # 9. Write transactional audit log
     await write_audit(
         session=db,
         tenant_id=UUID(current_user.tenant_id),
@@ -380,7 +398,16 @@ async def request_changes_on_approval(
         current_rev.decision_reason = clean_reason
         current_rev.decided_at = datetime.now(UTC)
 
-    # 7. Write transactional audit log
+    # 7. Domain side-effects (atomic within the same DB transaction)
+    if approval.approval_type == "policy.publish":
+        await _apply_policy_publish_decision(
+            db,
+            approval=approval,
+            decision="changes_requested",
+            actor_id=current_user.user_id,
+        )
+
+    # 8. Write transactional audit log
     await write_audit(
         session=db,
         tenant_id=UUID(current_user.tenant_id),
@@ -510,7 +537,16 @@ async def resubmit_approval(
     db.add(new_revision)
     await db.flush()
 
-    # 7. Write transactional audit log
+    # 7. Domain side-effects (atomic within the same DB transaction)
+    if approval.approval_type == "policy.publish":
+        await _apply_policy_publish_decision(
+            db,
+            approval=approval,
+            decision="changes_requested",
+            actor_id=current_user.user_id,
+        )
+
+    # 8. Write transactional audit log
     await write_audit(
         session=db,
         tenant_id=UUID(current_user.tenant_id),
@@ -614,4 +650,143 @@ def _verify_approver_authorization(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Access denied: deciding this approval requires '{required_role}' role or permission.",
+        )
+
+
+async def _apply_policy_publish_decision(
+    db: AsyncSession,
+    *,
+    approval: Approval,
+    decision: str,
+    actor_id: str,
+) -> None:
+    """
+    Executes atomic Stage 5 `policy.publish` governance transitions inside the same DB transaction:
+    - On `approved`: transitions target policy `review -> active`, atomically supersedes any
+      previously `active` version with the same `(tenant_id, lower(title))`, and emits audit logs.
+    - On `rejected` or `changes_requested`: returns target policy `review -> draft` so HR can
+      edit and re-submit.
+    """
+    raw_doc_id = (approval.payload or {}).get("document_id")
+    if not raw_doc_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Invalid policy.publish payload: missing document_id.",
+        )
+
+    doc_uuid = UUID(str(raw_doc_id))
+    doc = (
+        await db.execute(
+            select(PolicyDocument)
+            .where(
+                PolicyDocument.tenant_id == approval.tenant_id,
+                PolicyDocument.id == doc_uuid,
+            )
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+
+    if doc is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Target policy document '{doc_uuid}' not found for policy.publish approval.",
+        )
+
+    if decision == "approved":
+        try:
+            doc.lifecycle_status = assert_lifecycle_transition(
+                doc.lifecycle_status,
+                PolicyLifecycleStatus.ACTIVE.value,
+                ingestion_status=doc.ingestion_status,
+                approval_id=approval.id,
+                approval_status="approved",
+            )
+        except PolicyTransitionError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=str(exc),
+            ) from exc
+
+        doc.approval_id = approval.id
+
+        # Atomically supersede any previously active version with the same (tenant_id, lower(title))
+        prior_active_rows = (
+            (
+                await db.execute(
+                    select(PolicyDocument)
+                    .where(
+                        PolicyDocument.tenant_id == approval.tenant_id,
+                        func.lower(PolicyDocument.title) == doc.title.lower(),
+                        PolicyDocument.lifecycle_status == PolicyLifecycleStatus.ACTIVE.value,
+                        PolicyDocument.id != doc.id,
+                    )
+                    .with_for_update()
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        superseded_ids: list[str] = []
+        for prior in prior_active_rows:
+            prior.lifecycle_status = assert_lifecycle_transition(
+                prior.lifecycle_status,
+                PolicyLifecycleStatus.SUPERSEDED.value,
+                ingestion_status=prior.ingestion_status,
+            )
+            superseded_ids.append(str(prior.id))
+            await write_audit(
+                session=db,
+                tenant_id=approval.tenant_id,
+                actor_id=UUID(actor_id),
+                action="policy_document.superseded",
+                target_type="policy_document",
+                target_id=str(prior.id),
+                details={
+                    "title": prior.title,
+                    "superseded_version": prior.version,
+                    "replaced_by_document_id": str(doc.id),
+                    "replaced_by_version": doc.version,
+                    "approval_id": str(approval.id),
+                },
+            )
+
+        await write_audit(
+            session=db,
+            tenant_id=approval.tenant_id,
+            actor_id=UUID(actor_id),
+            action="policy_document.published",
+            target_type="policy_document",
+            target_id=str(doc.id),
+            details={
+                "title": doc.title,
+                "version": doc.version,
+                "visibility": doc.visibility,
+                "doc_type": doc.doc_type,
+                "approval_id": str(approval.id),
+                "superseded_document_ids": superseded_ids,
+            },
+        )
+    elif (
+        decision in ("rejected", "changes_requested")
+        and doc.lifecycle_status == PolicyLifecycleStatus.REVIEW.value
+    ):
+        doc.lifecycle_status = assert_lifecycle_transition(
+            doc.lifecycle_status,
+            PolicyLifecycleStatus.DRAFT.value,
+            ingestion_status=doc.ingestion_status,
+        )
+        await write_audit(
+            session=db,
+            tenant_id=approval.tenant_id,
+            actor_id=UUID(actor_id),
+            action="policy_document.publish_returned_to_draft",
+            target_type="policy_document",
+            target_id=str(doc.id),
+            details={
+                "title": doc.title,
+                "version": doc.version,
+                "decision": decision,
+                "approval_id": str(approval.id),
+            },
         )

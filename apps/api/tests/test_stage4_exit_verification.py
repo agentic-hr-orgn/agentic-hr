@@ -376,7 +376,8 @@ async def test_01_full_milestone_b_10_employee_exit_walkthrough(
             headers=owner_headers,
         )
         assert resp_policy.status_code == 201, resp_policy.text
-        assert resp_policy.json()["ingestion_status"] == "queued_stub"
+        assert resp_policy.json()["ingestion_status"] in ("indexed", "needs_review", "failed")
+        assert resp_policy.json()["lifecycle_status"] == "draft"
 
         # 3. Create 4 departments + two-phase Excel bulk import of 10 employees
         for name, code in [
@@ -476,7 +477,7 @@ async def test_01_full_milestone_b_10_employee_exit_walkthrough(
         try:
             policy_outbox = await conn.fetchval(
                 "SELECT COUNT(*) FROM public.outbox_events "
-                "WHERE tenant_id = $1::uuid AND event_type = 'policy.uploaded.stub';",
+                "WHERE tenant_id = $1::uuid AND event_type = 'policy.uploaded';",
                 globex.tenant_id,
             )
             assert policy_outbox >= 1

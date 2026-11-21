@@ -1069,17 +1069,57 @@ export interface paths {
         };
         /**
          * List Policy Documents
-         * @description Lists all uploaded policy documents for the active tenant.
+         * @description Lists tenant policy documents filtered by metadata and RBAC visibility.
          */
         get: operations["list_policy_documents_api_v1_policies_get"];
         put?: never;
         /**
          * Upload Policy Document
-         * @description Accepts PDF/DOCX/TXT policy files up to 10MB via multipart/form-data, stores via
-         *     tenant-scoped StorageHelper, persists `policy_documents` with `ingestion_status='queued_stub'`,
-         *     and emits transactional outbox event `policy.uploaded.stub`.
+         * @description Accepts PDF/DOCX/TXT policy files up to 10MB via streaming cutoff + magic-byte validation,
+         *     creates a new versioned `PolicyDocument`, emits `policy.uploaded`, and triggers ingestion.
          */
         post: operations["upload_policy_document_api_v1_policies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/policies/review-queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Policy Review Queue
+         * @description Lists policy documents requiring OCR review or ingestion repair (Owner / HR Head only).
+         */
+        get: operations["get_policy_review_queue_api_v1_policies_review_queue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/policies/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search Policy Documents
+         * @description Executes hybrid bilingual retrieval (SQL pre-filter + pgvector HNSW + simple FTS + pg_trgm
+         *     + RRF + reranker) strictly within the caller's tenant and role visibility boundary.
+         */
+        post: operations["search_policy_documents_api_v1_policies_search_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1097,11 +1137,110 @@ export interface paths {
         put?: never;
         /**
          * Upload Policy Document
-         * @description Accepts PDF/DOCX/TXT policy files up to 10MB via multipart/form-data, stores via
-         *     tenant-scoped StorageHelper, persists `policy_documents` with `ingestion_status='queued_stub'`,
-         *     and emits transactional outbox event `policy.uploaded.stub`.
+         * @description Accepts PDF/DOCX/TXT policy files up to 10MB via streaming cutoff + magic-byte validation,
+         *     creates a new versioned `PolicyDocument`, emits `policy.uploaded`, and triggers ingestion.
          */
         post: operations["upload_policy_document_api_v1_policies_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/policies/{policy_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Policy Document
+         * @description Returns policy metadata, extracted pages, and indexed chunks.
+         */
+        get: operations["preview_policy_document_api_v1_policies__policy_id__preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/policies/{policy_id}/chunks/{chunk_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Policy Chunk
+         * @description Edits a draft policy chunk, re-normalizes, and re-embeds ONLY that chunk.
+         */
+        patch: operations["update_policy_chunk_api_v1_policies__policy_id__chunks__chunk_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/policies/{policy_id}/pages/{page_number}/fix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fix Policy Page
+         * @description Saves manually corrected text for a `needs_ocr` page and re-indexes the document.
+         */
+        post: operations["fix_policy_page_api_v1_policies__policy_id__pages__page_number__fix_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/policies/{policy_id}/reingest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reingest Policy Document
+         * @description Re-queues and runs ingestion for a non-terminal policy document.
+         */
+        post: operations["reingest_policy_document_api_v1_policies__policy_id__reingest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/policies/{policy_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish Policy Document
+         * @description Submits an indexed `draft` policy for Stage 2 `policy.publish` approval.
+         */
+        post: operations["publish_policy_document_api_v1_policies__policy_id__publish_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1120,7 +1259,7 @@ export interface paths {
         post?: never;
         /**
          * Delete Policy Document
-         * @description Deletes a policy document for the active tenant.
+         * @description Soft-deletes (`lifecycle_status='archived'`) a policy document for the active tenant.
          */
         delete: operations["delete_policy_document_api_v1_policies__policy_id__delete"];
         options?: never;
@@ -1564,7 +1703,7 @@ export interface components {
              * @description Type of approval being requested
              * @enum {string}
              */
-            approval_type: "leave_request" | "candidate_offer" | "payroll_override" | "policy_exception";
+            approval_type: "leave_request" | "candidate_offer" | "payroll_override" | "policy_exception" | "policy.publish";
             /**
              * Payload
              * @description Domain-specific payload matching the approval_type
@@ -1790,6 +1929,25 @@ export interface components {
             /** Title */
             title?: string | null;
             /**
+             * Doc Type
+             * @default company_policy
+             */
+            doc_type: string;
+            /**
+             * Visibility
+             * @default all
+             */
+            visibility: string;
+            /** Language */
+            language?: string | null;
+            /** Effective Date */
+            effective_date?: string | null;
+            /**
+             * Source
+             * @default upload
+             */
+            source: string;
+            /**
              * Storage Provider
              * @default local
              */
@@ -1801,6 +1959,25 @@ export interface components {
             file: string;
             /** Title */
             title?: string | null;
+            /**
+             * Doc Type
+             * @default company_policy
+             */
+            doc_type: string;
+            /**
+             * Visibility
+             * @default all
+             */
+            visibility: string;
+            /** Language */
+            language?: string | null;
+            /** Effective Date */
+            effective_date?: string | null;
+            /**
+             * Source
+             * @default upload
+             */
+            source: string;
             /**
              * Storage Provider
              * @default local
@@ -2878,6 +3055,96 @@ export interface components {
             /** Unassigned */
             unassigned: components["schemas"]["OrgChartNode"][];
         };
+        /**
+         * PolicyArchiveResponse
+         * @description Response returned on soft-delete (`lifecycle_status='archived'`).
+         */
+        PolicyArchiveResponse: {
+            /** Status */
+            status: string;
+            /** Id */
+            id: string;
+        };
+        /**
+         * PolicyChunkPreviewItem
+         * @description Chunk preview item inside policy preview response.
+         */
+        PolicyChunkPreviewItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Chunk Index */
+            chunk_index: number;
+            /** Section Path */
+            section_path: string;
+            /** Page Start */
+            page_start: number;
+            /** Page End */
+            page_end: number;
+            /** Page Range */
+            page_range: string;
+            /** Text */
+            text: string;
+            /** Token Count */
+            token_count: number;
+            /** Language */
+            language: string;
+            /** Visibility */
+            visibility: string;
+            /** Has Injection Flag */
+            has_injection_flag: boolean;
+        };
+        /**
+         * PolicyChunkUpdateRequest
+         * @description Request payload to edit a draft policy chunk's text or section_path.
+         */
+        PolicyChunkUpdateRequest: {
+            /** Text */
+            text: string;
+            /** Section Path */
+            section_path?: string | null;
+            /**
+             * Mark Reviewed
+             * @default false
+             */
+            mark_reviewed: boolean;
+        };
+        /**
+         * PolicyCitation
+         * @description Canonical Stage 7 citation payload identifying the exact source clause and page range.
+         */
+        PolicyCitation: {
+            /**
+             * Chunk Id
+             * Format: uuid
+             */
+            chunk_id: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Title */
+            title: string;
+            /** Version */
+            version: number;
+            /** Doc Type */
+            doc_type: string;
+            /** Visibility */
+            visibility: string;
+            /** Section Path */
+            section_path: string;
+            /** Page Start */
+            page_start: number;
+            /** Page End */
+            page_end: number;
+            /** Page Range */
+            page_range: string;
+            /** Language */
+            language: string;
+        };
         /** PolicyDocument */
         PolicyDocument: {
             /** Title */
@@ -2891,7 +3158,7 @@ export interface components {
         };
         /**
          * PolicyDocumentResponse
-         * @description Serialized policy document metadata response.
+         * @description Serialized policy document metadata response (backward-compatible with Stage 4).
          */
         PolicyDocumentResponse: {
             /**
@@ -2906,6 +3173,21 @@ export interface components {
             tenant_id: string;
             /** Title */
             title: string;
+            /**
+             * Doc Type
+             * @default company_policy
+             */
+            doc_type: string;
+            /**
+             * Visibility
+             * @default all
+             */
+            visibility: string;
+            /**
+             * Version
+             * @default 1
+             */
+            version: number;
             /** File Name */
             file_name: string;
             /** Mime Type */
@@ -2918,6 +3200,50 @@ export interface components {
             storage_key: string;
             /** Ingestion Status */
             ingestion_status: string;
+            /**
+             * Lifecycle Status
+             * @default draft
+             */
+            lifecycle_status: string;
+            /**
+             * Display Status
+             * @default DRAFT
+             */
+            display_status: string;
+            /** Effective Date */
+            effective_date?: string | null;
+            /**
+             * Source
+             * @default upload
+             */
+            source: string;
+            /** Supersedes Document Id */
+            supersedes_document_id?: string | null;
+            /** Approval Id */
+            approval_id?: string | null;
+            /**
+             * Page Count
+             * @default 0
+             */
+            page_count: number;
+            /**
+             * Progress Pct
+             * @default 0
+             */
+            progress_pct: number;
+            /** Progress Stage */
+            progress_stage?: string | null;
+            /** Error Message */
+            error_message?: string | null;
+            /** Low Confidence Pages */
+            low_confidence_pages?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Has Prompt Injection Warning
+             * @default false
+             */
+            has_prompt_injection_warning: boolean;
             /** Uploaded By */
             uploaded_by?: string | null;
             /**
@@ -2930,6 +3256,157 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * PolicyPageFixRequest
+         * @description Request payload to manually supply or repair cleaned text for a needs_ocr page.
+         */
+        PolicyPageFixRequest: {
+            /** Cleaned Text */
+            cleaned_text: string;
+        };
+        /**
+         * PolicyPagePreviewItem
+         * @description Per-page extraction preview and OCR quality state.
+         */
+        PolicyPagePreviewItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Page Number */
+            page_number: number;
+            /** Cleaned Text */
+            cleaned_text: string;
+            /** Language */
+            language: string;
+            /** Quality Score */
+            quality_score: number;
+            /** Needs Ocr */
+            needs_ocr: boolean;
+            /** Ocr Applied */
+            ocr_applied: boolean;
+            /** Extraction Status */
+            extraction_status: string;
+            /** Error Message */
+            error_message?: string | null;
+        };
+        /**
+         * PolicyPreviewResponse
+         * @description Full policy document preview including pages and chunks.
+         */
+        PolicyPreviewResponse: {
+            document: components["schemas"]["PolicyDocumentResponse"];
+            /** Pages */
+            pages: components["schemas"]["PolicyPagePreviewItem"][];
+            /** Chunks */
+            chunks: components["schemas"]["PolicyChunkPreviewItem"][];
+        };
+        /**
+         * PolicyPublishRequest
+         * @description Optional parameters when submitting an indexed draft policy for `policy.publish` approval.
+         */
+        PolicyPublishRequest: {
+            /**
+             * Approver Role
+             * @default owner
+             * @enum {string}
+             */
+            approver_role: "owner" | "hr_head";
+        };
+        /**
+         * PolicyPublishResponse
+         * @description Response returned when submitting a policy for `policy.publish` approval.
+         */
+        PolicyPublishResponse: {
+            document: components["schemas"]["PolicyDocumentResponse"];
+            /**
+             * Approval Id
+             * Format: uuid
+             */
+            approval_id: string;
+            /** Approval Status */
+            approval_status: string;
+        };
+        /**
+         * PolicyReviewQueueItem
+         * @description Summary item in the HR low-confidence / failed ingestion review queue.
+         */
+        PolicyReviewQueueItem: {
+            document: components["schemas"]["PolicyDocumentResponse"];
+            /** Low Confidence Count */
+            low_confidence_count: number;
+        };
+        /**
+         * PolicySearchHit
+         * @description Single ranked retrieval hit with Stage 7 citation and fusion diagnostics.
+         */
+        PolicySearchHit: {
+            citation: components["schemas"]["PolicyCitation"];
+            /** Text */
+            text: string;
+            /** Snippet */
+            snippet: string;
+            /** Score */
+            score: number;
+            /** Rrf Score */
+            rrf_score: number;
+            /** Vector Rank */
+            vector_rank?: number | null;
+            /** Fts Rank */
+            fts_rank?: number | null;
+            /** Trgm Rank */
+            trgm_rank?: number | null;
+            /**
+             * Has Injection Flag
+             * @default false
+             */
+            has_injection_flag: boolean;
+        };
+        /**
+         * PolicySearchRequest
+         * @description Hybrid bilingual retrieval query payload.
+         */
+        PolicySearchRequest: {
+            /** Query */
+            query: string;
+            /**
+             * Top K
+             * @default 5
+             */
+            top_k: number;
+            /** Doc Type */
+            doc_type?: ("company_policy" | "labour_law" | "helpdesk_knowledge") | null;
+            /** Language */
+            language?: ("en" | "ur" | "mixed") | null;
+            /** Document Id */
+            document_id?: string | null;
+            /** Effective As Of */
+            effective_as_of?: string | null;
+        };
+        /**
+         * PolicySearchResponse
+         * @description Hybrid bilingual search response envelope.
+         */
+        PolicySearchResponse: {
+            /** Query */
+            query: string;
+            /** Normalized Query */
+            normalized_query: string;
+            /**
+             * Query Language
+             * @enum {string}
+             */
+            query_language: "en" | "ur" | "mixed";
+            /** Total Candidates */
+            total_candidates: number;
+            /** Hits */
+            hits: components["schemas"]["PolicySearchHit"][];
+            /** Embedding Model */
+            embedding_model: string;
+            /** Embedding Dim */
+            embedding_dim: number;
         };
         /** ReadOnlyToggleRequest */
         ReadOnlyToggleRequest: {
@@ -4868,7 +5345,15 @@ export interface operations {
     };
     list_policy_documents_api_v1_policies_get: {
         parameters: {
-            query?: never;
+            query?: {
+                doc_type?: string | null;
+                visibility?: string | null;
+                lifecycle_status?: string | null;
+                ingestion_status?: string | null;
+                language?: string | null;
+                needs_review_only?: boolean;
+                include_archived?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4882,6 +5367,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PolicyDocumentResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -4906,6 +5400,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PolicyDocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_policy_review_queue_api_v1_policies_review_queue_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyReviewQueueItem"][];
+                };
+            };
+        };
+    };
+    search_policy_documents_api_v1_policies_search_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicySearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicySearchResponse"];
                 };
             };
             /** @description Validation Error */
@@ -4952,6 +5499,175 @@ export interface operations {
             };
         };
     };
+    preview_policy_document_api_v1_policies__policy_id__preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                policy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyPreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_policy_chunk_api_v1_policies__policy_id__chunks__chunk_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                policy_id: string;
+                chunk_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyChunkUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyChunkPreviewItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fix_policy_page_api_v1_policies__policy_id__pages__page_number__fix_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                policy_id: string;
+                page_number: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyPageFixRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyDocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reingest_policy_document_api_v1_policies__policy_id__reingest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                policy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyDocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_policy_document_api_v1_policies__policy_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                policy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PolicyPublishRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyPublishResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     delete_policy_document_api_v1_policies__policy_id__delete: {
         parameters: {
             query?: never;
@@ -4969,9 +5685,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["PolicyArchiveResponse"];
                 };
             };
             /** @description Validation Error */

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from pydantic import model_validator
@@ -120,7 +121,11 @@ class Settings(BaseSettings):
     @property
     def should_ingest_inline(self) -> bool:
         """Returns True when policy ingestion should execute synchronously in-process."""
-        return bool(self.INGEST_INLINE) or self.ENVIRONMENT.strip().lower() == "test"
+        return (
+            bool(self.INGEST_INLINE)
+            or self.ENVIRONMENT.strip().lower() == "test"
+            or bool(os.environ.get("PYTEST_CURRENT_TEST"))
+        )
 
     @model_validator(mode="after")
     def _enforce_production_security_guards(self) -> "Settings":

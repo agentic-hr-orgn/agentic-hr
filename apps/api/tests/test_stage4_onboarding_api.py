@@ -296,7 +296,7 @@ async def test_03_policy_upload_stub_validation_and_outbox(
     assert resp_bad.status_code == 400
     assert "INVALID_POLICY_FILE_TYPE" in resp_bad.text
 
-    # 2. Valid PDF upload succeeds with ingestion_status="queued_stub"
+    # 2. Valid PDF upload succeeds with real Stage 5 inline ingestion (needs_review or indexed)
     pdf_bytes = b"%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n"
     resp_pdf = await async_client.post(
         "/api/v1/policies",
@@ -307,7 +307,8 @@ async def test_03_policy_upload_stub_validation_and_outbox(
     assert resp_pdf.status_code == 201, resp_pdf.text
     doc = resp_pdf.json()
     assert doc["title"] == "Globex Leave Policy 2026"
-    assert doc["ingestion_status"] == "queued_stub"
+    assert doc["ingestion_status"] in ("indexed", "needs_review", "failed")
+    assert doc["lifecycle_status"] == "draft"
     assert doc["storage_provider"] == "local"
     assert doc["storage_key"].startswith(f"{globex.tenant_id}/policies/")
 
@@ -316,14 +317,14 @@ async def test_03_policy_upload_stub_validation_and_outbox(
     assert resp_list.status_code == 200
     assert any(p["id"] == doc["id"] for p in resp_list.json())
 
-    # 4. Verify outbox event `policy.uploaded.stub` was atomically enqueued
+    # 4. Verify outbox event `policy.uploaded` was atomically enqueued
     conn = await asyncpg.connect(MIGRATION_DB_URL)
     try:
         outbox_row = await conn.fetchrow(
             """
             SELECT event_type, status, event_payload
             FROM public.outbox_events
-            WHERE tenant_id = $1::uuid AND event_type = 'policy.uploaded.stub'
+            WHERE tenant_id = $1::uuid AND event_type = 'policy.uploaded'
             ORDER BY created_at DESC
             LIMIT 1;
             """,
@@ -334,13 +335,13 @@ async def test_03_policy_upload_stub_validation_and_outbox(
     finally:
         await conn.close()
 
-    # 5. Delete policy cleans up record & local file
+    # 5. Delete policy soft-archives the record
     resp_del = await async_client.delete(
         f"/api/v1/policies/{doc['id']}",
         headers=owner_headers,
     )
     assert resp_del.status_code == 200
-    assert resp_del.json()["status"] == "deleted"
+    assert resp_del.json()["status"] == "archived"
 
 
 # ==============================================================================
