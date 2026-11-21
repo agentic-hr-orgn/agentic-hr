@@ -54,8 +54,6 @@ export function formatVisibility(visibility: string | null | undefined): string 
       return "Managers+";
     case "hr_only":
       return "HR Only";
-    case "owners":
-      return "Owners Only";
     default:
       return visibility || "All Employees";
   }
@@ -201,19 +199,17 @@ export function LifecycleStatusBadge({ status }: { status: string | null | undef
 
 export function VisibilityBadge({ visibility }: { visibility: string | null | undefined }) {
   const normalized = (visibility || "all").toLowerCase();
-  const isRestricted = normalized === "hr_only" || normalized === "owners";
+  const isRestricted = normalized === "hr_only";
   const Icon = isRestricted ? Lock : Users;
 
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${
-        normalized === "owners"
-          ? "border-[#102C54]/20 bg-[#102C54]/5 text-[#102C54]"
-          : normalized === "hr_only"
-            ? "border-amber-200 bg-amber-50 text-amber-800"
-            : normalized === "managers"
-              ? "border-[#2A5BDB]/20 bg-[#2A5BDB]/5 text-[#2A5BDB]"
-              : "border-appBorder bg-[#F8F9FD] text-textSecondary"
+        normalized === "hr_only"
+          ? "border-amber-200 bg-amber-50 text-amber-800"
+          : normalized === "managers"
+            ? "border-[#2A5BDB]/20 bg-[#2A5BDB]/5 text-[#2A5BDB]"
+            : "border-appBorder bg-[#F8F9FD] text-textSecondary"
       }`}
     >
       <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />

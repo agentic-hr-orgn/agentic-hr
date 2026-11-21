@@ -223,7 +223,6 @@ export function Step2UploadPolicies({
                 <option value="all">All Employees</option>
                 <option value="managers">Managers+</option>
                 <option value="hr_only">HR Only</option>
-                <option value="owners">Owners Only</option>
               </select>
             </div>
 

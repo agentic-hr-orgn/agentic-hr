@@ -130,14 +130,14 @@ export default function PoliciesPage() {
 
   const visibleTabs: Array<{ id: PolicyWorkspaceTab; domId: string; label: string }> = canManage
     ? [
-      { id: "library", domId: tabLibraryId, label: "Policy Library" },
-      { id: "search", domId: tabSearchId, label: "Bilingual Search" },
-      { id: "review", domId: tabReviewId, label: "OCR & Review Queue" },
-    ]
+        { id: "library", domId: tabLibraryId, label: "Policy Library" },
+        { id: "search", domId: tabSearchId, label: "Bilingual Search" },
+        { id: "review", domId: tabReviewId, label: "OCR & Review Queue" },
+      ]
     : [
-      { id: "library", domId: tabLibraryId, label: "Policy Library" },
-      { id: "search", domId: tabSearchId, label: "Bilingual Search" },
-    ];
+        { id: "library", domId: tabLibraryId, label: "Policy Library" },
+        { id: "search", domId: tabSearchId, label: "Bilingual Search" },
+      ];
 
   const resolvedActiveTab: PolicyWorkspaceTab =
     activeTab === "review" && !canManage ? "library" : activeTab;
@@ -329,10 +329,11 @@ export default function PoliciesPage() {
                 tabIndex={isSelected ? 0 : -1}
                 onClick={() => setActiveTab(tab.id)}
                 onKeyDown={(e) => handleTabKeyDown(e, index)}
-                className={`relative shrink-0 whitespace-nowrap inline-flex items-center gap-2 px-4 py-3 text-xs transition-colors border-b-[3px] focus-visible:outline-2 focus-visible:outline-[#2A5BDB] ${isSelected
-                  ? "border-[#2A5BDB] text-[#102C54] font-bold"
-                  : "border-transparent text-textSecondary font-medium hover:text-[#102C54]"
-                  }`}
+                className={`relative shrink-0 whitespace-nowrap inline-flex items-center gap-2 px-4 py-3 text-xs transition-colors border-b-[3px] focus-visible:outline-2 focus-visible:outline-[#2A5BDB] ${
+                  isSelected
+                    ? "border-[#2A5BDB] text-[#102C54] font-bold"
+                    : "border-transparent text-textSecondary font-medium hover:text-[#102C54]"
+                }`}
               >
                 <span>{tab.label}</span>
                 {tab.id === "review" && effectiveReviewQueue.length > 0 && (
@@ -408,7 +409,6 @@ export default function PoliciesPage() {
                         <option value="all">All Employees</option>
                         <option value="managers">Managers+</option>
                         <option value="hr_only">HR Only</option>
-                        <option value="owners">Owners Only</option>
                       </select>
                     </div>
 
@@ -664,8 +664,9 @@ export default function PoliciesPage() {
                                       className="text-[11px] px-2.5 py-1 h-auto inline-flex items-center gap-1 whitespace-nowrap"
                                     >
                                       <RefreshCw
-                                        className={`h-3 w-3 ${pendingReingestId === policy.id ? "animate-spin" : ""
-                                          }`}
+                                        className={`h-3 w-3 ${
+                                          pendingReingestId === policy.id ? "animate-spin" : ""
+                                        }`}
                                         aria-hidden="true"
                                       />
                                       Re-ingest
@@ -761,8 +762,8 @@ export default function PoliciesPage() {
                 Untrusted Document Defense
               </span>
               <p>
-                Prompt-injection markers are flagged at chunking time and enforced alongside
-                tenant Row-Level Security.
+                Prompt-injection markers are flagged at chunking time and enforced alongside tenant
+                Row-Level Security.
               </p>
             </div>
           </CardContent>

@@ -109,7 +109,7 @@ export interface UploadPolicyInput {
   file: File;
   title?: string;
   docType?: "company_policy" | "labour_law" | "helpdesk_knowledge" | string;
-  visibility?: "all" | "managers" | "hr_only" | "owners" | string;
+  visibility?: "all" | "managers" | "hr_only" | string;
   language?: "en" | "ur" | "mixed" | string;
   effectiveDate?: string;
   source?: string;
