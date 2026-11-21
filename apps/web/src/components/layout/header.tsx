@@ -42,9 +42,14 @@ const routeTitles: Array<{ prefix: string; title: string; subtitle: string }> = 
     subtitle: "E2B Sandboxed Code Tester",
   },
   {
+    prefix: "/policies/",
+    title: "Policy Preview & Fix",
+    subtitle: "Inspect Parsed Chunks, Repair OCR & Submit for Publish",
+  },
+  {
     prefix: "/policies",
     title: "Corporate Policy Brain",
-    subtitle: "Bilingual English & Urdu RAG",
+    subtitle: "Policy Library, Bilingual Search & OCR Review",
   },
   {
     prefix: "/employees",

@@ -1,6 +1,6 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import PoliciesPage from "@/app/(dashboard)/policies/page";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { EmployeeProfileDrawer } from "@/components/employees/employee-profile-drawer";
@@ -18,7 +18,9 @@ vi.mock("@/hooks/use-employees");
 describe("Pre-Stage 5 Enterprise Hardening UI (Live Policies, Toasts & Drawer Focus)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useToastStore.getState().clearToasts();
+    act(() => {
+      useToastStore.getState().clearToasts();
+    });
 
     vi.spyOn(backendStatusHook, "useBackendStatus").mockReturnValue({
       status: "live",
@@ -49,19 +51,51 @@ describe("Pre-Stage 5 Enterprise Hardening UI (Live Policies, Toasts & Drawer Fo
       isLoading: false,
       error: null,
     } as any);
+
+    vi.spyOn(policiesHook, "usePolicyReviewQueue").mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+
+    vi.spyOn(policiesHook, "usePublishPolicy").mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any);
+
+    vi.spyOn(policiesHook, "useReingestPolicy").mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any);
+
+    vi.spyOn(policiesHook, "useSearchPolicies").mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+      data: undefined,
+      error: null,
+    } as any);
   });
 
-  it("PoliciesPage displays live uploaded policies, uploads a PDF, deletes a policy, and triggers toasts", async () => {
+  it("PoliciesPage displays live uploaded policies, uploads a PDF with metadata, archives a policy, and triggers toasts", async () => {
     const uploadMutateAsync = vi.fn().mockResolvedValue({
       id: "pol-new",
       title: "Travel Policy 2026",
+      doc_type: "company_policy",
+      visibility: "all",
+      version: 1,
       file_name: "travel.pdf",
       mime_type: "application/pdf",
       size_bytes: 2048,
-      ingestion_status: "queued_stub",
+      ingestion_status: "indexed",
+      lifecycle_status: "draft",
+      display_status: "READY_TO_PUBLISH",
+      page_count: 2,
+      progress_pct: 100,
+      has_prompt_injection_warning: false,
       created_at: "2026-11-21T10:00:00+05:00",
     });
-    const deleteMutateAsync = vi.fn().mockResolvedValue({ status: "deleted", id: "pol-1" });
+    const deleteMutateAsync = vi.fn().mockResolvedValue({ status: "archived", id: "pol-1" });
     vi.spyOn(window, "confirm").mockReturnValue(true);
 
     vi.spyOn(policiesHook, "usePolicies").mockReturnValue({
@@ -70,12 +104,22 @@ describe("Pre-Stage 5 Enterprise Hardening UI (Live Policies, Toasts & Drawer Fo
           id: "pol-1",
           tenant_id: "t-acme",
           title: "Leave Handbook",
+          doc_type: "company_policy",
+          visibility: "all",
+          version: 1,
           file_name: "leave.pdf",
           mime_type: "application/pdf",
           size_bytes: 1024,
           storage_provider: "local",
           storage_key: "t-acme/policies/leave.pdf",
-          ingestion_status: "queued_stub",
+          ingestion_status: "indexed",
+          lifecycle_status: "draft",
+          display_status: "READY_TO_PUBLISH",
+          source: "upload",
+          page_count: 1,
+          progress_pct: 100,
+          low_confidence_pages: [],
+          has_prompt_injection_warning: false,
           created_at: "2026-11-20T09:00:00+05:00",
           updated_at: "2026-11-20T09:00:00+05:00",
         },
@@ -103,7 +147,7 @@ describe("Pre-Stage 5 Enterprise Hardening UI (Live Policies, Toasts & Drawer Fo
       </>
     );
 
-    expect(screen.getByText(/Uploaded Corporate Policies \(1\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Corporate Policy Library \(1\)/i)).toBeInTheDocument();
     expect(screen.getByText("Leave Handbook")).toBeInTheDocument();
 
     const fileInput = screen.getByLabelText(/Document File/i) as HTMLInputElement;
@@ -112,21 +156,30 @@ describe("Pre-Stage 5 Enterprise Hardening UI (Live Policies, Toasts & Drawer Fo
     fireEvent.change(screen.getByLabelText(/Policy Title/i), {
       target: { value: "Travel Policy 2026" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^Upload Policy$/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Upload Policy$/i }));
+    });
 
     await waitFor(() => {
       expect(uploadMutateAsync).toHaveBeenCalledWith({
         file: pdfFile,
         title: "Travel Policy 2026",
+        docType: "company_policy",
+        visibility: "all",
+        language: undefined,
+        effectiveDate: undefined,
+        source: "upload",
       });
     });
     expect(await screen.findByText("Policy uploaded")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Delete policy Leave Handbook/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Archive policy Leave Handbook/i }));
+    });
     await waitFor(() => {
       expect(deleteMutateAsync).toHaveBeenCalledWith("pol-1");
     });
-    expect(await screen.findByText("Policy deleted")).toBeInTheDocument();
+    expect(await screen.findByText("Policy archived")).toBeInTheDocument();
   });
 
   it("PoliciesPage renders StandbyBanner when FastAPI backend is offline", () => {
@@ -159,16 +212,20 @@ describe("Pre-Stage 5 Enterprise Hardening UI (Live Policies, Toasts & Drawer Fo
 
     render(<PoliciesPage />);
     expect(
-      screen.getByText(/Corporate Policy uploads and deletions require a live backend/i)
+      screen.getByText(
+        /Policy uploads, publishing, and live bilingual search require an active backend connection/i
+      )
     ).toBeInTheDocument();
   });
 
   it("ToastProvider renders notifications and dismisses them on click", async () => {
     render(<ToastProvider />);
-    useToastStore.getState().pushToast({
-      variant: "error",
-      title: "Sync Alert",
-      description: "Connection expired",
+    act(() => {
+      useToastStore.getState().pushToast({
+        variant: "error",
+        title: "Sync Alert",
+        description: "Connection expired",
+      });
     });
 
     expect(await screen.findByText("Sync Alert")).toBeInTheDocument();

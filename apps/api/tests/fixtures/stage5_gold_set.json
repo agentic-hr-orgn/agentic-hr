@@ -1,0 +1,182 @@
+[
+  {
+    "id": "Q01",
+    "category": "same_language",
+    "query_language": "en",
+    "query": "How many annual leave days do confirmed employees receive and how many can be carried forward?",
+    "actor_role": "employee",
+    "expected_title": "Leave & Time-Off Policy",
+    "expected_version": 2,
+    "expected_keywords": ["20", "annual leave", "10"]
+  },
+  {
+    "id": "Q02",
+    "category": "same_language",
+    "query_language": "en",
+    "query": "When is a medical certificate required for sick leave?",
+    "actor_role": "employee",
+    "expected_title": "Leave & Time-Off Policy",
+    "expected_version": 2,
+    "expected_keywords": ["medical certificate", "10 paid sick leave", "2 consecutive"]
+  },
+  {
+    "id": "Q03",
+    "category": "same_language",
+    "query_language": "en",
+    "query": "How many days of maternity leave, paternity leave, and bereavement leave are provided?",
+    "actor_role": "employee",
+    "expected_title": "Leave & Time-Off Policy",
+    "expected_version": 2,
+    "expected_keywords": ["90 calendar days", "maternity", "bereavement"]
+  },
+  {
+    "id": "Q04",
+    "category": "same_language",
+    "query_language": "en",
+    "query": "What are the core office working hours in PKT and which days are the weekend?",
+    "actor_role": "employee",
+    "expected_title": "Attendance & Working Hours Policy",
+    "expected_version": 1,
+    "expected_keywords": ["9:00 AM", "6:00 PM", "Saturday and Sunday"]
+  },
+  {
+    "id": "Q05",
+    "category": "same_language",
+    "query_language": "en",
+    "query": "What is the morning grace period and what happens after 3 late arrivals in a month?",
+    "actor_role": "employee",
+    "expected_title": "Attendance & Working Hours Policy",
+    "expected_version": 1,
+    "expected_keywords": ["15-minute grace period", "3 late arrivals", "0.5-day"]
+  },
+  {
+    "id": "Q06",
+    "category": "same_language",
+    "query_language": "en",
+    "query": "What is the evening support shift allowance and night weekend overtime multiplier?",
+    "actor_role": "employee",
+    "expected_title": "Attendance & Working Hours Policy",
+    "expected_version": 1,
+    "expected_keywords": ["PKR 1,500", "2.0x", "PKR 2,500"]
+  },
+  {
+    "id": "Q07",
+    "category": "same_language",
+    "query_language": "en",
+    "query": "How does the Inquiry Committee handle anti-harassment complaints?",
+    "actor_role": "employee",
+    "expected_title": "Code of Conduct & Workplace Ethics",
+    "expected_version": 1,
+    "expected_keywords": ["Inquiry Committee", "14 working days", "harassment"]
+  },
+  {
+    "id": "Q08",
+    "category": "same_language",
+    "query_language": "en",
+    "query": "What is the maximum vendor gift value under the conflict of interest policy?",
+    "actor_role": "employee",
+    "expected_title": "Code of Conduct & Workplace Ethics",
+    "expected_version": 1,
+    "expected_keywords": ["PKR 10,000", "vendor gifts", "conflict"]
+  },
+  {
+    "id": "Q09",
+    "category": "same_language",
+    "query_language": "en",
+    "query": "How often must corporate passwords be rotated and is MFA mandatory?",
+    "actor_role": "employee",
+    "expected_title": "IT & Acceptable Usage Policy",
+    "expected_version": 1,
+    "expected_keywords": ["90 days", "14-character", "MFA"]
+  },
+  {
+    "id": "Q10",
+    "category": "same_language",
+    "query_language": "en",
+    "query": "What disk encryption and screen lock timeout are required on company laptops?",
+    "actor_role": "employee",
+    "expected_title": "IT & Acceptable Usage Policy",
+    "expected_version": 1,
+    "expected_keywords": ["BitLocker", "FileVault", "5 minutes"]
+  },
+  {
+    "id": "Q11",
+    "category": "same_language",
+    "query_language": "ur",
+    "query": "ہسپتال داخلہ ہیلتھ انشورنس اور ماہانہ میڈیکل الاؤنس کی حد کتنی ہے؟",
+    "actor_role": "employee",
+    "expected_title": "Benefits & Remote Work Policy",
+    "expected_version": 1,
+    "expected_keywords": ["1,000,000", "15,000", "ہیلتھ انشورنس"]
+  },
+  {
+    "id": "Q12",
+    "category": "same_language",
+    "query_language": "en",
+    "query": "How much is the home-office ergonomics stipend after probation?",
+    "actor_role": "employee",
+    "expected_title": "Benefits & Remote Work Policy",
+    "expected_version": 1,
+    "expected_keywords": ["PKR 75,000", "ergonomics", "probation"]
+  },
+  {
+    "id": "Q13",
+    "category": "same_language",
+    "query_language": "en",
+    "query": "What is the L5 Engineering Manager monthly PKR salary band and executive bonus multiplier?",
+    "actor_role": "owner",
+    "expected_title": "Compensation & Salary Bands Policy",
+    "expected_version": 1,
+    "expected_keywords": ["800,000 - 1,200,000", "25%", "L5"]
+  },
+  {
+    "id": "Q14",
+    "category": "same_language",
+    "query_language": "en",
+    "query": "What is the annual salary increment percentage for Exceeds Expectations in July?",
+    "actor_role": "owner",
+    "expected_title": "Compensation & Salary Bands Policy",
+    "expected_version": 1,
+    "expected_keywords": ["16%-22%", "July 1", "Exceeds Expectations"]
+  },
+  {
+    "id": "Q15",
+    "category": "cross_language",
+    "query_language": "ur",
+    "query": "سالانہ چھٹیاں کتنی ملتی ہیں؟",
+    "actor_role": "employee",
+    "expected_title": "Leave & Time-Off Policy",
+    "expected_version": 2,
+    "expected_keywords": ["20 paid annual leave", "annual leave"]
+  },
+  {
+    "id": "Q16",
+    "category": "cross_language",
+    "query_language": "ur",
+    "query": "دفتر آنے میں کتنے منٹ کی رعایت ہے اور تاخیر پر کیا اصول ہے؟",
+    "actor_role": "employee",
+    "expected_title": "Attendance & Working Hours Policy",
+    "expected_version": 1,
+    "expected_keywords": ["15-minute grace period", "9:15 AM"]
+  },
+  {
+    "id": "Q17",
+    "category": "cross_language",
+    "query_language": "en",
+    "query": "How many days per week is remote work from home allowed?",
+    "actor_role": "employee",
+    "expected_title": "Benefits & Remote Work Policy",
+    "expected_version": 1,
+    "expected_keywords": ["ہفتے میں دو دن", "ریموٹ ورک"]
+  },
+  {
+    "id": "Q18",
+    "category": "cross_language",
+    "query_language": "en",
+    "query": "What is the monthly internet allowance amount for remote work from home?",
+    "actor_role": "employee",
+    "expected_title": "Benefits & Remote Work Policy",
+    "expected_version": 1,
+    "expected_keywords": ["5000", "انٹرنیٹ الاؤنس"]
+  }
+]

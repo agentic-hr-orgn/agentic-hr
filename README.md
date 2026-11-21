@@ -2,12 +2,13 @@
 
 **Agentic HR Core** is a multi-tenant agentic AI workforce platform engineered for SMEs, automating high-overhead HR and recruiting workflows with deterministic PostgreSQL authority, least-privilege Google Workspace connectors, and human-in-the-loop governance.
 
-## Platform Status (Stages 1–4 Hardened · Next: Stage 5)
+## Platform Status (Stages 1–5 Complete · Next: Stage 6)
 - **Stage 1 (Platform Skeleton)**: Monorepo (`Next.js 16` + `FastAPI` + `PostgreSQL 16/pgvector` + `Redis` + `Temporal`) — **Complete**
 - **Stage 2 (Governance Core + Pass 1 Hardening)**: Forced Row-Level Security (`FORCE ROW LEVEL SECURITY`), `security_invoker` views (Migration `0013`), immutable `audit_logs`, AES-256-GCM envelope encryption, atomic `IdempotencyGate`, Temporal approval workflows, and 4-tier `ModelGateway` (`cheap`, `strong`, `reasoning`, `private`) — **Complete**
 - **Stage 3 (Milestone A: Connectors + Pass 2 Hardening)**: Google Workspace least-privilege connectors (`gmail.send`, `drive.file`, `calendar.events`), Postgres-authoritative one-way Google Sheets sync & drift reconciliation, 13 `@mcp_guardrail` FastMCP tools, durable 401 circuit breaker, and `Asia/Karachi` PKT standardization — **Complete**
 - **Stage 4 (Milestone B — Phase 0: Onboarding Wizard, Employees & Encrypted Record Keeper)**: Migrations `0014` & `0015`, 4-field AAD AES-256-GCM PII crypto (CNIC/IBAN), two-phase `.xlsx` bulk importer, resumable 5-step onboarding wizard & PKT launch, cycle-safe org chart, per-employee document vault (`google_drive`/`local`), daily 09:00 PKT 30/7/1-day Temporal expiry scan, and in-app notification bell — **Complete** ([docs/stage-4-verification.md](docs/stage-4-verification.md))
-- **Next Stage**: **Stage 5 (Recruitment Agents — DocuVerify, Screener & Policy Brain RAG)**
+- **Stage 5 (Policy Ingestion & Bilingual Search — RAG Foundation)**: Migration `0016` (`pg_trgm`, 768D HNSW `VECTOR(768)`, GIN `'simple'` FTS, Forced RLS), ADR 008 bilingual Urdu/English normalizer, permissive PDF/DOCX/TXT parser & clause-aware chunker, `ModelGateway.embed_texts` (`gemini-embedding-001`), sandboxed Temporal ingestion, Stage 2 `policy.publish` versioning, hybrid RRF + reranker retrieval (`POST /api/v1/policies/search`), Next.js 16 3-tab Policy Brain UI, and 18-question Gold Set (`Recall@5 >= 90%`) — **Complete** ([docs/stage-5-verification.md](docs/stage-5-verification.md))
+- **Next Stage**: **Stage 6 (Leave, Attendance & Payroll Determinism)**
 
 ---
 
@@ -95,4 +96,4 @@ pnpm format:check
 - [docs/adr/003-model-routing.md](docs/adr/003-model-routing.md) & [docs/adr/007-model-routing-tiers-2026.md](docs/adr/007-model-routing-tiers-2026.md) — 4-Tier AI Model Routing & Private PII Fail-Closed Boundary
 - [docs/adr/005-sheets-view.md](docs/adr/005-sheets-view.md) — PostgreSQL Authoritative Truth vs Google Sheets Synced View
 - [docs/adr/006-workspace-workaround.md](docs/adr/006-workspace-workaround.md) & [docs/oauth-scopes.md](docs/oauth-scopes.md) — Least-Privilege Scopes (`gmail.send`, `drive.file`, `calendar.events`) & 6 Authorized Test Accounts
-- Verification Reports: [Stage 1](docs/stage-1-verification.md) · [Stage 2](docs/stage-2-verification.md) · [Stage 3](docs/stage-3-verification.md) · [Stage 4](docs/stage-4-verification.md)
+- Verification Reports: [Stage 1](docs/stage-1-verification.md) · [Stage 2](docs/stage-2-verification.md) · [Stage 3](docs/stage-3-verification.md) · [Stage 4](docs/stage-4-verification.md) · [Stage 5](docs/stage-5-verification.md)

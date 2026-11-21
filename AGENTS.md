@@ -208,9 +208,10 @@ pnpm --filter @agentic-hr/web dev
 
 ---
 
-## 11. Current Stage: Stages 1–4 Complete — Ready for Stage 5
+## 11. Current Stage: Stages 1–5 Complete — Ready for Stage 6
 - **Stage 1 (Platform Skeleton)**: Monorepo, Next.js 16, FastAPI, Docker Postgres/Redis/Temporal complete.
 - **Stage 2 (Governance Core + Pass 1 Hardening)**: Forced RLS, Migration `0013` (`security_invoker` alias views, `audit_logs` TRUNCATE trigger, `outbox_due_tenant_ids`), atomic `IdempotencyGate`, AES-256-GCM envelope encryption, Temporal approvals, ADR 007 4-tier `ModelGateway`.
 - **Stage 3 (Milestone A Connectors + Pass 2 Hardening)**: Google Workspace connectors (Gmail, Sheets, Drive, Calendar), 13 `@mcp_guardrail` FastMCP tools, durable 401 circuit-breaker persistence across HTTP & MCP, `Asia/Karachi` timezone standardization (`app.core.timezones`), and enterprise Live/Standby Next.js 16 UI.
 - **Stage 4 (Milestone B — Phase 0: Onboarding Wizard, Employees & Encrypted Record Keeper)**: Migrations `0014` & `0015` (6 forced-RLS tables, `pub_employees` & `pub_documents_expiring` secure views, `document_scan_tenant_ids`), 4-field AAD AES-256-GCM PII crypto, two-phase `.xlsx` importer, resumable 5-step onboarding wizard & PKT launch, cycle-safe org chart, per-employee document vault (`google_drive`/`local`), daily PKT 30/7/1-day Temporal expiry scan & notification bell (`v0.4-stage4-hardened`, `docs/stage-4-verification.md`).
-- **Next Stage**: **Stage 5 (Recruitment Agents — DocuVerify & Screener)**.
+- **Stage 5 (Policy Ingestion & Bilingual Search — RAG Foundation)**: Migration `0016` (`pg_trgm`, 768D HNSW `VECTOR(768)`, GIN `'simple'` FTS, Forced RLS), ADR 008 bilingual Urdu/English normalizer, permissive PDF/DOCX/TXT parser & clause-aware chunker, `ModelGateway.embed_texts` (`gemini-embedding-001`), sandboxed Temporal ingestion, Stage 2 `policy.publish` versioning, hybrid RRF + reranker retrieval (`POST /api/v1/policies/search`), Next.js 16 3-tab Policy Brain UI, and 18-question Gold Set (`Recall@5 >= 90%`) (`v0.5-stage5-rag-verified`, `docs/stage-5-verification.md`).
+- **Next Stage**: **Stage 6 (Leave, Attendance & Payroll Determinism)**.
