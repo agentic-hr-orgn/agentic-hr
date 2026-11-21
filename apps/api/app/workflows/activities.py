@@ -26,6 +26,7 @@ from app.services.connector_service import (
 )
 from app.services.document_expiry_service import DocumentExpiryService
 from app.services.email_delivery_service import EmailDeliveryService, RecipientBlockedError
+from app.services.policy_ingestion_service import PolicyIngestionService
 
 
 def _require_fake_integrations(activity_name: str) -> None:
@@ -472,3 +473,118 @@ async def scan_tenant_expiring_documents_activity(
             send_emails=req.send_emails,
         )
         return summary.model_dump(mode="json")
+
+
+# ==============================================================================
+# Stage 5 Prompt 3: Tenant-Scoped Policy Ingestion Activities
+# ==============================================================================
+
+
+@dataclass
+class PolicyIngestionStepRequest:
+    """Tenant-scoped request for a single PolicyIngestionWorkflow activity step."""
+
+    tenant_id: str
+    document_id: str
+
+
+@dataclass
+class PolicyIngestionFailRequest:
+    """Tenant-scoped failure recording payload for PolicyIngestionWorkflow."""
+
+    tenant_id: str
+    document_id: str
+    error_message: str
+
+
+def _parse_policy_activity_uuids(req: PolicyIngestionStepRequest) -> tuple[UUID, UUID]:
+    try:
+        t_id = UUID(str(req.tenant_id).strip())
+        d_id = UUID(str(req.document_id).strip())
+        return t_id, d_id
+    except ValueError as exc:
+        raise ApplicationError(
+            f"Invalid tenant_id or document_id UUID: ({req.tenant_id}, {req.document_id})",
+            non_retryable=True,
+        ) from exc
+
+
+@activity.defn
+async def parse_policy_document_activity(req: PolicyIngestionStepRequest) -> dict[str, Any]:
+    """Step 1 Activity: Parses stored policy file and persists `policy_document_pages`."""
+    t_id, d_id = _parse_policy_activity_uuids(req)
+    async with AsyncSessionLocal() as session:
+        result = await PolicyIngestionService.parse_and_store_pages(
+            session,
+            tenant_id=t_id,
+            document_id=d_id,
+        )
+        await session.commit()
+        return result
+
+
+@activity.defn
+async def chunk_policy_document_activity(req: PolicyIngestionStepRequest) -> dict[str, Any]:
+    """Step 2 Activity: Runs clause-aware chunker and indexes `policy_chunks` (`tsv`)."""
+    t_id, d_id = _parse_policy_activity_uuids(req)
+    async with AsyncSessionLocal() as session:
+        result = await PolicyIngestionService.chunk_and_index_lexical(
+            session,
+            tenant_id=t_id,
+            document_id=d_id,
+        )
+        await session.commit()
+        return result
+
+
+@activity.defn
+async def embed_policy_chunks_activity(req: PolicyIngestionStepRequest) -> dict[str, Any]:
+    """Step 3 Activity: Reuses cached embeddings by `content_hash` and embeds only new chunks."""
+    t_id, d_id = _parse_policy_activity_uuids(req)
+    async with AsyncSessionLocal() as session:
+        result = await PolicyIngestionService.embed_chunks_idempotent(
+            session,
+            tenant_id=t_id,
+            document_id=d_id,
+        )
+        await session.commit()
+        return result
+
+
+@activity.defn
+async def finalize_policy_ingestion_activity(req: PolicyIngestionStepRequest) -> dict[str, Any]:
+    """Step 4 Activity: Finalizes `ingestion_status` (`indexed` or `needs_review`)."""
+    t_id, d_id = _parse_policy_activity_uuids(req)
+    async with AsyncSessionLocal() as session:
+        result = await PolicyIngestionService.finalize_ingestion(
+            session,
+            tenant_id=t_id,
+            document_id=d_id,
+        )
+        await session.commit()
+        return result
+
+
+@activity.defn
+async def mark_policy_ingestion_failed_activity(
+    req: PolicyIngestionFailRequest,
+) -> dict[str, Any]:
+    """Failure compensation Activity: Marks `ingestion_status='failed'` with audit log."""
+    try:
+        t_id = UUID(str(req.tenant_id).strip())
+        d_id = UUID(str(req.document_id).strip())
+    except ValueError as exc:
+        raise ApplicationError(
+            f"Invalid tenant_id or document_id UUID: ({req.tenant_id}, {req.document_id})",
+            non_retryable=True,
+        ) from exc
+
+    async with AsyncSessionLocal() as session:
+        result = await PolicyIngestionService.mark_ingestion_failed(
+            session,
+            tenant_id=t_id,
+            document_id=d_id,
+            error_message=req.error_message,
+        )
+        await session.commit()
+        return result

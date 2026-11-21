@@ -14,7 +14,10 @@ from app.models.membership import Membership
 from app.models.notification import Notification
 from app.models.onboarding_state import OnboardingState
 from app.models.outbox import OutboxEvent
+from app.models.policy_chunk import PolicyChunk
+from app.models.policy_chunk_embedding import PolicyChunkEmbedding
 from app.models.policy_document import PolicyDocument
+from app.models.policy_document_page import PolicyDocumentPage
 from app.models.role import Role
 from app.models.sheets import SheetsDriftLog, SheetsSyncQueue
 from app.models.synthetic import (
@@ -45,7 +48,10 @@ __all__ = [
     "Notification",
     "OnboardingState",
     "OutboxEvent",
+    "PolicyChunk",
+    "PolicyChunkEmbedding",
     "PolicyDocument",
+    "PolicyDocumentPage",
     "Role",
     "SentMessage",
     "SheetsDriftLog",
