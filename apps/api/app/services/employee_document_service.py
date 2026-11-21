@@ -32,7 +32,11 @@ from app.services.connector_service import (
     CredentialNotFoundError,
     ReadOnlyConnectorError,
 )
-from app.services.storage_helper import MAX_UPLOAD_SIZE_BYTES, StorageHelper
+from app.services.storage_helper import (
+    MAX_UPLOAD_SIZE_BYTES,
+    StorageHelper,
+    validate_file_magic_bytes,
+)
 
 logger = logging.getLogger("agentic_hr.services.employee_document")
 
@@ -199,6 +203,12 @@ class EmployeeDocumentService:
                 ),
             )
 
+        validate_file_magic_bytes(
+            file_bytes,
+            resolved_mime,
+            error_code="INVALID_DOCUMENT_FILE_TYPE",
+        )
+
         category = f"employee_docs_{employee_id}"
         stored = None
 
@@ -248,41 +258,46 @@ class EmployeeDocumentService:
             "_", " "
         ).strip()
 
-        doc = EmployeeDocument(
-            tenant_id=t_id,
-            employee_id=employee_id,
-            document_type=clean_doc_type,
-            title=resolved_title[:255],
-            file_name=clean_file_name[:255],
-            mime_type=resolved_mime,
-            size_bytes=stored.size_bytes,
-            storage_provider=stored.storage_provider,
-            storage_key=stored.storage_key,
-            web_view_link=stored.web_view_link,
-            expiry_date=expiry_date,
-            uploaded_by=UUID(str(actor.user_id)),
-        )
-        session.add(doc)
-        await session.flush()
+        try:
+            doc = EmployeeDocument(
+                tenant_id=t_id,
+                employee_id=employee_id,
+                document_type=clean_doc_type,
+                title=resolved_title[:255],
+                file_name=clean_file_name[:255],
+                mime_type=resolved_mime,
+                size_bytes=stored.size_bytes,
+                storage_provider=stored.storage_provider,
+                storage_key=stored.storage_key,
+                web_view_link=stored.web_view_link,
+                expiry_date=expiry_date,
+                uploaded_by=UUID(str(actor.user_id)),
+            )
+            session.add(doc)
+            await session.flush()
 
-        await write_audit(
-            session,
-            action="employee_document.uploaded",
-            target_type="employee_document",
-            target_id=doc.id,
-            details={
-                "employee_id": str(employee_id),
-                "document_type": doc.document_type,
-                "title": doc.title,
-                "file_name": doc.file_name,
-                "mime_type": doc.mime_type,
-                "size_bytes": doc.size_bytes,
-                "storage_provider": doc.storage_provider,
-                "expiry_date": doc.expiry_date.isoformat() if doc.expiry_date else None,
-            },
-            actor_id=actor.user_id,
-            tenant_id=t_id,
-        )
+            await write_audit(
+                session,
+                action="employee_document.uploaded",
+                target_type="employee_document",
+                target_id=doc.id,
+                details={
+                    "employee_id": str(employee_id),
+                    "document_type": doc.document_type,
+                    "title": doc.title,
+                    "file_name": doc.file_name,
+                    "mime_type": doc.mime_type,
+                    "size_bytes": doc.size_bytes,
+                    "storage_provider": doc.storage_provider,
+                    "expiry_date": doc.expiry_date.isoformat() if doc.expiry_date else None,
+                },
+                actor_id=actor.user_id,
+                tenant_id=t_id,
+            )
+        except Exception:
+            if stored.storage_provider == "local":
+                StorageHelper.delete_local_file(tenant_id=t_id, storage_key=stored.storage_key)
+            raise
 
         return EmployeeDocumentResponse.model_validate(doc)
 

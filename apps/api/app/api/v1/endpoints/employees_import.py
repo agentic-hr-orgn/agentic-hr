@@ -11,10 +11,12 @@ Endpoints:
 from fastapi import APIRouter, Depends, File, Response, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rate_limit import RateLimiter
 from app.core.security import AuthenticatedUserContext, require_owner_manager_or_hr_head
 from app.db.session import get_db
 from app.schemas.employee_import import ImportCommitResponse, ImportValidationResult
-from app.services.employee_import_service import EmployeeImportService
+from app.services.employee_import_service import MAX_IMPORT_FILE_BYTES, EmployeeImportService
+from app.services.storage_helper import read_upload_bytes_limited
 
 router = APIRouter()
 
@@ -40,7 +42,13 @@ async def download_employee_import_template(
     )
 
 
-@router.post("/validate", response_model=ImportValidationResult)
+@router.post(
+    "/validate",
+    response_model=ImportValidationResult,
+    dependencies=[
+        Depends(RateLimiter(requests=60, window_seconds=60, scope="employees_import.validate"))
+    ],
+)
 async def validate_employee_import_xlsx(
     file: UploadFile = File(...),
     current_user: AuthenticatedUserContext = Depends(require_owner_manager_or_hr_head),
@@ -50,7 +58,11 @@ async def validate_employee_import_xlsx(
     Parses and validates every row in an uploaded `.xlsx` workbook without stopping on first error,
     stages encrypted PII in Redis (30-min TTL), and returns masked preview rows + per-row errors.
     """
-    content = await file.read()
+    content = await read_upload_bytes_limited(
+        file,
+        MAX_IMPORT_FILE_BYTES,
+        error_code="IMPORT_FILE_TOO_LARGE",
+    )
     return await EmployeeImportService.validate_upload_xlsx(
         session=db,
         tenant_id=current_user.tenant_id,
@@ -81,7 +93,13 @@ async def download_employee_import_error_report(
     )
 
 
-@router.post("/{batch_id}/commit", response_model=ImportCommitResponse)
+@router.post(
+    "/{batch_id}/commit",
+    response_model=ImportCommitResponse,
+    dependencies=[
+        Depends(RateLimiter(requests=60, window_seconds=60, scope="employees_import.commit"))
+    ],
+)
 async def commit_employee_import_batch(
     batch_id: str,
     current_user: AuthenticatedUserContext = Depends(require_owner_manager_or_hr_head),

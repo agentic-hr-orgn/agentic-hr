@@ -11,6 +11,7 @@ Endpoints:
 from fastapi import APIRouter, Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rate_limit import RateLimiter
 from app.core.security import (
     AuthenticatedUserContext,
     get_current_user,
@@ -75,7 +76,11 @@ async def get_onboarding_readiness(
     )
 
 
-@router.post("/launch", response_model=OnboardingLaunchResponse)
+@router.post(
+    "/launch",
+    response_model=OnboardingLaunchResponse,
+    dependencies=[Depends(RateLimiter(requests=30, window_seconds=60, scope="onboarding.launch"))],
+)
 async def launch_tenant_workspace(
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),

@@ -23,6 +23,7 @@ export default defineConfig({
     url: "http://localhost:3000/sign-in",
     env: {
       PLAYWRIGHT: "true",
+      ALLOW_E2E_AUTH_BYPASS: "true",
       PORT: "3000",
     },
     reuseExistingServer: !process.env.CI,

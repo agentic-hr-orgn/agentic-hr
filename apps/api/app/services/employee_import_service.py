@@ -45,6 +45,7 @@ from app.schemas.employee_import import (
 from app.services.audit_service import write_audit
 from app.services.employee_service import EmployeeService
 from app.services.sheets_sync_service import SheetsSyncService
+from app.services.storage_helper import XLSX_MIME, validate_file_magic_bytes
 
 logger = logging.getLogger("agentic_hr.services.employee_import")
 
@@ -360,6 +361,12 @@ class EmployeeImportService:
                     f"maximum allowed limit of {MAX_IMPORT_FILE_BYTES} bytes (5MB)."
                 ),
             )
+
+        validate_file_magic_bytes(
+            file_bytes,
+            XLSX_MIME,
+            error_code="INVALID_XLSX_FILE",
+        )
 
         try:
             wb = openpyxl.load_workbook(

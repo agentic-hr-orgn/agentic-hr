@@ -29,6 +29,7 @@ import {
 } from "@/hooks/use-employees";
 import { isOfflineError } from "@/lib/api-request";
 import { formatPKT, getPKTDaysUntil } from "@/lib/format";
+import { useToastStore } from "@/stores/toast-store";
 
 interface EmployeeProfileDrawerProps {
   employeeId: string | null;
@@ -108,6 +109,9 @@ function EmployeeProfileDrawerContent({
   const docExpiryId = useId();
   const docFileId = useId();
   const docFileInputRef = useRef<HTMLInputElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const pushToast = useToastStore((s) => s.pushToast);
 
   const { data: currentUser } = useCurrentUser();
   const {
@@ -156,13 +160,48 @@ function EmployeeProfileDrawerContent({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+
+    const getFocusableElements = (): HTMLElement[] => {
+      if (!dialogRef.current) return [];
+      const selector =
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+      return Array.from(dialogRef.current.querySelectorAll<HTMLElement>(selector));
+    };
+
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         onClose();
+        return;
+      }
+      if (e.key === "Tab") {
+        const focusable = getFocusableElements();
+        if (focusable.length === 0) {
+          e.preventDefault();
+          return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+        if (e.shiftKey) {
+          if (!active || active === first || !dialogRef.current?.contains(active)) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else if (!active || active === last || !dialogRef.current?.contains(active)) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      if (previouslyFocusedRef.current && document.contains(previouslyFocusedRef.current)) {
+        previouslyFocusedRef.current.focus();
+      }
+    };
   }, [onClose]);
 
   const userRole = currentUser?.role?.toLowerCase() || "employee";
@@ -227,8 +266,15 @@ function EmployeeProfileDrawerContent({
       await updateEmployee.mutateAsync({ employeeId: profile.id, payload });
       setIsEditing(false);
       setBannerSuccess("Employee profile updated in PostgreSQL & queued for Sheets sync.");
+      pushToast({
+        variant: "success",
+        title: "Employee profile updated",
+        description: `${profile.full_name} saved in PostgreSQL & queued for Sheets sync.`,
+      });
     } catch (err: unknown) {
-      setBannerError(err instanceof Error ? err.message : "Failed to update employee profile.");
+      const msg = err instanceof Error ? err.message : "Failed to update employee profile.";
+      setBannerError(msg);
+      pushToast({ variant: "error", title: "Profile update failed", description: msg });
     }
   };
 
@@ -254,8 +300,15 @@ function EmployeeProfileDrawerContent({
         docFileInputRef.current.value = "";
       }
       setBannerSuccess(`Uploaded '${uploaded.title}' to ${uploaded.storage_provider} vault.`);
+      pushToast({
+        variant: "success",
+        title: "Document uploaded",
+        description: `'${uploaded.title}' stored in ${uploaded.storage_provider} vault.`,
+      });
     } catch (err: unknown) {
-      setBannerError(err instanceof Error ? err.message : "Failed to upload document.");
+      const msg = err instanceof Error ? err.message : "Failed to upload document.";
+      setBannerError(msg);
+      pushToast({ variant: "error", title: "Document upload failed", description: msg });
     }
   };
 
@@ -280,8 +333,15 @@ function EmployeeProfileDrawerContent({
     try {
       await deleteDoc.mutateAsync(documentId);
       setBannerSuccess(`Deleted document '${title}'.`);
+      pushToast({
+        variant: "success",
+        title: "Document deleted",
+        description: `Removed '${title}'.`,
+      });
     } catch (err: unknown) {
-      setBannerError(err instanceof Error ? err.message : "Failed to delete document.");
+      const msg = err instanceof Error ? err.message : "Failed to delete document.";
+      setBannerError(msg);
+      pushToast({ variant: "error", title: "Delete failed", description: msg });
     }
   };
 
@@ -293,10 +353,12 @@ function EmployeeProfileDrawerContent({
       }}
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="flex h-full w-full max-w-2xl flex-col border-l border-appBorder bg-white shadow-2xl"
+        className="flex h-full w-full max-w-2xl flex-col border-l border-appBorder bg-white shadow-2xl focus:outline-none"
       >
         {/* Drawer Header */}
         <div className="flex items-start justify-between border-b border-appBorder bg-[#F8F9FD] px-6 py-4">

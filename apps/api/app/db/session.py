@@ -53,6 +53,9 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
         except ConnectorAuthExpiredError:
             await session.commit()
             raise
+        except Exception:
+            await session.rollback()
+            raise
         finally:
             await session.close()
 
