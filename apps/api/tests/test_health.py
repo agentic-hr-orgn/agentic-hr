@@ -6,6 +6,8 @@ Verifies GET /health, unique request ID generation, and unified JSON error handl
 import httpx
 import pytest
 
+from app.core.config import settings
+
 
 @pytest.mark.asyncio
 async def test_get_health_httpx(async_client: httpx.AsyncClient) -> None:
@@ -17,7 +19,8 @@ async def test_get_health_httpx(async_client: httpx.AsyncClient) -> None:
 
     data = response.json()
     assert data["status"] == "healthy"
-    assert data["environment"] == "development"
+    assert data["environment"] == settings.ENVIRONMENT
+    assert data["environment"] in {"development", "test"}
     assert "database" in data
     assert "connected" in data["database"]
     assert "pgvector_enabled" in data["database"]
