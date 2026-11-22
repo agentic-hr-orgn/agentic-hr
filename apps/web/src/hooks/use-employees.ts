@@ -27,6 +27,7 @@ export interface EmployeeListParams {
   employmentType?: string;
   page?: number;
   pageSize?: number;
+  enabled?: boolean;
 }
 
 function buildHeaders(authHeader: string | null, json = false): Record<string, string> {
@@ -49,6 +50,7 @@ export function useEmployees(params: EmployeeListParams = {}) {
     employmentType = "",
     page = 1,
     pageSize = 15,
+    enabled = true,
   } = params;
 
   return useQuery<EmployeeListResponse, Error>({
@@ -79,7 +81,7 @@ export function useEmployees(params: EmployeeListParams = {}) {
       }
       throw new ApiOfflineError("OFFLINE: FastAPI backend is unreachable.");
     },
-    enabled: isLoaded,
+    enabled: isLoaded && enabled,
     staleTime: 1000 * 30,
     retry: false,
   });

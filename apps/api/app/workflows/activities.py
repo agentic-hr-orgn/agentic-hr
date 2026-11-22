@@ -26,6 +26,11 @@ from app.services.connector_service import (
 )
 from app.services.document_expiry_service import DocumentExpiryService
 from app.services.email_delivery_service import EmailDeliveryService, RecipientBlockedError
+from app.services.leave_accrual_service import (
+    run_monthly_accrual,
+    run_year_end_carry_forward,
+)
+from app.services.leave_service import LeaveService
 from app.services.policy_ingestion_service import PolicyIngestionService
 
 
@@ -588,3 +593,203 @@ async def mark_policy_ingestion_failed_activity(
         )
         await session.commit()
         return result
+
+
+# ==============================================================================
+# Stage 6 Prompt 2: Tenant-Scoped Leave Accrual & Carry-Forward Activities
+# ==============================================================================
+
+
+@dataclass
+class TenantMonthlyAccrualRequest:
+    """Tenant-scoped monthly leave accrual parameters."""
+
+    tenant_id: str
+    year_month: str
+    actor_id: str | None = None
+
+
+@dataclass
+class TenantCarryForwardRequest:
+    """Tenant-scoped year-end leave carry-forward parameters."""
+
+    tenant_id: str
+    from_year: int
+    to_year: int
+    actor_id: str | None = None
+
+
+@activity.defn
+async def run_tenant_monthly_accrual_activity(
+    req: TenantMonthlyAccrualRequest,
+) -> dict[str, Any]:
+    """Executes idempotent monthly leave accrual for a single tenant under Forced RLS."""
+    try:
+        t_id = UUID(str(req.tenant_id).strip())
+    except ValueError as exc:
+        raise ApplicationError(
+            f"Invalid tenant_id UUID for run_tenant_monthly_accrual_activity: {req.tenant_id}",
+            non_retryable=True,
+        ) from exc
+
+    async with AsyncSessionLocal() as session:
+        await set_tenant_context(session, str(t_id))
+        summary = await run_monthly_accrual(
+            session,
+            tenant_id=t_id,
+            year_month=req.year_month,
+            actor_id=req.actor_id,
+        )
+        await session.commit()
+        return summary
+
+
+@activity.defn
+async def run_tenant_carry_forward_activity(
+    req: TenantCarryForwardRequest,
+) -> dict[str, Any]:
+    """Executes idempotent year-end carry-forward for a single tenant under Forced RLS."""
+    try:
+        t_id = UUID(str(req.tenant_id).strip())
+    except ValueError as exc:
+        raise ApplicationError(
+            f"Invalid tenant_id UUID for run_tenant_carry_forward_activity: {req.tenant_id}",
+            non_retryable=True,
+        ) from exc
+
+    async with AsyncSessionLocal() as session:
+        await set_tenant_context(session, str(t_id))
+        summary = await run_year_end_carry_forward(
+            session,
+            tenant_id=t_id,
+            from_year=req.from_year,
+            to_year=req.to_year,
+            actor_id=req.actor_id,
+        )
+        await session.commit()
+        return summary
+
+
+# ==============================================================================
+# Stage 6 Prompt 3: Durable Leave Request Lifecycle Activities
+# ==============================================================================
+
+
+@dataclass
+class LeaveWorkflowActivityRequest:
+    """Tenant-scoped identifier payload for leave request workflow activities."""
+
+    tenant_id: str
+    leave_request_id: str
+
+
+@dataclass
+class LeaveDecisionActivityRequest:
+    """Tenant-scoped terminal decision payload for leave request workflow activities."""
+
+    tenant_id: str
+    leave_request_id: str
+    target_status: str
+    actor_id: str | None = None
+    note: str | None = None
+
+
+def _parse_leave_uuids(tenant_id: str, leave_request_id: str) -> tuple[UUID, UUID]:
+    try:
+        return UUID(str(tenant_id).strip()), UUID(str(leave_request_id).strip())
+    except ValueError as exc:
+        raise ApplicationError(
+            f"Invalid UUID in leave workflow activity: ({tenant_id}, {leave_request_id})",
+            non_retryable=True,
+        ) from exc
+
+
+@activity.defn
+async def notify_leave_requested_activity(
+    req: LeaveWorkflowActivityRequest,
+) -> dict[str, Any]:
+    """Notifies the assigned manager in-app and via Gmail when a leave request is submitted."""
+    t_id, r_id = _parse_leave_uuids(req.tenant_id, req.leave_request_id)
+    async with AsyncSessionLocal() as session:
+        await set_tenant_context(session, str(t_id))
+        return await LeaveService.notify_leave_requested(session, tenant_id=t_id, request_id=r_id)
+
+
+@activity.defn
+async def send_leave_reminder_activity(
+    req: LeaveWorkflowActivityRequest,
+) -> dict[str, Any]:
+    """Sends a 24h reminder notification & Gmail to the manager if still pending."""
+    t_id, r_id = _parse_leave_uuids(req.tenant_id, req.leave_request_id)
+    async with AsyncSessionLocal() as session:
+        await set_tenant_context(session, str(t_id))
+        return await LeaveService.send_leave_reminder(session, tenant_id=t_id, request_id=r_id)
+
+
+@activity.defn
+async def escalate_leave_request_activity(
+    req: LeaveWorkflowActivityRequest,
+) -> dict[str, Any]:
+    """Escalates a pending leave request to `work_week.backup_approver_user_id` at 48h."""
+    t_id, r_id = _parse_leave_uuids(req.tenant_id, req.leave_request_id)
+    async with AsyncSessionLocal() as session:
+        await set_tenant_context(session, str(t_id))
+        return await LeaveService.escalate_leave_request(session, tenant_id=t_id, request_id=r_id)
+
+
+@activity.defn
+async def expire_leave_request_activity(
+    req: LeaveWorkflowActivityRequest,
+) -> dict[str, Any]:
+    """Expires a pending leave request at 72h and releases its reserved balance."""
+    t_id, r_id = _parse_leave_uuids(req.tenant_id, req.leave_request_id)
+    async with AsyncSessionLocal() as session:
+        await set_tenant_context(session, str(t_id))
+        return await LeaveService.release_leave_reservation(
+            session,
+            tenant_id=t_id,
+            request_id=r_id,
+            target_status="expired",
+            actor_id=None,
+            note="Automatically expired after approval timeout.",
+        )
+
+
+@activity.defn
+async def release_leave_reservation_activity(
+    req: LeaveDecisionActivityRequest,
+) -> dict[str, Any]:
+    """Idempotently releases reserved leave days for rejected or cancelled requests."""
+    t_id, r_id = _parse_leave_uuids(req.tenant_id, req.leave_request_id)
+    target = (
+        req.target_status
+        if req.target_status in ("rejected", "cancelled", "expired")
+        else "cancelled"
+    )
+    async with AsyncSessionLocal() as session:
+        await set_tenant_context(session, str(t_id))
+        return await LeaveService.release_leave_reservation(
+            session,
+            tenant_id=t_id,
+            request_id=r_id,
+            target_status=target,  # type: ignore[arg-type]
+            actor_id=req.actor_id,
+            note=req.note,
+        )
+
+
+@activity.defn
+async def approve_leave_request_activity(
+    req: LeaveDecisionActivityRequest,
+) -> dict[str, Any]:
+    """Single idempotent leave approval activity (balance deduct, attendance, outbox, Sheets, Calendar, email)."""
+    t_id, r_id = _parse_leave_uuids(req.tenant_id, req.leave_request_id)
+    async with AsyncSessionLocal() as session:
+        await set_tenant_context(session, str(t_id))
+        return await LeaveService.approve_leave_request(
+            session,
+            tenant_id=t_id,
+            request_id=r_id,
+            decided_by=req.actor_id,
+            decision_note=req.note,
+        )

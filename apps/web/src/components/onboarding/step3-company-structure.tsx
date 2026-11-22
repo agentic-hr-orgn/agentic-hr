@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useEffect, useId, useState } from "react";
+import React, { useCallback, useEffect, useId, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
   Building2,
-  CalendarClock,
   CheckCircle2,
   Plus,
   ShieldCheck,
@@ -16,6 +15,10 @@ import type { OnboardingState, OnboardingStepSaveRequest } from "@agentic-hr/con
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  LeaveAttendanceConfigPanel,
+  type LeaveConfigWizardSnapshot,
+} from "@/components/leave/leave-attendance-config-panel";
 import { useCreateDepartment, useDeleteDepartment, useDepartments } from "@/hooks/use-departments";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { isOfflineError } from "@/lib/api-request";
@@ -110,6 +113,7 @@ export function Step3CompanyStructure({
   const [deptCode, setDeptCode] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [leaveSnapshot, setLeaveSnapshot] = useState<LeaveConfigWizardSnapshot | null>(null);
 
   useEffect(() => {
     if (onboardingState?.business_type) {
@@ -120,8 +124,13 @@ export function Step3CompanyStructure({
   const userRole = currentUser?.role?.toLowerCase() || "owner";
   const canManage =
     userRole === "owner" || userRole === "manager" || currentUser?.is_hr_head === true;
+  const canManageLeaveConfig = userRole === "owner" || currentUser?.is_hr_head === true;
 
   const liveDeptError = deptError && !isOfflineError(deptError) ? deptError.message : null;
+
+  const handleSnapshotChange = useCallback((snapshot: LeaveConfigWizardSnapshot) => {
+    setLeaveSnapshot(snapshot);
+  }, []);
 
   const handleAddDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,15 +177,17 @@ export function Step3CompanyStructure({
       business_type: businessType,
       advance_step: true,
       structure_config: {
-        weekends: ["Saturday", "Sunday"],
-        leave_rules: {
+        ...existingConfig,
+        weekends: leaveSnapshot?.weekends ?? ["Saturday", "Sunday"],
+        probation_months: leaveSnapshot?.probation_months ?? 3,
+        check_in_enabled: leaveSnapshot?.check_in_enabled ?? true,
+        leave_rules: leaveSnapshot?.leave_rules ?? {
           annual_days: 20,
           sick_days: 10,
           casual_days: 10,
           carry_forward_max: 5,
         },
-        holidays: [],
-        ...existingConfig,
+        holidays: leaveSnapshot?.holidays ?? [],
       },
     });
   };
@@ -315,7 +326,6 @@ export function Step3CompanyStructure({
               </Button>
             </form>
 
-            {/* Departments List */}
             <div className="space-y-2 border-t border-appBorder pt-4">
               <p className="text-xs font-bold uppercase tracking-wider text-[#102C54]">
                 Configured Departments ({departments.length})
@@ -365,105 +375,72 @@ export function Step3CompanyStructure({
           </CardContent>
         </Card>
 
-        {/* Stage 6 Placeholders & Permissions Matrix */}
-        <div className="space-y-6">
-          {/* Stage 6 Coming Soon Placeholders */}
-          <Card className="border border-appBorder bg-white shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <CalendarClock className="h-4 w-4 text-[#2A5BDB]" aria-hidden="true" />
-                  <CardTitle className="text-base text-[#102C54]">
-                    Attendance, Leave &amp; Holiday Defaults
-                  </CardTitle>
-                </div>
-                <Badge variant="warning">Stage 6 — Coming Soon</Badge>
-              </div>
-              <CardDescription className="text-xs text-textSecondary">
-                Saved as starter configuration for Stage 6 Leave Management &amp; Payroll runs.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-3">
-              <div className="rounded-small border border-appBorder bg-[#F8F9FD] p-3">
-                <span className="block font-bold text-[#102C54]">Leave Rules</span>
-                <span className="mt-1 block text-[11px] text-textSecondary">
-                  Annual: 20 days • Sick: 10 days • Casual: 10 days
-                </span>
-              </div>
-              <div className="rounded-small border border-appBorder bg-[#F8F9FD] p-3">
-                <span className="block font-bold text-[#102C54]">Weekend Schedule</span>
-                <span className="mt-1 block text-[11px] text-textSecondary">
-                  Saturday &amp; Sunday (Asia/Karachi PKT default)
-                </span>
-              </div>
-              <div className="rounded-small border border-appBorder bg-[#F8F9FD] p-3">
-                <span className="block font-bold text-[#102C54]">Public Holidays</span>
-                <span className="mt-1 block text-[11px] text-textSecondary">
-                  Gazetted PK calendar editable in Stage 6
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Roles & Permissions Matrix */}
-          <Card className="border border-appBorder bg-white shadow-sm">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-[#2A5BDB]" aria-hidden="true" />
-                <CardTitle className="text-base text-[#102C54]">
-                  Roles &amp; Permissions Matrix (ADR 002)
-                </CardTitle>
-              </div>
-              <CardDescription className="text-xs text-textSecondary">
-                Encrypted PII (CNIC &amp; bank IBAN) is strictly restricted to Owner, HR Head,
-                Payroll Admin, and employee self-view.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div
-                tabIndex={0}
-                role="region"
-                aria-labelledby={matrixCaptionId}
-                className="overflow-x-auto rounded-small border border-appBorder"
-              >
-                <table className="w-full border-collapse text-left text-[11px]">
-                  <caption id={matrixCaptionId} className="sr-only">
-                    Agentic HR role-based access and PII boundaries matrix
-                  </caption>
-                  <thead className="bg-[#102C54] text-white">
-                    <tr>
-                      <th scope="col" className="px-2.5 py-2 font-semibold">
-                        Role
+        {/* Roles & Permissions Matrix */}
+        <Card className="border border-appBorder bg-white shadow-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-[#2A5BDB]" aria-hidden="true" />
+              <CardTitle className="text-base text-[#102C54]">
+                Roles &amp; Permissions Matrix (ADR 002)
+              </CardTitle>
+            </div>
+            <CardDescription className="text-xs text-textSecondary">
+              Encrypted PII (CNIC &amp; bank IBAN) is strictly restricted to Owner, HR Head, Payroll
+              Admin, and employee self-view.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div
+              tabIndex={0}
+              role="region"
+              aria-labelledby={matrixCaptionId}
+              className="overflow-x-auto rounded-small border border-appBorder"
+            >
+              <table className="w-full border-collapse text-left text-[11px]">
+                <caption id={matrixCaptionId} className="sr-only">
+                  Agentic HR role-based access and PII boundaries matrix
+                </caption>
+                <thead className="bg-[#102C54] text-white">
+                  <tr>
+                    <th scope="col" className="px-2.5 py-2 font-semibold">
+                      Role
+                    </th>
+                    <th scope="col" className="px-2.5 py-2 font-semibold">
+                      Directory
+                    </th>
+                    <th scope="col" className="px-2.5 py-2 font-semibold">
+                      Encrypted PII
+                    </th>
+                    <th scope="col" className="px-2.5 py-2 font-semibold">
+                      Approvals
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-appBorder bg-white">
+                  {ROLES_MATRIX.map((row) => (
+                    <tr key={row.role} className="hover:bg-[#F8F9FD]">
+                      <th scope="row" className="px-2.5 py-2 font-bold text-[#102C54]">
+                        {row.role}
                       </th>
-                      <th scope="col" className="px-2.5 py-2 font-semibold">
-                        Directory
-                      </th>
-                      <th scope="col" className="px-2.5 py-2 font-semibold">
-                        Encrypted PII
-                      </th>
-                      <th scope="col" className="px-2.5 py-2 font-semibold">
-                        Approvals
-                      </th>
+                      <td className="px-2.5 py-2 text-textSecondary">{row.directory}</td>
+                      <td className="px-2.5 py-2 font-medium text-[#2A5BDB]">{row.pii}</td>
+                      <td className="px-2.5 py-2 text-textSecondary">{row.approvals}</td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-appBorder bg-white">
-                    {ROLES_MATRIX.map((row) => (
-                      <tr key={row.role} className="hover:bg-[#F8F9FD]">
-                        <th scope="row" className="px-2.5 py-2 font-bold text-[#102C54]">
-                          {row.role}
-                        </th>
-                        <td className="px-2.5 py-2 text-textSecondary">{row.directory}</td>
-                        <td className="px-2.5 py-2 font-medium text-[#2A5BDB]">{row.pii}</td>
-                        <td className="px-2.5 py-2 text-textSecondary">{row.approvals}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Live Stage 6 Leave, Work-Week & Holiday Rules */}
+      <LeaveAttendanceConfigPanel
+        mode="wizard"
+        canManage={canManageLeaveConfig}
+        isOffline={isOfflineError(deptError)}
+        onConfigSnapshotChange={handleSnapshotChange}
+      />
 
       <div className="flex items-center justify-between pt-2">
         <Button type="button" variant="outline" onClick={onBack}>

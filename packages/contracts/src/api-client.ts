@@ -1569,6 +1569,514 @@ export interface paths {
         patch: operations["mark_notification_read_api_v1_notifications__notification_id__read_patch"];
         trace?: never;
     };
+    "/api/v1/leave/config/work-week": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Work Week Config
+         * @description Returns the tenant's work-week, probation, team coverage, and check-in configuration.
+         */
+        get: operations["get_work_week_config_api_v1_leave_config_work_week_get"];
+        /**
+         * Update Work Week Config
+         * @description Updates the tenant's work-week configuration. Restricted to Owner or HR Head.
+         */
+        put: operations["update_work_week_config_api_v1_leave_config_work_week_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/config/types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Leave Types
+         * @description Lists tenant leave types, auto-seeding default Pakistani SME types on first access.
+         */
+        get: operations["list_leave_types_api_v1_leave_config_types_get"];
+        put?: never;
+        /**
+         * Create Leave Type
+         * @description Creates a new tenant leave type. Restricted to Owner or HR Head.
+         */
+        post: operations["create_leave_type_api_v1_leave_config_types_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/config/types/{leave_type_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Leave Type
+         * @description Deletes or soft-deactivates a leave type. Restricted to Owner or HR Head.
+         */
+        delete: operations["delete_leave_type_api_v1_leave_config_types__leave_type_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Leave Type
+         * @description Updates an existing leave type. Restricted to Owner or HR Head.
+         */
+        patch: operations["update_leave_type_api_v1_leave_config_types__leave_type_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/leave/config/holidays": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Holidays
+         * @description Lists tenant public holidays, auto-seeding Pakistan fixed holidays on first access.
+         */
+        get: operations["list_holidays_api_v1_leave_config_holidays_get"];
+        put?: never;
+        /**
+         * Create Holiday
+         * @description Creates a custom or default public holiday. Restricted to Owner or HR Head.
+         */
+        post: operations["create_holiday_api_v1_leave_config_holidays_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/config/holidays/{holiday_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Holiday
+         * @description Deletes a public holiday. Restricted to Owner or HR Head.
+         */
+        delete: operations["delete_holiday_api_v1_leave_config_holidays__holiday_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Holiday
+         * @description Updates an existing public holiday. Restricted to Owner or HR Head.
+         */
+        patch: operations["update_holiday_api_v1_leave_config_holidays__holiday_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/leave/intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leave Intake Chat
+         * @description Conversational bilingual leave intake agent. Asks at most ONE focused clarifying
+         *     question if incomplete, or runs deterministic `check_leave` and returns a `confirm_card`.
+         */
+        post: operations["leave_intake_chat_api_v1_leave_intake_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Leave Request
+         * @description Submits a leave request using serialized `SELECT ... FOR UPDATE` balance locking,
+         *     reserves balance, optionally creates a Stage 2 `leave.exception` approval on
+         *     policy violation, and starts durable `LeaveRequestWorkflow`.
+         */
+        post: operations["submit_leave_request_api_v1_leave_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/balances/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get My Leave Balances
+         * @description Returns the caller's leave balances for the requested (or current PKT) year.
+         */
+        get: operations["get_my_leave_balances_api_v1_leave_balances_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List All Leave Balances
+         * @description HR Head / Owner view of tenant leave balances.
+         */
+        get: operations["list_all_leave_balances_api_v1_leave_balances_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/requests/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List My Leave Requests
+         * @description Lists the caller's own submitted leave requests.
+         */
+        get: operations["list_my_leave_requests_api_v1_leave_requests_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Leave Approval Inbox
+         * @description Lists pending leave requests assigned to the caller (or escalated backup approver).
+         *     Owner and HR Head see all pending requests in the tenant.
+         */
+        get: operations["list_leave_approval_inbox_api_v1_leave_inbox_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Team Leave Calendar
+         * @description Lists approved and pending team leaves for calendar visibility.
+         */
+        get: operations["list_team_leave_calendar_api_v1_leave_calendar_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Hr Leave Overview
+         * @description HR Head / Owner overview metrics and full tenant leave request log.
+         */
+        get: operations["get_hr_leave_overview_api_v1_leave_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/requests/{request_id}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide Leave Request
+         * @description Approves or rejects a pending leave request (strict approver/escalated/HR RBAC).
+         */
+        post: operations["decide_leave_request_api_v1_leave_requests__request_id__decide_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/requests/{request_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Leave Request
+         * @description Cancels a pending request (releases reservation) or approved request (reverses attendance/balance).
+         */
+        post: operations["cancel_leave_request_api_v1_leave_requests__request_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/me/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get My Today Attendance
+         * @description Returns today's Asia/Karachi date, `check_in_enabled`, `is_locked`, and caller's record.
+         */
+        get: operations["get_my_today_attendance_api_v1_attendance_me_today_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/check-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Self Check In
+         * @description Employee self check-in / check-out (requires `work_week.check_in_enabled = true`).
+         */
+        post: operations["self_check_in_api_v1_attendance_check_in_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Daily Attendance Grid
+         * @description Lists daily attendance grid for manager's direct reports (or all employees for HR/Owner).
+         */
+        get: operations["get_daily_attendance_grid_api_v1_attendance_daily_get"];
+        /**
+         * Upsert Daily Attendance Grid
+         * @description Batch upserts daily attendance statuses (`source='manager_grid'`). Refuses locked months.
+         */
+        put: operations["upsert_daily_attendance_grid_api_v1_attendance_daily_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/import/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Attendance Excel Import
+         * @description Phase 1 of Excel attendance import: magic-byte check, row validation, and Redis staging.
+         */
+        post: operations["validate_attendance_excel_import_api_v1_attendance_import_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/import/{batch_id}/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Commit Attendance Excel Import
+         * @description Phase 2 of Excel attendance import: atomically commits clean staged rows.
+         */
+        post: operations["commit_attendance_excel_import_api_v1_attendance_import__batch_id__commit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/months/{year_month}/auto-fill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Auto Fill Month Attendance
+         * @description Fills missing weekends, holidays, and approved leave dates for `year_month` (`YYYY-MM`).
+         */
+        post: operations["auto_fill_month_attendance_api_v1_attendance_months__year_month__auto_fill_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/months/{year_month}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Month Attendance Review
+         * @description Returns per-employee monthly status tallies and exact missing attendance dates.
+         */
+        get: operations["get_month_attendance_review_api_v1_attendance_months__year_month__review_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/months/{year_month}/lock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lock Month Attendance
+         * @description Locks an attendance month for payroll after verifying zero attendance gaps.
+         */
+        post: operations["lock_month_attendance_api_v1_attendance_months__year_month__lock_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/post-lock-edit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Post Lock Attendance Edit
+         * @description Creates a Stage 2 `attendance.post_lock_edit` approval for a locked attendance month.
+         */
+        post: operations["request_post_lock_attendance_edit_api_v1_attendance_post_lock_edit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/synthetic/company": {
         parameters: {
             query?: never;
@@ -1703,7 +2211,7 @@ export interface components {
              * @description Type of approval being requested
              * @enum {string}
              */
-            approval_type: "leave_request" | "candidate_offer" | "payroll_override" | "policy_exception" | "policy.publish";
+            approval_type: "leave_request" | "candidate_offer" | "payroll_override" | "policy_exception" | "policy.publish" | "leave.exception" | "attendance.post_lock_edit";
             /**
              * Payload
              * @description Domain-specific payload matching the approval_type
@@ -1841,6 +2349,348 @@ export interface components {
             decided_at?: string | null;
             /** Created At */
             created_at: string;
+        };
+        /**
+         * AttendanceAutoFillRequest
+         * @description Optional configuration for monthly attendance auto-fill.
+         */
+        AttendanceAutoFillRequest: {
+            /**
+             * Overwrite Existing
+             * @default false
+             */
+            overwrite_existing: boolean;
+        };
+        /**
+         * AttendanceAutoFillResponse
+         * @description Summary of automated weekend, holiday, and approved-leave attendance fills.
+         */
+        AttendanceAutoFillResponse: {
+            /** Year Month */
+            year_month: string;
+            /** Active Employees */
+            active_employees: number;
+            /** Filled Leave Days */
+            filled_leave_days: number;
+            /** Filled Holiday Days */
+            filled_holiday_days: number;
+            /** Filled Weekend Days */
+            filled_weekend_days: number;
+            /** Total Filled */
+            total_filled: number;
+            /** Skipped Existing */
+            skipped_existing: number;
+        };
+        /**
+         * AttendanceCheckInRequest
+         * @description Self check-in / check-out payload.
+         */
+        AttendanceCheckInRequest: {
+            /** Action */
+            action?: ("check_in" | "check_out") | null;
+            /**
+             * Check Out
+             * @default false
+             */
+            check_out: boolean;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Target Date
+             * @description Optional Asia/Karachi date override (defaults to today PKT).
+             */
+            target_date?: string | null;
+        };
+        /**
+         * AttendanceImportCommitResponse
+         * @description Response from POST /api/v1/attendance/import/{batch_id}/commit.
+         */
+        AttendanceImportCommitResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "committed";
+            /** Import Batch Id */
+            import_batch_id: string;
+            /** Committed Count */
+            committed_count: number;
+            /** Sheets Queued */
+            sheets_queued: number;
+            /** Year Months */
+            year_months: string[];
+        };
+        /**
+         * AttendanceImportPreviewRow
+         * @description Preview row returned by two-phase attendance Excel validation.
+         */
+        AttendanceImportPreviewRow: {
+            /** Row Number */
+            row_number: number;
+            /** Employee Email */
+            employee_email: string;
+            /** Attendance Date */
+            attendance_date: string;
+            /** Status */
+            status: string;
+            /** Notes */
+            notes?: string | null;
+            /** Is Valid */
+            is_valid: boolean;
+            /** Errors */
+            errors?: string[];
+        };
+        /**
+         * AttendanceImportRowError
+         * @description Row-level error reported during Excel attendance import validation.
+         */
+        AttendanceImportRowError: {
+            /** Row Number */
+            row_number: number;
+            /** Field */
+            field: string;
+            /** Message */
+            message: string;
+        };
+        /**
+         * AttendanceImportValidationResult
+         * @description Response from POST /api/v1/attendance/import/validate.
+         */
+        AttendanceImportValidationResult: {
+            /** Import Batch Id */
+            import_batch_id: string;
+            /** File Name */
+            file_name: string;
+            /** Total Rows */
+            total_rows: number;
+            /** Valid Rows */
+            valid_rows: number;
+            /** Invalid Rows */
+            invalid_rows: number;
+            /** Can Commit */
+            can_commit: boolean;
+            /** Preview Rows */
+            preview_rows: components["schemas"]["AttendanceImportPreviewRow"][];
+            /** Errors */
+            errors: components["schemas"]["AttendanceImportRowError"][];
+        };
+        /**
+         * AttendanceMonthLockResponse
+         * @description Persisted month-lock summary returned by POST /api/v1/attendance/months/{year_month}/lock.
+         */
+        AttendanceMonthLockResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Year Month */
+            year_month: string;
+            /** Locked By */
+            locked_by?: string | null;
+            /**
+             * Locked At
+             * Format: date-time
+             */
+            locked_at: string;
+            /** Employee Count */
+            employee_count: number;
+            /** Record Count */
+            record_count: number;
+        };
+        /**
+         * AttendanceMonthReviewResponse
+         * @description Full-month attendance completeness review prior to locking.
+         */
+        AttendanceMonthReviewResponse: {
+            /** Year Month */
+            year_month: string;
+            /**
+             * Month Start
+             * Format: date
+             */
+            month_start: string;
+            /**
+             * Month End
+             * Format: date
+             */
+            month_end: string;
+            /** Days In Month */
+            days_in_month: number;
+            /** Active Employees */
+            active_employees: number;
+            /** Total Gaps */
+            total_gaps: number;
+            /** Auto Fillable Gaps */
+            auto_fillable_gaps: number;
+            /** Is Locked */
+            is_locked: boolean;
+            /** Can Lock */
+            can_lock: boolean;
+            /** Locked At */
+            locked_at?: string | null;
+            /** Locked By */
+            locked_by?: string | null;
+            /** Employees */
+            employees: components["schemas"]["EmployeeMonthGapItem"][];
+        };
+        /**
+         * AttendancePostLockEditRequest
+         * @description Request to initiate a Stage 2 governance approval for editing a locked month.
+         */
+        AttendancePostLockEditRequest: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /**
+             * Attendance Date
+             * Format: date
+             */
+            attendance_date: string;
+            /**
+             * New Status
+             * @enum {string}
+             */
+            new_status: "PRESENT" | "ABSENT" | "HALF_DAY" | "ON_LEAVE" | "WFH" | "HOLIDAY" | "WEEKEND";
+            /** Notes */
+            notes?: string | null;
+            /** Reason */
+            reason: string;
+            /**
+             * Approver Role
+             * @default hr_head
+             * @enum {string}
+             */
+            approver_role: "owner" | "hr_head";
+        };
+        /**
+         * AttendancePostLockEditResponse
+         * @description Response after creating a Stage 2 `attendance.post_lock_edit` approval.
+         */
+        AttendancePostLockEditResponse: {
+            /**
+             * Approval Id
+             * Format: uuid
+             */
+            approval_id: string;
+            /** Approval Status */
+            approval_status: string;
+            /** Approver Role */
+            approver_role: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /**
+             * Attendance Date
+             * Format: date
+             */
+            attendance_date: string;
+            /** Year Month */
+            year_month: string;
+            /** Previous Status */
+            previous_status?: ("PRESENT" | "ABSENT" | "HALF_DAY" | "ON_LEAVE" | "WFH" | "HOLIDAY" | "WEEKEND") | null;
+            /**
+             * New Status
+             * @enum {string}
+             */
+            new_status: "PRESENT" | "ABSENT" | "HALF_DAY" | "ON_LEAVE" | "WFH" | "HOLIDAY" | "WEEKEND";
+            /** Notes */
+            notes?: string | null;
+            /** Reason */
+            reason: string;
+        };
+        /**
+         * AttendanceRecordResponse
+         * @description Serialized attendance record for API responses.
+         */
+        AttendanceRecordResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /** Employee Email */
+            employee_email: string;
+            /** Department Name */
+            department_name?: string | null;
+            /**
+             * Attendance Date
+             * Format: date
+             */
+            attendance_date: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PRESENT" | "ABSENT" | "HALF_DAY" | "ON_LEAVE" | "WFH" | "HOLIDAY" | "WEEKEND";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "check_in" | "manager_grid" | "excel_import" | "auto_fill" | "leave_approval" | "post_lock_edit";
+            /** Check In At */
+            check_in_at?: string | null;
+            /** Check Out At */
+            check_out_at?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Leave Request Id */
+            leave_request_id?: string | null;
+            /** Locked */
+            locked: boolean;
+            /** Updated By */
+            updated_by?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * AttendanceTodayResponse
+         * @description Caller's today Asia/Karachi check-in status and tenant toggle state.
+         */
+        AttendanceTodayResponse: {
+            /**
+             * Today Date
+             * Format: date
+             */
+            today_date: string;
+            /** Year Month */
+            year_month: string;
+            /** Check In Enabled */
+            check_in_enabled: boolean;
+            /** Is Locked */
+            is_locked: boolean;
+            record?: components["schemas"]["AttendanceRecordResponse"] | null;
         };
         /** AuditLogResponse */
         AuditLogResponse: {
@@ -1983,6 +2833,11 @@ export interface components {
              * @default local
              */
             storage_provider: string;
+        };
+        /** Body_validate_attendance_excel_import_api_v1_attendance_import_validate_post */
+        Body_validate_attendance_excel_import_api_v1_attendance_import_validate_post: {
+            /** File */
+            file: string;
         };
         /** Body_validate_employee_import_xlsx_api_v1_employees_import_validate_post */
         Body_validate_employee_import_xlsx_api_v1_employees_import_validate_post: {
@@ -2182,6 +3037,120 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * DailyAttendanceGridResponse
+         * @description Manager/HR daily attendance grid for a target date.
+         */
+        DailyAttendanceGridResponse: {
+            /**
+             * Target Date
+             * Format: date
+             */
+            target_date: string;
+            /** Year Month */
+            year_month: string;
+            /** Is Locked */
+            is_locked: boolean;
+            /** Total Employees */
+            total_employees: number;
+            /** Marked Count */
+            marked_count: number;
+            /** Unmarked Count */
+            unmarked_count: number;
+            /** Rows */
+            rows: components["schemas"]["DailyAttendanceGridRow"][];
+        };
+        /**
+         * DailyAttendanceGridRow
+         * @description Single employee row in the manager/HR daily attendance grid.
+         */
+        DailyAttendanceGridRow: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Code */
+            employee_code?: string | null;
+            /** Employee Name */
+            employee_name: string;
+            /** Employee Email */
+            employee_email: string;
+            /** Department Name */
+            department_name?: string | null;
+            /** Job Title */
+            job_title?: string | null;
+            /** Attendance Id */
+            attendance_id?: string | null;
+            /**
+             * Attendance Date
+             * Format: date
+             */
+            attendance_date: string;
+            /** Status */
+            status?: ("PRESENT" | "ABSENT" | "HALF_DAY" | "ON_LEAVE" | "WFH" | "HOLIDAY" | "WEEKEND") | null;
+            /** Source */
+            source?: ("check_in" | "manager_grid" | "excel_import" | "auto_fill" | "leave_approval" | "post_lock_edit") | null;
+            /** Check In At */
+            check_in_at?: string | null;
+            /** Check Out At */
+            check_out_at?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Locked
+             * @default false
+             */
+            locked: boolean;
+        };
+        /**
+         * DailyAttendanceUpsertItem
+         * @description Single employee entry in a manager daily grid batch upsert.
+         */
+        DailyAttendanceUpsertItem: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PRESENT" | "ABSENT" | "HALF_DAY" | "ON_LEAVE" | "WFH" | "HOLIDAY" | "WEEKEND";
+            /** Notes */
+            notes?: string | null;
+        };
+        /**
+         * DailyAttendanceUpsertRequest
+         * @description Batch upsert payload for manager/HR daily attendance grid.
+         */
+        DailyAttendanceUpsertRequest: {
+            /**
+             * Target Date
+             * Format: date
+             */
+            target_date: string;
+            /** Entries */
+            entries: components["schemas"]["DailyAttendanceUpsertItem"][];
+        };
+        /**
+         * DailyAttendanceUpsertResponse
+         * @description Summary returned after batch upserting daily attendance grid entries.
+         */
+        DailyAttendanceUpsertResponse: {
+            /**
+             * Target Date
+             * Format: date
+             */
+            target_date: string;
+            /** Year Month */
+            year_month: string;
+            /** Upserted Count */
+            upserted_count: number;
+            /** Records */
+            records: components["schemas"]["AttendanceRecordResponse"][];
         };
         /** DatabaseStatus */
         DatabaseStatus: {
@@ -2505,6 +3474,72 @@ export interface components {
             total_pages: number;
         };
         /**
+         * EmployeeMonthGapItem
+         * @description Per-employee monthly summary and exact missing attendance dates.
+         */
+        EmployeeMonthGapItem: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Code */
+            employee_code?: string | null;
+            /** Employee Name */
+            employee_name: string;
+            /** Employee Email */
+            employee_email: string;
+            /** Department Name */
+            department_name?: string | null;
+            /**
+             * Present Days
+             * @default 0
+             */
+            present_days: number;
+            /**
+             * Wfh Days
+             * @default 0
+             */
+            wfh_days: number;
+            /**
+             * Half Days
+             * @default 0
+             */
+            half_days: number;
+            /**
+             * On Leave Days
+             * @default 0
+             */
+            on_leave_days: number;
+            /**
+             * Absent Days
+             * @default 0
+             */
+            absent_days: number;
+            /**
+             * Holiday Days
+             * @default 0
+             */
+            holiday_days: number;
+            /**
+             * Weekend Days
+             * @default 0
+             */
+            weekend_days: number;
+            /**
+             * Recorded Days
+             * @default 0
+             */
+            recorded_days: number;
+            /** Missing Days */
+            missing_days?: string[];
+            /**
+             * Missing Count
+             * @default 0
+             */
+            missing_count: number;
+        };
+        /**
          * EmployeeProfileResponse
          * @description Detailed employee profile response with strict role-based PII fields.
          *     `cnic` and `bank_account` are populated ONLY when `can_view_sensitive` is True.
@@ -2718,6 +3753,104 @@ export interface components {
             request_id?: string | null;
         };
         /**
+         * HolidayCreateRequest
+         * @description Payload accepted by POST /api/v1/leave/config/holidays.
+         */
+        HolidayCreateRequest: {
+            /**
+             * Holiday Date
+             * Format: date
+             */
+            holiday_date: string;
+            /** Name */
+            name: string;
+            /**
+             * Is Optional
+             * @default false
+             */
+            is_optional: boolean;
+            /**
+             * Source
+             * @default custom
+             * @enum {string}
+             */
+            source: "default_pk" | "custom";
+        };
+        /**
+         * HolidayDeleteResponse
+         * @description Response returned by DELETE /api/v1/leave/config/holidays/{holiday_id}.
+         */
+        HolidayDeleteResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Holiday Date
+             * Format: date
+             */
+            holiday_date: string;
+            /**
+             * Action
+             * @default deleted
+             * @constant
+             */
+            action: "deleted";
+        };
+        /**
+         * HolidayResponse
+         * @description Serialized tenant holiday record.
+         */
+        HolidayResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Holiday Date
+             * Format: date
+             */
+            holiday_date: string;
+            /** Name */
+            name: string;
+            /** Is Optional */
+            is_optional: boolean;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "default_pk" | "custom";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * HolidayUpdateRequest
+         * @description Payload accepted by PATCH /api/v1/leave/config/holidays/{holiday_id}.
+         */
+        HolidayUpdateRequest: {
+            /** Holiday Date */
+            holiday_date?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Is Optional */
+            is_optional?: boolean | null;
+        };
+        /**
          * ImportCommitResponse
          * @description Response returned by POST /api/v1/employees/import/{batch_id}/commit.
          */
@@ -2799,6 +3932,484 @@ export interface components {
             preview_rows: components["schemas"]["ImportPreviewRow"][];
             /** Errors */
             errors: components["schemas"]["ImportRowError"][];
+        };
+        /**
+         * LeaveBalanceItemResponse
+         * @description Serialized leave balance row with computed available_days.
+         */
+        LeaveBalanceItemResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /**
+             * Leave Type Id
+             * Format: uuid
+             */
+            leave_type_id: string;
+            /** Leave Type Code */
+            leave_type_code: string;
+            /** Leave Type Name */
+            leave_type_name: string;
+            /** Year */
+            year: number;
+            /** Allocated Days */
+            allocated_days: string;
+            /** Carried Forward Days */
+            carried_forward_days: string;
+            /** Reserved Days */
+            reserved_days: string;
+            /** Used Days */
+            used_days: string;
+            /** Available Days */
+            available_days: string;
+            /** Is Paid */
+            is_paid: boolean;
+            /** Accrual Mode */
+            accrual_mode: string;
+        };
+        /**
+         * LeaveCancelRequest
+         * @description Payload accepted by POST /api/v1/leave/requests/{request_id}/cancel.
+         */
+        LeaveCancelRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * LeaveConfirmCard
+         * @description Pre-submission confirmation card produced once intake slots are complete.
+         */
+        LeaveConfirmCard: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /**
+             * Leave Type Id
+             * Format: uuid
+             */
+            leave_type_id: string;
+            /** Leave Type Code */
+            leave_type_code: string;
+            /** Leave Type Name */
+            leave_type_name: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /**
+             * Is Half Day
+             * @default false
+             */
+            is_half_day: boolean;
+            /** Half Day Period */
+            half_day_period?: ("morning" | "afternoon") | null;
+            /** Working Days */
+            working_days: string;
+            /** Reason */
+            reason: string;
+            /** Document Id */
+            document_id?: string | null;
+            /** Balance Before */
+            balance_before: string;
+            /** Balance After */
+            balance_after: string;
+            /**
+             * Policy Check Status
+             * @enum {string}
+             */
+            policy_check_status: "OK" | "VIOLATION" | "BLOCKED";
+            /** Policy Check Reasons */
+            policy_check_reasons?: components["schemas"]["RuleOutcome"][];
+        };
+        /**
+         * LeaveDecisionRequest
+         * @description Payload accepted by POST /api/v1/leave/requests/{request_id}/decide.
+         */
+        LeaveDecisionRequest: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approved" | "rejected";
+            /** Note */
+            note?: string | null;
+        };
+        /**
+         * LeaveIntakeRequest
+         * @description Payload accepted by POST /api/v1/leave/intake.
+         */
+        LeaveIntakeRequest: {
+            /** Message */
+            message: string;
+            /** Conversation Context */
+            conversation_context?: {
+                [key: string]: unknown;
+            } | null;
+            /** Employee Id */
+            employee_id?: string | null;
+        };
+        /**
+         * LeaveIntakeResponse
+         * @description Response returned by POST /api/v1/leave/intake.
+         */
+        LeaveIntakeResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "needs_clarification" | "ready_to_confirm";
+            /** Clarifying Question */
+            clarifying_question?: string | null;
+            /** Extracted */
+            extracted?: {
+                [key: string]: unknown;
+            };
+            confirm_card?: components["schemas"]["LeaveConfirmCard"] | null;
+        };
+        /**
+         * LeaveOverviewResponse
+         * @description HR overview counters and list of tenant leave requests.
+         */
+        LeaveOverviewResponse: {
+            /** Total Requests */
+            total_requests: number;
+            /** Pending Count */
+            pending_count: number;
+            /** Pending Hr Exception Count */
+            pending_hr_exception_count: number;
+            /** Approved Count */
+            approved_count: number;
+            /** Rejected Count */
+            rejected_count: number;
+            /** Cancelled Count */
+            cancelled_count: number;
+            /** Expired Count */
+            expired_count: number;
+            /** Requests */
+            requests?: components["schemas"]["LeaveRequestResponse"][];
+        };
+        /**
+         * LeaveRequestCreateRequest
+         * @description Payload accepted by POST /api/v1/leave/requests.
+         */
+        LeaveRequestCreateRequest: {
+            /** Leave Type Id */
+            leave_type_id?: string | null;
+            /** Leave Type Code */
+            leave_type_code?: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /**
+             * Is Half Day
+             * @default false
+             */
+            is_half_day: boolean;
+            /** Half Day Period */
+            half_day_period?: ("morning" | "afternoon") | null;
+            /** Reason */
+            reason: string;
+            /** Document Id */
+            document_id?: string | null;
+            /** Employee Id */
+            employee_id?: string | null;
+            /** As Of Date */
+            as_of_date?: string | null;
+            /**
+             * Start Workflow
+             * @default true
+             */
+            start_workflow: boolean;
+            /** Reminder Hours */
+            reminder_hours?: number | null;
+            /** Escalation Hours */
+            escalation_hours?: number | null;
+            /** Expiry Hours */
+            expiry_hours?: number | null;
+        };
+        /**
+         * LeaveRequestResponse
+         * @description Serialized leave request DTO with joined employee & leave type metadata.
+         */
+        LeaveRequestResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /** Employee Email */
+            employee_email?: string | null;
+            /** Department Name */
+            department_name?: string | null;
+            /**
+             * Leave Type Id
+             * Format: uuid
+             */
+            leave_type_id: string;
+            /** Leave Type Code */
+            leave_type_code: string;
+            /** Leave Type Name */
+            leave_type_name: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Is Half Day */
+            is_half_day: boolean;
+            /** Half Day Period */
+            half_day_period?: string | null;
+            /** Working Days */
+            working_days: string;
+            /** Reason */
+            reason: string;
+            /** Document Id */
+            document_id?: string | null;
+            /** Policy Check Status */
+            policy_check_status: string;
+            /** Policy Check Reasons */
+            policy_check_reasons?: {
+                [key: string]: unknown;
+            }[];
+            /** Status */
+            status: string;
+            /** Approver User Id */
+            approver_user_id?: string | null;
+            /** Escalated To User Id */
+            escalated_to_user_id?: string | null;
+            /** Hr Exception Approval Id */
+            hr_exception_approval_id?: string | null;
+            /** Hr Exception Status */
+            hr_exception_status?: string | null;
+            /** Workflow Id */
+            workflow_id?: string | null;
+            /** Calendar Event Id */
+            calendar_event_id?: string | null;
+            /**
+             * Sheets Row Synced
+             * @default false
+             */
+            sheets_row_synced: boolean;
+            /** Decided By */
+            decided_by?: string | null;
+            /** Decided At */
+            decided_at?: string | null;
+            /** Decision Note */
+            decision_note?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * LeaveTypeCreateRequest
+         * @description Payload accepted by POST /api/v1/leave/config/types.
+         */
+        LeaveTypeCreateRequest: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Annual Allowance Days
+             * @default 0.00
+             */
+            annual_allowance_days: number | string;
+            /**
+             * Accrual Mode
+             * @default upfront
+             * @enum {string}
+             */
+            accrual_mode: "upfront" | "monthly";
+            /**
+             * Carry Forward Cap Days
+             * @default 0.00
+             */
+            carry_forward_cap_days: number | string;
+            /** Max Consecutive Days */
+            max_consecutive_days?: number | null;
+            /**
+             * Min Notice Days
+             * @default 0
+             */
+            min_notice_days: number;
+            /**
+             * Allow During Probation
+             * @default false
+             */
+            allow_during_probation: boolean;
+            /** Requires Document After Days */
+            requires_document_after_days?: number | null;
+            /**
+             * Allow Half Day
+             * @default true
+             */
+            allow_half_day: boolean;
+            /**
+             * Is Paid
+             * @default true
+             */
+            is_paid: boolean;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+        };
+        /**
+         * LeaveTypeDeleteResponse
+         * @description Response returned by DELETE /api/v1/leave/config/types/{leave_type_id}.
+         */
+        LeaveTypeDeleteResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Code */
+            code: string;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "deleted" | "deactivated";
+            /** Is Active */
+            is_active: boolean;
+        };
+        /**
+         * LeaveTypeResponse
+         * @description Serialized leave type configuration.
+         */
+        LeaveTypeResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Annual Allowance Days */
+            annual_allowance_days: string;
+            /**
+             * Accrual Mode
+             * @enum {string}
+             */
+            accrual_mode: "upfront" | "monthly";
+            /** Carry Forward Cap Days */
+            carry_forward_cap_days: string;
+            /** Max Consecutive Days */
+            max_consecutive_days?: number | null;
+            /** Min Notice Days */
+            min_notice_days: number;
+            /** Allow During Probation */
+            allow_during_probation: boolean;
+            /** Requires Document After Days */
+            requires_document_after_days?: number | null;
+            /** Allow Half Day */
+            allow_half_day: boolean;
+            /** Is Paid */
+            is_paid: boolean;
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * LeaveTypeUpdateRequest
+         * @description Payload accepted by PATCH /api/v1/leave/config/types/{leave_type_id}.
+         */
+        LeaveTypeUpdateRequest: {
+            /** Name */
+            name?: string | null;
+            /** Annual Allowance Days */
+            annual_allowance_days?: number | string | null;
+            /** Accrual Mode */
+            accrual_mode?: ("upfront" | "monthly") | null;
+            /** Carry Forward Cap Days */
+            carry_forward_cap_days?: number | string | null;
+            /** Max Consecutive Days */
+            max_consecutive_days?: number | null;
+            /** Min Notice Days */
+            min_notice_days?: number | null;
+            /** Allow During Probation */
+            allow_during_probation?: boolean | null;
+            /** Requires Document After Days */
+            requires_document_after_days?: number | null;
+            /** Allow Half Day */
+            allow_half_day?: boolean | null;
+            /** Is Paid */
+            is_paid?: boolean | null;
+            /** Is Active */
+            is_active?: boolean | null;
         };
         /**
          * MarkAllReadResponse
@@ -3413,6 +5024,23 @@ export interface components {
             /** Is Read Only */
             is_read_only: boolean;
         };
+        /**
+         * RuleOutcome
+         * @description Structured diagnostic outcome for a single policy rule evaluation.
+         */
+        RuleOutcome: {
+            /** Rule */
+            rule: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "OK" | "VIOLATION" | "BLOCKED";
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
         /** SendEmailRequest */
         SendEmailRequest: {
             /** To Email */
@@ -3592,6 +5220,48 @@ export interface components {
             }[];
         };
         /**
+         * TeamCalendarItemResponse
+         * @description Team calendar entry for approved/pending leaves.
+         */
+        TeamCalendarItemResponse: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /** Department Name */
+            department_name?: string | null;
+            /** Leave Type Code */
+            leave_type_code: string;
+            /** Leave Type Name */
+            leave_type_name: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Is Half Day */
+            is_half_day: boolean;
+            /** Half Day Period */
+            half_day_period?: string | null;
+            /** Working Days */
+            working_days: string;
+            /** Status */
+            status: string;
+        };
+        /**
          * TenantKillSwitchRequest
          * @description Payload to engage or disengage the tenant kill-switch.
          */
@@ -3666,6 +5336,69 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * WorkWeekResponse
+         * @description Serialized per-tenant work-week, probation, team coverage, and check-in settings.
+         */
+        WorkWeekResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Weekend Days */
+            weekend_days: string[];
+            /** Probation Months */
+            probation_months: number;
+            /** Max Team Absent Pct */
+            max_team_absent_pct: string;
+            /** Min Team Present */
+            min_team_present: number;
+            /** Backup Approver User Id */
+            backup_approver_user_id?: string | null;
+            /** Check In Enabled */
+            check_in_enabled: boolean;
+            /** Timezone */
+            timezone: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * WorkWeekUpdateRequest
+         * @description Payload accepted by PUT /api/v1/leave/config/work-week.
+         */
+        WorkWeekUpdateRequest: {
+            /**
+             * Weekend Days
+             * @description Weekend day names (e.g. ['Saturday', 'Sunday'])
+             */
+            weekend_days?: string[] | null;
+            /** Probation Months */
+            probation_months?: number | null;
+            /** Max Team Absent Pct */
+            max_team_absent_pct?: number | string | null;
+            /** Min Team Present */
+            min_team_present?: number | null;
+            /** Backup Approver User Id */
+            backup_approver_user_id?: string | null;
+            /** Check In Enabled */
+            check_in_enabled?: boolean | null;
+            /** Timezone */
+            timezone?: string | null;
         };
         /** WorkflowTriggerRequest */
         WorkflowTriggerRequest: {
@@ -6206,6 +7939,934 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotificationItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_work_week_config_api_v1_leave_config_work_week_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkWeekResponse"];
+                };
+            };
+        };
+    };
+    update_work_week_config_api_v1_leave_config_work_week_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkWeekUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkWeekResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_leave_types_api_v1_leave_config_types_get: {
+        parameters: {
+            query?: {
+                include_inactive?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveTypeResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_leave_type_api_v1_leave_config_types_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveTypeCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveTypeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_leave_type_api_v1_leave_config_types__leave_type_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leave_type_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveTypeDeleteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_leave_type_api_v1_leave_config_types__leave_type_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leave_type_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveTypeUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveTypeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_holidays_api_v1_leave_config_holidays_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_holiday_api_v1_leave_config_holidays_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HolidayCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_holiday_api_v1_leave_config_holidays__holiday_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                holiday_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayDeleteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_holiday_api_v1_leave_config_holidays__holiday_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                holiday_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HolidayUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    leave_intake_chat_api_v1_leave_intake_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveIntakeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveIntakeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_leave_request_api_v1_leave_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveRequestCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_leave_balances_api_v1_leave_balances_me_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveBalanceItemResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_all_leave_balances_api_v1_leave_balances_get: {
+        parameters: {
+            query?: {
+                employee_id?: string | null;
+                year?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveBalanceItemResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_leave_requests_api_v1_leave_requests_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveRequestResponse"][];
+                };
+            };
+        };
+    };
+    list_leave_approval_inbox_api_v1_leave_inbox_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveRequestResponse"][];
+                };
+            };
+        };
+    };
+    list_team_leave_calendar_api_v1_leave_calendar_get: {
+        parameters: {
+            query?: {
+                start_date?: string | null;
+                end_date?: string | null;
+                department_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamCalendarItemResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_hr_leave_overview_api_v1_leave_overview_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveOverviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_leave_request_api_v1_leave_requests__request_id__decide_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_leave_request_api_v1_leave_requests__request_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LeaveCancelRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_today_attendance_api_v1_attendance_me_today_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceTodayResponse"];
+                };
+            };
+        };
+    };
+    self_check_in_api_v1_attendance_check_in_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AttendanceCheckInRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRecordResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_daily_attendance_grid_api_v1_attendance_daily_get: {
+        parameters: {
+            query: {
+                target_date: string;
+                department_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyAttendanceGridResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upsert_daily_attendance_grid_api_v1_attendance_daily_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyAttendanceUpsertRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyAttendanceUpsertResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_attendance_excel_import_api_v1_attendance_import_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_validate_attendance_excel_import_api_v1_attendance_import_validate_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceImportValidationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commit_attendance_excel_import_api_v1_attendance_import__batch_id__commit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceImportCommitResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    auto_fill_month_attendance_api_v1_attendance_months__year_month__auto_fill_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year_month: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AttendanceAutoFillRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceAutoFillResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_month_attendance_review_api_v1_attendance_months__year_month__review_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year_month: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceMonthReviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lock_month_attendance_api_v1_attendance_months__year_month__lock_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year_month: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceMonthLockResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_post_lock_attendance_edit_api_v1_attendance_post_lock_edit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendancePostLockEditRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendancePostLockEditResponse"];
                 };
             };
             /** @description Validation Error */

@@ -44,6 +44,7 @@ from app.schemas.employee_import import (
 )
 from app.services.audit_service import write_audit
 from app.services.employee_service import EmployeeService
+from app.services.leave_config_service import initialize_employee_leave_balances
 from app.services.sheets_sync_service import SheetsSyncService
 from app.services.storage_helper import XLSX_MIME, validate_file_magic_bytes
 
@@ -998,6 +999,15 @@ class EmployeeImportService:
                     emp.manager_id = target_mgr_id
 
             await session.flush()
+
+            # Initialize leave balances & accrual ledger entries for all imported employees
+            for emp, _, _ in inserted_employees:
+                await initialize_employee_leave_balances(
+                    session,
+                    tenant_id=t_id,
+                    employee_id=emp.id,
+                    actor_id=actor_id,
+                )
 
             # Enqueue newly committed employees into sheets_sync_queue
             sheets_queued = 0

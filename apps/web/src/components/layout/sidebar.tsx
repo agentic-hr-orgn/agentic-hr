@@ -13,6 +13,8 @@ import {
   FolderGit2,
   X,
   Building2,
+  CalendarCheck2,
+  CalendarDays,
   CheckCircle2,
   Rocket,
 } from "lucide-react";
@@ -36,6 +38,8 @@ const navItems: NavItem[] = [
   { label: "Candidates", icon: Users2, href: "/candidates", badge: "DocuVerify & Screener" },
   { label: "Code Tester", icon: TerminalSquare, href: "/assessments", badge: "E2B Sandbox" },
   { label: "Policy Brain", icon: BookOpenCheck, href: "/policies", badge: "Bilingual RAG" },
+  { label: "Leave", icon: CalendarDays, href: "/leave", badge: "AI Intake" },
+  { label: "Attendance", icon: CalendarCheck2, href: "/attendance", badge: "Month Lock" },
   { label: "Directory", icon: FolderGit2, href: "/employees", badge: "Sheets View" },
   { label: "Settings", icon: Settings, href: "/settings" },
 ];

@@ -50,7 +50,7 @@ test.describe("Stage 5 Policy Library, Bilingual Search & Onboarding Step 2 E2E"
     await page.setExtraHTTPHeaders({ "x-e2e-test": "true" });
     await page.goto("/policies");
 
-    await expect(page.getByText("Stage 5 ✓ · Stage 6 next").first()).toBeVisible();
+    await expect(page.getByText("Stage 6 ✓ · Stage 7 next").first()).toBeVisible();
     await expect(
       page.getByRole("heading", { name: /Corporate Policy Brain \(Bilingual RAG\)/i })
     ).toBeVisible();

@@ -31,13 +31,21 @@ from app.workflows import (
     DocumentExpiryScanWorkflow,
     DummyApprovalWorkflow,
     HumanApprovalWorkflow,
+    LeaveAccrualWorkflow,
+    LeaveAccrualWorkflowInput,
+    LeaveCarryForwardWorkflow,
+    LeaveCarryForwardWorkflowInput,
+    LeaveRequestWorkflow,
     PolicyIngestionWorkflow,
     SampleOnboardingWorkflow,
     WaitForApprovalWorkflow,
+    approve_leave_request_activity,
     chunk_policy_document_activity,
     embed_policy_chunks_activity,
+    escalate_leave_request_activity,
     execute_dummy_approved_action_activity,
     execute_dummy_rejected_action_activity,
+    expire_leave_request_activity,
     finalize_policy_ingestion_activity,
     get_approval_decision_activity,
     greeting_activity,
@@ -45,10 +53,15 @@ from app.workflows import (
     mark_policy_ingestion_failed_activity,
     notify_approval_decision_activity,
     notify_changes_requested_activity,
+    notify_leave_requested_activity,
     notify_resubmitted_activity,
     parse_policy_document_activity,
+    release_leave_reservation_activity,
+    run_tenant_carry_forward_activity,
+    run_tenant_monthly_accrual_activity,
     scan_tenant_expiring_documents_activity,
     schedule_interview_activity,
+    send_leave_reminder_activity,
     send_tenant_email_activity,
     send_welcome_notification,
     verify_approval_record_activity,
@@ -63,6 +76,12 @@ logger = logging.getLogger("agentic_hr.worker")
 DAILY_DOCUMENT_EXPIRY_SCHEDULE_ID = "daily-document-expiry-scan"
 DAILY_DOCUMENT_EXPIRY_CRON = "0 9 * * *"
 DAILY_DOCUMENT_EXPIRY_TZ = "Asia/Karachi"
+
+MONTHLY_LEAVE_ACCRUAL_SCHEDULE_ID = "monthly-leave-accrual"
+MONTHLY_LEAVE_ACCRUAL_CRON = "5 0 1 * *"
+ANNUAL_LEAVE_CARRY_FORWARD_SCHEDULE_ID = "annual-leave-carry-forward"
+ANNUAL_LEAVE_CARRY_FORWARD_CRON = "10 0 1 1 *"
+LEAVE_SCHEDULE_TZ = "Asia/Karachi"
 
 
 def build_daily_document_expiry_schedule() -> Schedule:
@@ -113,6 +132,75 @@ async def ensure_daily_document_expiry_schedule(client: Client) -> str:
         return "updated"
 
 
+def build_monthly_leave_accrual_schedule() -> Schedule:
+    """Builds the canonical monthly leave accrual schedule (00:05 on 1st of month PKT)."""
+    return Schedule(
+        action=ScheduleActionStartWorkflow(
+            LeaveAccrualWorkflow.run,
+            LeaveAccrualWorkflowInput(),
+            id="leave-monthly-accrual",
+            task_queue=settings.TEMPORAL_TASK_QUEUE,
+        ),
+        spec=ScheduleSpec(
+            cron_expressions=[MONTHLY_LEAVE_ACCRUAL_CRON],
+            time_zone_name=LEAVE_SCHEDULE_TZ,
+        ),
+        policy=SchedulePolicy(overlap=ScheduleOverlapPolicy.SKIP),
+    )
+
+
+def build_annual_leave_carry_forward_schedule() -> Schedule:
+    """Builds the canonical year-end carry-forward schedule (00:10 on Jan 1st PKT)."""
+    return Schedule(
+        action=ScheduleActionStartWorkflow(
+            LeaveCarryForwardWorkflow.run,
+            LeaveCarryForwardWorkflowInput(),
+            id="leave-annual-carry-forward",
+            task_queue=settings.TEMPORAL_TASK_QUEUE,
+        ),
+        spec=ScheduleSpec(
+            cron_expressions=[ANNUAL_LEAVE_CARRY_FORWARD_CRON],
+            time_zone_name=LEAVE_SCHEDULE_TZ,
+        ),
+        policy=SchedulePolicy(overlap=ScheduleOverlapPolicy.SKIP),
+    )
+
+
+async def ensure_leave_accrual_schedules(client: Client) -> dict[str, str]:
+    """
+    Idempotently creates or updates both Stage 6 leave Temporal Schedules:
+    - `monthly-leave-accrual` (00:05 on the 1st of each month, Asia/Karachi)
+    - `annual-leave-carry-forward` (00:10 on January 1st, Asia/Karachi)
+    """
+    desired_schedules: dict[str, Schedule] = {
+        MONTHLY_LEAVE_ACCRUAL_SCHEDULE_ID: build_monthly_leave_accrual_schedule(),
+        ANNUAL_LEAVE_CARRY_FORWARD_SCHEDULE_ID: build_annual_leave_carry_forward_schedule(),
+    }
+    outcomes: dict[str, str] = {}
+    for schedule_id, desired_schedule in desired_schedules.items():
+        try:
+            await client.create_schedule(schedule_id, desired_schedule)
+            logger.info("Created Temporal Schedule '%s' (%s).", schedule_id, LEAVE_SCHEDULE_TZ)
+            outcomes[schedule_id] = "created"
+        except ScheduleAlreadyRunningError:
+            handle = client.get_schedule_handle(schedule_id)
+
+            async def _updater(
+                _input: ScheduleUpdateInput,
+                _sched: Schedule = desired_schedule,
+            ) -> ScheduleUpdate:
+                return ScheduleUpdate(schedule=_sched)
+
+            await handle.update(_updater)
+            logger.info(
+                "Updated existing Temporal Schedule '%s' (%s).",
+                schedule_id,
+                LEAVE_SCHEDULE_TZ,
+            )
+            outcomes[schedule_id] = "updated"
+    return outcomes
+
+
 async def run_worker() -> None:
     logger.info("Initializing Agentic HR Background Worker...")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
@@ -140,6 +228,14 @@ async def run_worker() -> None:
             exc,
         )
 
+    try:
+        await ensure_leave_accrual_schedules(client)
+    except Exception as exc:
+        logger.warning(
+            "Could not register Stage 6 leave accrual schedules at startup (continuing worker): %s",
+            exc,
+        )
+
     worker = Worker(
         client,
         task_queue=settings.TEMPORAL_TASK_QUEUE,
@@ -150,6 +246,9 @@ async def run_worker() -> None:
             WaitForApprovalWorkflow,
             DocumentExpiryScanWorkflow,
             PolicyIngestionWorkflow,
+            LeaveAccrualWorkflow,
+            LeaveCarryForwardWorkflow,
+            LeaveRequestWorkflow,
         ],
         activities=[
             greeting_activity,
@@ -170,6 +269,14 @@ async def run_worker() -> None:
             embed_policy_chunks_activity,
             finalize_policy_ingestion_activity,
             mark_policy_ingestion_failed_activity,
+            run_tenant_monthly_accrual_activity,
+            run_tenant_carry_forward_activity,
+            notify_leave_requested_activity,
+            send_leave_reminder_activity,
+            escalate_leave_request_activity,
+            expire_leave_request_activity,
+            release_leave_reservation_activity,
+            approve_leave_request_activity,
         ],
     )
 

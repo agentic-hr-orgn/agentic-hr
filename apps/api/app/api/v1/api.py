@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     approvals,
+    attendance,
     audit,
     auth,
     connectors,
@@ -13,6 +14,8 @@ from app.api.v1.endpoints import (
     employees,
     employees_import,
     health,
+    leave,
+    leave_config,
     notifications,
     onboarding,
     policies,
@@ -55,4 +58,19 @@ api_router.include_router(
     notifications.router,
     prefix="/notifications",
     tags=["notifications"],
+)
+api_router.include_router(
+    leave_config.router,
+    prefix="/leave/config",
+    tags=["leave-config"],
+)
+api_router.include_router(
+    leave.router,
+    prefix="/leave",
+    tags=["leave"],
+)
+api_router.include_router(
+    attendance.router,
+    prefix="/attendance",
+    tags=["attendance"],
 )

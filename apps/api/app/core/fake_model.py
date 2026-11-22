@@ -15,8 +15,10 @@ import asyncio
 import hashlib
 import json
 import math
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from datetime import date, timedelta
 from typing import Any, Literal, get_args, get_origin
 
 from pydantic import BaseModel
@@ -652,7 +654,10 @@ class FakeModelProvider:
 
             if output is None:
                 if schema:
-                    output = self._synthesize_schema(schema)
+                    if schema.__name__ == "LeaveIntakeExtraction":
+                        output = self._parse_leave_intake_prompt(prompt)
+                    else:
+                        output = self._synthesize_schema(schema)
                 else:
                     output = f"Deterministic model response for route '{route}' using '{model_id}'."
 
@@ -660,6 +665,209 @@ class FakeModelProvider:
         completion_tokens = max(5, len(output.split()) * 2)
 
         return output, prompt_tokens, completion_tokens
+
+    @staticmethod
+    def _parse_leave_intake_prompt(prompt: str) -> str:
+        """
+        Deterministic bilingual (English, Urdu script, Roman Urdu) parser for
+        `LeaveIntakeExtraction` structured output in offline/fake mode.
+        """
+        as_of_match = re.search(r"AS_OF_DATE:\s*(\d{4}-\d{2}-\d{2})", prompt)
+        as_of = date.fromisoformat(as_of_match.group(1)) if as_of_match else date(2026, 6, 1)
+
+        msg_match = re.search(
+            r"<untrusted_[a-zA-Z0-9_]+>\s*(.*?)\s*</untrusted_[a-zA-Z0-9_]+>",
+            prompt,
+            flags=re.DOTALL | re.IGNORECASE,
+        )
+        if msg_match:
+            raw_message = msg_match.group(1).strip()
+        else:
+            fallback_match = re.search(
+                r"<<<BEGIN_UNTRUSTED_DATA[^>]*>>>\s*(.*?)\s*<<<END_UNTRUSTED_DATA[^>]*>>>",
+                prompt,
+                flags=re.DOTALL,
+            )
+            raw_message = fallback_match.group(1).strip() if fallback_match else ""
+        lower_msg = raw_message.lower()
+
+        # 1. Detect leave type (English + Urdu + Roman Urdu); generic "chutti"/"leave" alone stays None
+        leave_type_code: str | None = None
+        type_patterns: tuple[tuple[str, tuple[str, ...]], ...] = (
+            (
+                "annual",
+                ("annual", "vacation", "earned leave", "salana", "سالانہ", "سالانه"),
+            ),
+            (
+                "sick",
+                (
+                    "sick",
+                    "medical",
+                    "illness",
+                    "fever",
+                    "doctor",
+                    "bimari",
+                    "bimar",
+                    "bukhar",
+                    "tabiyat",
+                    "بیماری",
+                    "طبی",
+                    "بخار",
+                ),
+            ),
+            (
+                "casual",
+                (
+                    "casual",
+                    "urgent",
+                    "emergency",
+                    "personal",
+                    "ittefaqia",
+                    "hangami",
+                    "zaroori",
+                    "اتفاقیہ",
+                    "ہنگامی",
+                    "ضروری",
+                ),
+            ),
+            ("maternity", ("maternity", "زچگی", "zachgi")),
+            ("paternity", ("paternity",)),
+            ("unpaid", ("unpaid", "lwp", "without pay", "بغیر تنخواہ")),
+        )
+        for code, keywords in type_patterns:
+            if any(kw in lower_msg or kw in raw_message for kw in keywords):
+                leave_type_code = code
+                break
+
+        # 2. Detect half-day & period
+        is_half_day = any(
+            kw in lower_msg or kw in raw_message
+            for kw in ("half day", "half-day", "halfday", "aadha din", "adha din", "آدھا دن")
+        )
+        half_day_period: str | None = None
+        if is_half_day:
+            if any(
+                kw in lower_msg or kw in raw_message for kw in ("morning", "subah", "صبح", "am")
+            ):
+                half_day_period = "morning"
+            elif any(
+                kw in lower_msg or kw in raw_message
+                for kw in ("afternoon", "dopehar", "evening", "shaam", "دوپہر", "pm")
+            ):
+                half_day_period = "afternoon"
+
+        # 3. Extract dates (ISO dates, month names, relative phrases)
+        start_date: date | None = None
+        end_date: date | None = None
+
+        iso_dates = re.findall(r"\b(\d{4}-\d{2}-\d{2})\b", raw_message)
+        if iso_dates:
+            parsed_iso = [date.fromisoformat(d) for d in iso_dates]
+            start_date = parsed_iso[0]
+            end_date = parsed_iso[1] if len(parsed_iso) >= 2 else parsed_iso[0]
+        else:
+            months_map = {
+                "jan": 1,
+                "january": 1,
+                "feb": 2,
+                "february": 2,
+                "mar": 3,
+                "march": 3,
+                "apr": 4,
+                "april": 4,
+                "may": 5,
+                "jun": 6,
+                "june": 6,
+                "jul": 7,
+                "july": 7,
+                "aug": 8,
+                "august": 8,
+                "sep": 9,
+                "sept": 9,
+                "september": 9,
+                "oct": 10,
+                "october": 10,
+                "nov": 11,
+                "november": 11,
+                "dec": 12,
+                "december": 12,
+            }
+            month_pat = "|".join(months_map.keys())
+            md_matches = re.findall(
+                rf"\b(?:({month_pat})\s+(\d{{1,2}})|(\d{{1,2}})\s+({month_pat}))(?:,?\s*(\d{{4}}))?\b",
+                lower_msg,
+            )
+            parsed_named: list[date] = []
+            for m1, d1, d2, m2, yr in md_matches:
+                m_str = m1 or m2
+                d_int = int(d1 or d2)
+                y_int = int(yr) if yr else as_of.year
+                try:
+                    parsed_named.append(date(y_int, months_map[m_str], d_int))
+                except ValueError:
+                    continue
+            if parsed_named:
+                start_date = parsed_named[0]
+                end_date = parsed_named[1] if len(parsed_named) >= 2 else parsed_named[0]
+
+        if start_date is None:
+            if any(kw in lower_msg for kw in ("day after tomorrow", "parson")):
+                start_date = as_of + timedelta(days=2)
+            elif any(kw in lower_msg for kw in ("tomorrow", "kal", "کل")):
+                start_date = as_of + timedelta(days=1)
+            elif any(kw in lower_msg for kw in ("today", "aaj", "آج")):
+                start_date = as_of
+            else:
+                weekday_names = {
+                    "monday": 0,
+                    "tuesday": 1,
+                    "wednesday": 2,
+                    "thursday": 3,
+                    "friday": 4,
+                    "saturday": 5,
+                    "sunday": 6,
+                }
+                next_wd = re.search(
+                    r"\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
+                    lower_msg,
+                )
+                if next_wd:
+                    target_wd = weekday_names[next_wd.group(1)]
+                    delta = (target_wd - as_of.weekday()) % 7
+                    if delta == 0:
+                        delta = 7
+                    start_date = as_of + timedelta(days=delta)
+
+        if start_date is not None and end_date is None:
+            dur_match = re.search(r"\bfor\s+(\d{1,2})\s+days?\b", lower_msg)
+            if dur_match and not is_half_day:
+                num_days = max(1, int(dur_match.group(1)))
+                end_date = start_date + timedelta(days=num_days - 1)
+            else:
+                end_date = start_date
+
+        # 4. Extract concise reason
+        reason: str | None = None
+        reason_match = re.search(
+            r"(?:because|due to|reason[:\s]+|kyunke|wajah[:\s]+)\s+(.+)",
+            raw_message,
+            flags=re.IGNORECASE,
+        )
+        if reason_match:
+            reason = reason_match.group(1).strip(" .!?")[:300]
+        elif leave_type_code and start_date:
+            reason = raw_message[:300]
+
+        payload = {
+            "leave_type_code": leave_type_code,
+            "start_date": start_date.isoformat() if start_date else None,
+            "end_date": end_date.isoformat() if end_date else None,
+            "is_half_day": is_half_day,
+            "half_day_period": half_day_period,
+            "reason": reason,
+            "clarifying_question": None,
+        }
+        return json.dumps(payload)
 
     def _synthesize_schema(self, schema: type[BaseModel]) -> str:
         """Dynamically synthesizes a 100% valid JSON payload conforming to any Pydantic model."""

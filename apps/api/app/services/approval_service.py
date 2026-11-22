@@ -270,6 +270,22 @@ async def decide_approval(
             decision=decision,
             actor_id=current_user.user_id,
         )
+    elif approval.approval_type == "leave.exception":
+        await _apply_leave_exception_decision(
+            db,
+            approval=approval,
+            decision=decision,
+            actor_id=current_user.user_id,
+            reason=clean_reason,
+        )
+    elif approval.approval_type == "attendance.post_lock_edit":
+        await _apply_attendance_post_lock_edit_decision(
+            db,
+            approval=approval,
+            decision=decision,
+            actor_id=current_user.user_id,
+            reason=clean_reason,
+        )
 
     # 9. Write transactional audit log
     await write_audit(
@@ -322,6 +338,17 @@ async def decide_approval(
             reason=clean_reason,
             workflow_id=loaded_approval.workflow_id,
         )
+        if loaded_approval.approval_type == "leave.exception":
+            leave_req_id = (loaded_approval.payload or {}).get("leave_request_id")
+            if leave_req_id:
+                from app.core.temporal import get_temporal_client
+
+                client = await get_temporal_client()
+                handle = client.get_workflow_handle(str(leave_req_id))
+                await handle.signal(
+                    "hr_exception_decision",
+                    args=[decision, str(current_user.user_id), clean_reason],
+                )
     except Exception as exc:
         logger.warning(f"Temporal workflow signaling skipped: {exc}")
 
@@ -790,3 +817,223 @@ async def _apply_policy_publish_decision(
                 "approval_id": str(approval.id),
             },
         )
+
+
+async def _apply_leave_exception_decision(
+    db: AsyncSession,
+    *,
+    approval: Approval,
+    decision: str,
+    actor_id: str,
+    reason: str | None = None,
+) -> None:
+    """
+    Executes atomic Stage 6 `leave.exception` side effects inside `decide_approval`:
+    - On `rejected`: releases reserved balance (`release:{request_id}`) and transitions
+      the linked `LeaveRequest` to `rejected`.
+    - On `approved`: records HR exception approval audit; if manager already approved
+      (`status == 'pending_hr_exception'`), completes atomic balance deduction,
+      working-dates attendance upsert, `leave.approved` outbox, and Sheets sync.
+    """
+    from app.models.leave import LeaveRequest
+    from app.services.leave_service import LeaveService
+
+    raw_req_id = (approval.payload or {}).get("leave_request_id")
+    if not raw_req_id:
+        return
+    req_uuid = UUID(str(raw_req_id))
+
+    leave_req = (
+        await db.execute(
+            select(LeaveRequest)
+            .where(
+                LeaveRequest.tenant_id == approval.tenant_id,
+                LeaveRequest.id == req_uuid,
+            )
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    if leave_req is None:
+        return
+
+    if decision == "rejected":
+        await LeaveService.release_leave_reservation_in_tx(
+            db,
+            tenant_id=approval.tenant_id,
+            leave_req=leave_req,
+            target_status="rejected",
+            actor_id=actor_id,
+            note=reason or "HR exception rejected",
+        )
+    elif decision == "approved":
+        await write_audit(
+            session=db,
+            tenant_id=approval.tenant_id,
+            actor_id=UUID(actor_id),
+            action="leave.hr_exception_approved",
+            target_type="leave_request",
+            target_id=leave_req.id,
+            details={"approval_id": str(approval.id), "reason": reason},
+        )
+        if leave_req.status == "pending_hr_exception":
+            await LeaveService.approve_leave_request_phase1_in_tx(
+                db,
+                tenant_id=approval.tenant_id,
+                leave_req=leave_req,
+                decided_by=actor_id,
+                decision_note=reason or leave_req.decision_note,
+            )
+
+
+async def _apply_attendance_post_lock_edit_decision(
+    db: AsyncSession,
+    *,
+    approval: Approval,
+    decision: str,
+    actor_id: str,
+    reason: str | None = None,
+) -> None:
+    """
+    Executes atomic Stage 6 `attendance.post_lock_edit` side effects inside `decide_approval`:
+    - On `approved`: locks/updates the target `Attendance` row (`source='post_lock_edit'`,
+      preserving `locked=True`), writes `attendance.post_lock_edited` with before/after diff,
+      and enqueues an `Attendance` Google Sheets sync row.
+    - On `rejected`: writes `attendance.post_lock_edit_rejected` audit log without mutating data.
+    """
+    from datetime import date as date_cls
+
+    from app.models.attendance import Attendance
+    from app.models.employee import Employee
+    from app.services.sheets_sync_service import SheetsSyncService
+
+    payload = approval.payload or {}
+    emp_id_raw = payload.get("employee_id")
+    att_date_raw = payload.get("attendance_date")
+    new_status = str(payload.get("new_status") or "")
+    notes = payload.get("notes")
+
+    if not emp_id_raw or not att_date_raw or not new_status:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Invalid attendance.post_lock_edit payload.",
+        )
+
+    emp_uuid = UUID(str(emp_id_raw))
+    att_date = date_cls.fromisoformat(str(att_date_raw))
+    actor_uuid = UUID(str(actor_id))
+
+    if decision == "rejected":
+        await write_audit(
+            session=db,
+            tenant_id=approval.tenant_id,
+            actor_id=actor_uuid,
+            action="attendance.post_lock_edit_rejected",
+            target_type="approval",
+            target_id=str(approval.id),
+            details={
+                "employee_id": str(emp_uuid),
+                "attendance_date": att_date.isoformat(),
+                "requested_status": new_status,
+                "reason": reason,
+            },
+        )
+        return
+
+    emp = (
+        await db.execute(
+            select(Employee).where(
+                Employee.tenant_id == approval.tenant_id,
+                Employee.id == emp_uuid,
+            )
+        )
+    ).scalar_one_or_none()
+    if emp is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Employee '{emp_uuid}' not found for post-lock attendance edit.",
+        )
+    emp_code_or_id = emp.employee_code or str(emp.id)[:8].upper()
+    emp_name = emp.full_name
+
+    att = (
+        await db.execute(
+            select(Attendance)
+            .where(
+                Attendance.tenant_id == approval.tenant_id,
+                Attendance.employee_id == emp_uuid,
+                Attendance.attendance_date == att_date,
+            )
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+
+    before_snapshot = {
+        "status": att.status if att else None,
+        "source": att.source if att else None,
+        "notes": att.notes if att else None,
+        "locked": att.locked if att else True,
+    }
+
+    if att is None:
+        att = Attendance(
+            tenant_id=approval.tenant_id,
+            employee_id=emp_uuid,
+            attendance_date=att_date,
+            status=new_status,
+            source="post_lock_edit",
+            notes=notes,
+            locked=True,
+            updated_by=actor_uuid,
+        )
+        db.add(att)
+        await db.flush()
+    else:
+        att.status = new_status
+        att.source = "post_lock_edit"
+        if notes is not None:
+            att.notes = notes
+        att.locked = True
+        att.updated_by = actor_uuid
+        att.updated_at = datetime.now(UTC)
+        await db.flush()
+
+    att_id = att.id
+    after_snapshot = {
+        "status": att.status,
+        "source": att.source,
+        "notes": att.notes,
+        "locked": att.locked,
+    }
+
+    await write_audit(
+        session=db,
+        tenant_id=approval.tenant_id,
+        actor_id=actor_uuid,
+        action="attendance.post_lock_edited",
+        target_type="attendance",
+        target_id=str(att_id),
+        details={
+            "approval_id": str(approval.id),
+            "employee_id": str(emp_uuid),
+            "attendance_date": att_date.isoformat(),
+            "before": before_snapshot,
+            "after": after_snapshot,
+            "reason": reason or payload.get("reason"),
+        },
+    )
+
+    await SheetsSyncService.enqueue_attendance_sync(
+        session=db,
+        tenant_id=approval.tenant_id,
+        entity_id=f"{emp_uuid}:{att_date.isoformat()}",
+        action="post_lock_edit",
+        dedupe_pending=False,
+        payload={
+            "attendance_date": att_date.isoformat(),
+            "employee_id": emp_code_or_id,
+            "employee_name": emp_name,
+            "status": new_status,
+            "source": "post_lock_edit",
+            "locked": True,
+        },
+    )
