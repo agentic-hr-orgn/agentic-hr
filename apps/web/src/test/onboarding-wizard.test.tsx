@@ -8,6 +8,8 @@ import * as connectorsHook from "@/hooks/use-connectors";
 import * as currentUserHook from "@/hooks/use-current-user";
 import * as departmentsHook from "@/hooks/use-departments";
 import * as employeeImportHook from "@/hooks/use-employee-import";
+import * as employeesHook from "@/hooks/use-employees";
+import * as leaveHook from "@/hooks/use-leave";
 import * as onboardingHook from "@/hooks/use-onboarding";
 import * as policiesHook from "@/hooks/use-policies";
 import { ApiHttpError } from "@/lib/api-request";
@@ -18,6 +20,8 @@ vi.mock("@/hooks/use-connectors");
 vi.mock("@/hooks/use-current-user");
 vi.mock("@/hooks/use-departments");
 vi.mock("@/hooks/use-employee-import");
+vi.mock("@/hooks/use-employees");
+vi.mock("@/hooks/use-leave");
 vi.mock("@/hooks/use-onboarding");
 vi.mock("@/hooks/use-policies");
 
@@ -194,6 +198,55 @@ describe("Stage 4 Prompt 6 — Resumable 5-Step Onboarding Wizard UI", () => {
       mutateAsync: mockLaunchWorkspace,
       isPending: false,
     } as any);
+
+    vi.spyOn(employeesHook, "useEmployees").mockReturnValue({
+      data: { items: [], total: 0, page: 1, page_size: 100, total_pages: 1 },
+      isLoading: false,
+      error: null,
+    } as any);
+    vi.spyOn(leaveHook, "useWorkWeek").mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    } as any);
+    vi.spyOn(leaveHook, "useUpdateWorkWeek").mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any);
+    vi.spyOn(leaveHook, "useLeaveTypes").mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+    } as any);
+    vi.spyOn(leaveHook, "useCreateLeaveType").mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any);
+    vi.spyOn(leaveHook, "useUpdateLeaveType").mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any);
+    vi.spyOn(leaveHook, "useDeleteLeaveType").mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any);
+    vi.spyOn(leaveHook, "useHolidays").mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+    } as any);
+    vi.spyOn(leaveHook, "useCreateHoliday").mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any);
+    vi.spyOn(leaveHook, "useUpdateHoliday").mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any);
+    vi.spyOn(leaveHook, "useDeleteHoliday").mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as any);
   });
 
   it("resumes automatically from saved current_step=3 once without overriding later step clicks", () => {
@@ -211,8 +264,8 @@ describe("Stage 4 Prompt 6 — Resumable 5-Step Onboarding Wizard UI", () => {
     const { rerender } = render(<OnboardingPage />);
 
     expect(screen.getByText(/Step 3 — Company Structure/i)).toBeInTheDocument();
-    expect(screen.getByText(/Stage 6 — Coming Soon/i)).toBeInTheDocument();
-    expect(screen.getByText(/Weekend Schedule/i)).toBeInTheDocument();
+    expect(screen.getByText(/Stage 6 — Live/i)).toBeInTheDocument();
+    expect(screen.getByText("Weekend Schedule")).toBeInTheDocument();
     expect(screen.getByText(/40% Complete/i)).toBeInTheDocument();
 
     // User clicks back to Step 1

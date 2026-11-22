@@ -98,7 +98,8 @@ export type AttendanceImportRowError = components["schemas"]["AttendanceImportRo
 export type AttendanceImportPreviewRow = components["schemas"]["AttendanceImportPreviewRow"];
 export type AttendanceImportValidationResult =
   components["schemas"]["AttendanceImportValidationResult"];
-export type AttendanceImportCommitResponse = components["schemas"]["AttendanceImportCommitResponse"];
+export type AttendanceImportCommitResponse =
+  components["schemas"]["AttendanceImportCommitResponse"];
 export type AttendanceAutoFillRequest = components["schemas"]["AttendanceAutoFillRequest"];
 export type AttendanceAutoFillResponse = components["schemas"]["AttendanceAutoFillResponse"];
 export type EmployeeMonthGapItem = components["schemas"]["EmployeeMonthGapItem"];

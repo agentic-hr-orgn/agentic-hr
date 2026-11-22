@@ -52,6 +52,16 @@ const routeTitles: Array<{ prefix: string; title: string; subtitle: string }> = 
     subtitle: "Policy Library, Bilingual Search & OCR Review",
   },
   {
+    prefix: "/leave",
+    title: "Leave Management",
+    subtitle: "Balances, AI Intake, Approvals & Team Calendar",
+  },
+  {
+    prefix: "/attendance",
+    title: "Attendance & Month Lock",
+    subtitle: "Check-In, Daily Grid, Bulk Import & Payroll Lock",
+  },
+  {
     prefix: "/employees",
     title: "Employee Directory",
     subtitle: "Postgres Authoritative, Sheets Synced",
