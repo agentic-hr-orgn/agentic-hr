@@ -72,6 +72,95 @@ class SheetsSyncService:
         await session.flush()
         return item
 
+    @classmethod
+    async def enqueue_attendance_sync(
+        cls,
+        session: AsyncSession,
+        *,
+        tenant_id: UUID | str,
+        entity_id: str,
+        action: str,
+        payload: dict[str, Any],
+        spreadsheet_id: str | None = None,
+        entity_type: str = "attendance",
+        dedupe_pending: bool = True,
+    ) -> SheetsSyncQueue | None:
+        """
+        Idempotently enqueues an Attendance sheet synchronization row targeting
+        `sheet_name='Attendance'`. Never performs live Google network calls inline.
+        """
+        t_id = UUID(str(tenant_id))
+        if dedupe_pending:
+            existing = (
+                await session.execute(
+                    select(SheetsSyncQueue.id)
+                    .where(
+                        SheetsSyncQueue.tenant_id == t_id,
+                        SheetsSyncQueue.entity_type == entity_type,
+                        SheetsSyncQueue.entity_id == str(entity_id),
+                        SheetsSyncQueue.action == action,
+                        SheetsSyncQueue.sheet_name == "Attendance",
+                        SheetsSyncQueue.status == "pending",
+                    )
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+            if existing is not None:
+                return None
+
+        return await cls.enqueue_sync(
+            session=session,
+            tenant_id=t_id,
+            entity_type=entity_type,
+            entity_id=str(entity_id),
+            action=action,
+            payload=payload,
+            spreadsheet_id=spreadsheet_id or "default_attendance_tracker",
+            sheet_name="Attendance",
+        )
+
+    @classmethod
+    async def enqueue_leave_tracker_sync(
+        cls,
+        session: AsyncSession,
+        *,
+        tenant_id: UUID | str,
+        leave_request_id: str,
+        action: str,
+        payload: dict[str, Any],
+        spreadsheet_id: str | None = None,
+    ) -> SheetsSyncQueue | None:
+        """
+        Idempotently enqueues a Leave Tracker sheet synchronization row targeting
+        `sheet_name='Leave Tracker'`.
+        """
+        t_id = UUID(str(tenant_id))
+        existing = (
+            await session.execute(
+                select(SheetsSyncQueue.id)
+                .where(
+                    SheetsSyncQueue.tenant_id == t_id,
+                    SheetsSyncQueue.entity_type == "leave_request",
+                    SheetsSyncQueue.entity_id == str(leave_request_id),
+                    SheetsSyncQueue.action == action,
+                )
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            return None
+
+        return await cls.enqueue_sync(
+            session=session,
+            tenant_id=t_id,
+            entity_type="leave_request",
+            entity_id=str(leave_request_id),
+            action=action,
+            payload=payload,
+            spreadsheet_id=spreadsheet_id or "default_leave_tracker",
+            sheet_name="Leave Tracker",
+        )
+
     @staticmethod
     async def get_or_create_spreadsheet(
         session: AsyncSession,
@@ -199,16 +288,35 @@ class SheetsSyncService:
             item.status = "processing"
             await session.flush()
 
-            # Build row: [Employee ID, Name, Email, Department, Role, Status]
+            # Build row based on sheet_name
             payload = item.payload
-            row = [
-                payload.get("employee_id", item.entity_id),
-                payload.get("name", ""),
-                payload.get("email", ""),
-                payload.get("department", "General"),
-                payload.get("role", "Staff"),
-                payload.get("status", "Active"),
-            ]
+            if item.sheet_name == "Attendance":
+                row = [
+                    payload.get("attendance_date", payload.get("year_month", item.entity_id)),
+                    payload.get("employee_id", ""),
+                    payload.get("employee_name", ""),
+                    payload.get("status", ""),
+                    payload.get("source", item.action),
+                    payload.get("locked", False),
+                ]
+            elif item.sheet_name in ("Leave Tracker", "Leave"):
+                row = [
+                    payload.get("leave_request_id", item.entity_id),
+                    payload.get("employee_id", ""),
+                    payload.get("employee_name", ""),
+                    payload.get("leave_type", ""),
+                    f"{payload.get('start_date', '')}..{payload.get('end_date', '')}",
+                    payload.get("status", ""),
+                ]
+            else:
+                row = [
+                    payload.get("employee_id", item.entity_id),
+                    payload.get("name", ""),
+                    payload.get("email", ""),
+                    payload.get("department", "General"),
+                    payload.get("role", "Staff"),
+                    payload.get("status", "Active"),
+                ]
 
             try:
                 await execute_connector_call(

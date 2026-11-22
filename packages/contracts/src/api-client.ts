@@ -1893,6 +1893,190 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance/me/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get My Today Attendance
+         * @description Returns today's Asia/Karachi date, `check_in_enabled`, `is_locked`, and caller's record.
+         */
+        get: operations["get_my_today_attendance_api_v1_attendance_me_today_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/check-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Self Check In
+         * @description Employee self check-in / check-out (requires `work_week.check_in_enabled = true`).
+         */
+        post: operations["self_check_in_api_v1_attendance_check_in_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Daily Attendance Grid
+         * @description Lists daily attendance grid for manager's direct reports (or all employees for HR/Owner).
+         */
+        get: operations["get_daily_attendance_grid_api_v1_attendance_daily_get"];
+        /**
+         * Upsert Daily Attendance Grid
+         * @description Batch upserts daily attendance statuses (`source='manager_grid'`). Refuses locked months.
+         */
+        put: operations["upsert_daily_attendance_grid_api_v1_attendance_daily_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/import/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Attendance Excel Import
+         * @description Phase 1 of Excel attendance import: magic-byte check, row validation, and Redis staging.
+         */
+        post: operations["validate_attendance_excel_import_api_v1_attendance_import_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/import/{batch_id}/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Commit Attendance Excel Import
+         * @description Phase 2 of Excel attendance import: atomically commits clean staged rows.
+         */
+        post: operations["commit_attendance_excel_import_api_v1_attendance_import__batch_id__commit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/months/{year_month}/auto-fill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Auto Fill Month Attendance
+         * @description Fills missing weekends, holidays, and approved leave dates for `year_month` (`YYYY-MM`).
+         */
+        post: operations["auto_fill_month_attendance_api_v1_attendance_months__year_month__auto_fill_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/months/{year_month}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Month Attendance Review
+         * @description Returns per-employee monthly status tallies and exact missing attendance dates.
+         */
+        get: operations["get_month_attendance_review_api_v1_attendance_months__year_month__review_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/months/{year_month}/lock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lock Month Attendance
+         * @description Locks an attendance month for payroll after verifying zero attendance gaps.
+         */
+        post: operations["lock_month_attendance_api_v1_attendance_months__year_month__lock_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance/post-lock-edit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Post Lock Attendance Edit
+         * @description Creates a Stage 2 `attendance.post_lock_edit` approval for a locked attendance month.
+         */
+        post: operations["request_post_lock_attendance_edit_api_v1_attendance_post_lock_edit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/synthetic/company": {
         parameters: {
             query?: never;
@@ -2166,6 +2350,348 @@ export interface components {
             /** Created At */
             created_at: string;
         };
+        /**
+         * AttendanceAutoFillRequest
+         * @description Optional configuration for monthly attendance auto-fill.
+         */
+        AttendanceAutoFillRequest: {
+            /**
+             * Overwrite Existing
+             * @default false
+             */
+            overwrite_existing: boolean;
+        };
+        /**
+         * AttendanceAutoFillResponse
+         * @description Summary of automated weekend, holiday, and approved-leave attendance fills.
+         */
+        AttendanceAutoFillResponse: {
+            /** Year Month */
+            year_month: string;
+            /** Active Employees */
+            active_employees: number;
+            /** Filled Leave Days */
+            filled_leave_days: number;
+            /** Filled Holiday Days */
+            filled_holiday_days: number;
+            /** Filled Weekend Days */
+            filled_weekend_days: number;
+            /** Total Filled */
+            total_filled: number;
+            /** Skipped Existing */
+            skipped_existing: number;
+        };
+        /**
+         * AttendanceCheckInRequest
+         * @description Self check-in / check-out payload.
+         */
+        AttendanceCheckInRequest: {
+            /** Action */
+            action?: ("check_in" | "check_out") | null;
+            /**
+             * Check Out
+             * @default false
+             */
+            check_out: boolean;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Target Date
+             * @description Optional Asia/Karachi date override (defaults to today PKT).
+             */
+            target_date?: string | null;
+        };
+        /**
+         * AttendanceImportCommitResponse
+         * @description Response from POST /api/v1/attendance/import/{batch_id}/commit.
+         */
+        AttendanceImportCommitResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "committed";
+            /** Import Batch Id */
+            import_batch_id: string;
+            /** Committed Count */
+            committed_count: number;
+            /** Sheets Queued */
+            sheets_queued: number;
+            /** Year Months */
+            year_months: string[];
+        };
+        /**
+         * AttendanceImportPreviewRow
+         * @description Preview row returned by two-phase attendance Excel validation.
+         */
+        AttendanceImportPreviewRow: {
+            /** Row Number */
+            row_number: number;
+            /** Employee Email */
+            employee_email: string;
+            /** Attendance Date */
+            attendance_date: string;
+            /** Status */
+            status: string;
+            /** Notes */
+            notes?: string | null;
+            /** Is Valid */
+            is_valid: boolean;
+            /** Errors */
+            errors?: string[];
+        };
+        /**
+         * AttendanceImportRowError
+         * @description Row-level error reported during Excel attendance import validation.
+         */
+        AttendanceImportRowError: {
+            /** Row Number */
+            row_number: number;
+            /** Field */
+            field: string;
+            /** Message */
+            message: string;
+        };
+        /**
+         * AttendanceImportValidationResult
+         * @description Response from POST /api/v1/attendance/import/validate.
+         */
+        AttendanceImportValidationResult: {
+            /** Import Batch Id */
+            import_batch_id: string;
+            /** File Name */
+            file_name: string;
+            /** Total Rows */
+            total_rows: number;
+            /** Valid Rows */
+            valid_rows: number;
+            /** Invalid Rows */
+            invalid_rows: number;
+            /** Can Commit */
+            can_commit: boolean;
+            /** Preview Rows */
+            preview_rows: components["schemas"]["AttendanceImportPreviewRow"][];
+            /** Errors */
+            errors: components["schemas"]["AttendanceImportRowError"][];
+        };
+        /**
+         * AttendanceMonthLockResponse
+         * @description Persisted month-lock summary returned by POST /api/v1/attendance/months/{year_month}/lock.
+         */
+        AttendanceMonthLockResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Year Month */
+            year_month: string;
+            /** Locked By */
+            locked_by?: string | null;
+            /**
+             * Locked At
+             * Format: date-time
+             */
+            locked_at: string;
+            /** Employee Count */
+            employee_count: number;
+            /** Record Count */
+            record_count: number;
+        };
+        /**
+         * AttendanceMonthReviewResponse
+         * @description Full-month attendance completeness review prior to locking.
+         */
+        AttendanceMonthReviewResponse: {
+            /** Year Month */
+            year_month: string;
+            /**
+             * Month Start
+             * Format: date
+             */
+            month_start: string;
+            /**
+             * Month End
+             * Format: date
+             */
+            month_end: string;
+            /** Days In Month */
+            days_in_month: number;
+            /** Active Employees */
+            active_employees: number;
+            /** Total Gaps */
+            total_gaps: number;
+            /** Auto Fillable Gaps */
+            auto_fillable_gaps: number;
+            /** Is Locked */
+            is_locked: boolean;
+            /** Can Lock */
+            can_lock: boolean;
+            /** Locked At */
+            locked_at?: string | null;
+            /** Locked By */
+            locked_by?: string | null;
+            /** Employees */
+            employees: components["schemas"]["EmployeeMonthGapItem"][];
+        };
+        /**
+         * AttendancePostLockEditRequest
+         * @description Request to initiate a Stage 2 governance approval for editing a locked month.
+         */
+        AttendancePostLockEditRequest: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /**
+             * Attendance Date
+             * Format: date
+             */
+            attendance_date: string;
+            /**
+             * New Status
+             * @enum {string}
+             */
+            new_status: "PRESENT" | "ABSENT" | "HALF_DAY" | "ON_LEAVE" | "WFH" | "HOLIDAY" | "WEEKEND";
+            /** Notes */
+            notes?: string | null;
+            /** Reason */
+            reason: string;
+            /**
+             * Approver Role
+             * @default hr_head
+             * @enum {string}
+             */
+            approver_role: "owner" | "hr_head";
+        };
+        /**
+         * AttendancePostLockEditResponse
+         * @description Response after creating a Stage 2 `attendance.post_lock_edit` approval.
+         */
+        AttendancePostLockEditResponse: {
+            /**
+             * Approval Id
+             * Format: uuid
+             */
+            approval_id: string;
+            /** Approval Status */
+            approval_status: string;
+            /** Approver Role */
+            approver_role: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /**
+             * Attendance Date
+             * Format: date
+             */
+            attendance_date: string;
+            /** Year Month */
+            year_month: string;
+            /** Previous Status */
+            previous_status?: ("PRESENT" | "ABSENT" | "HALF_DAY" | "ON_LEAVE" | "WFH" | "HOLIDAY" | "WEEKEND") | null;
+            /**
+             * New Status
+             * @enum {string}
+             */
+            new_status: "PRESENT" | "ABSENT" | "HALF_DAY" | "ON_LEAVE" | "WFH" | "HOLIDAY" | "WEEKEND";
+            /** Notes */
+            notes?: string | null;
+            /** Reason */
+            reason: string;
+        };
+        /**
+         * AttendanceRecordResponse
+         * @description Serialized attendance record for API responses.
+         */
+        AttendanceRecordResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /** Employee Email */
+            employee_email: string;
+            /** Department Name */
+            department_name?: string | null;
+            /**
+             * Attendance Date
+             * Format: date
+             */
+            attendance_date: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PRESENT" | "ABSENT" | "HALF_DAY" | "ON_LEAVE" | "WFH" | "HOLIDAY" | "WEEKEND";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "check_in" | "manager_grid" | "excel_import" | "auto_fill" | "leave_approval" | "post_lock_edit";
+            /** Check In At */
+            check_in_at?: string | null;
+            /** Check Out At */
+            check_out_at?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Leave Request Id */
+            leave_request_id?: string | null;
+            /** Locked */
+            locked: boolean;
+            /** Updated By */
+            updated_by?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * AttendanceTodayResponse
+         * @description Caller's today Asia/Karachi check-in status and tenant toggle state.
+         */
+        AttendanceTodayResponse: {
+            /**
+             * Today Date
+             * Format: date
+             */
+            today_date: string;
+            /** Year Month */
+            year_month: string;
+            /** Check In Enabled */
+            check_in_enabled: boolean;
+            /** Is Locked */
+            is_locked: boolean;
+            record?: components["schemas"]["AttendanceRecordResponse"] | null;
+        };
         /** AuditLogResponse */
         AuditLogResponse: {
             /** Id */
@@ -2307,6 +2833,11 @@ export interface components {
              * @default local
              */
             storage_provider: string;
+        };
+        /** Body_validate_attendance_excel_import_api_v1_attendance_import_validate_post */
+        Body_validate_attendance_excel_import_api_v1_attendance_import_validate_post: {
+            /** File */
+            file: string;
         };
         /** Body_validate_employee_import_xlsx_api_v1_employees_import_validate_post */
         Body_validate_employee_import_xlsx_api_v1_employees_import_validate_post: {
@@ -2506,6 +3037,120 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * DailyAttendanceGridResponse
+         * @description Manager/HR daily attendance grid for a target date.
+         */
+        DailyAttendanceGridResponse: {
+            /**
+             * Target Date
+             * Format: date
+             */
+            target_date: string;
+            /** Year Month */
+            year_month: string;
+            /** Is Locked */
+            is_locked: boolean;
+            /** Total Employees */
+            total_employees: number;
+            /** Marked Count */
+            marked_count: number;
+            /** Unmarked Count */
+            unmarked_count: number;
+            /** Rows */
+            rows: components["schemas"]["DailyAttendanceGridRow"][];
+        };
+        /**
+         * DailyAttendanceGridRow
+         * @description Single employee row in the manager/HR daily attendance grid.
+         */
+        DailyAttendanceGridRow: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Code */
+            employee_code?: string | null;
+            /** Employee Name */
+            employee_name: string;
+            /** Employee Email */
+            employee_email: string;
+            /** Department Name */
+            department_name?: string | null;
+            /** Job Title */
+            job_title?: string | null;
+            /** Attendance Id */
+            attendance_id?: string | null;
+            /**
+             * Attendance Date
+             * Format: date
+             */
+            attendance_date: string;
+            /** Status */
+            status?: ("PRESENT" | "ABSENT" | "HALF_DAY" | "ON_LEAVE" | "WFH" | "HOLIDAY" | "WEEKEND") | null;
+            /** Source */
+            source?: ("check_in" | "manager_grid" | "excel_import" | "auto_fill" | "leave_approval" | "post_lock_edit") | null;
+            /** Check In At */
+            check_in_at?: string | null;
+            /** Check Out At */
+            check_out_at?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Locked
+             * @default false
+             */
+            locked: boolean;
+        };
+        /**
+         * DailyAttendanceUpsertItem
+         * @description Single employee entry in a manager daily grid batch upsert.
+         */
+        DailyAttendanceUpsertItem: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PRESENT" | "ABSENT" | "HALF_DAY" | "ON_LEAVE" | "WFH" | "HOLIDAY" | "WEEKEND";
+            /** Notes */
+            notes?: string | null;
+        };
+        /**
+         * DailyAttendanceUpsertRequest
+         * @description Batch upsert payload for manager/HR daily attendance grid.
+         */
+        DailyAttendanceUpsertRequest: {
+            /**
+             * Target Date
+             * Format: date
+             */
+            target_date: string;
+            /** Entries */
+            entries: components["schemas"]["DailyAttendanceUpsertItem"][];
+        };
+        /**
+         * DailyAttendanceUpsertResponse
+         * @description Summary returned after batch upserting daily attendance grid entries.
+         */
+        DailyAttendanceUpsertResponse: {
+            /**
+             * Target Date
+             * Format: date
+             */
+            target_date: string;
+            /** Year Month */
+            year_month: string;
+            /** Upserted Count */
+            upserted_count: number;
+            /** Records */
+            records: components["schemas"]["AttendanceRecordResponse"][];
         };
         /** DatabaseStatus */
         DatabaseStatus: {
@@ -2827,6 +3472,72 @@ export interface components {
             page_size: number;
             /** Total Pages */
             total_pages: number;
+        };
+        /**
+         * EmployeeMonthGapItem
+         * @description Per-employee monthly summary and exact missing attendance dates.
+         */
+        EmployeeMonthGapItem: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Code */
+            employee_code?: string | null;
+            /** Employee Name */
+            employee_name: string;
+            /** Employee Email */
+            employee_email: string;
+            /** Department Name */
+            department_name?: string | null;
+            /**
+             * Present Days
+             * @default 0
+             */
+            present_days: number;
+            /**
+             * Wfh Days
+             * @default 0
+             */
+            wfh_days: number;
+            /**
+             * Half Days
+             * @default 0
+             */
+            half_days: number;
+            /**
+             * On Leave Days
+             * @default 0
+             */
+            on_leave_days: number;
+            /**
+             * Absent Days
+             * @default 0
+             */
+            absent_days: number;
+            /**
+             * Holiday Days
+             * @default 0
+             */
+            holiday_days: number;
+            /**
+             * Weekend Days
+             * @default 0
+             */
+            weekend_days: number;
+            /**
+             * Recorded Days
+             * @default 0
+             */
+            recorded_days: number;
+            /** Missing Days */
+            missing_days?: string[];
+            /**
+             * Missing Count
+             * @default 0
+             */
+            missing_count: number;
         };
         /**
          * EmployeeProfileResponse
@@ -7844,6 +8555,318 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LeaveRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_today_attendance_api_v1_attendance_me_today_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceTodayResponse"];
+                };
+            };
+        };
+    };
+    self_check_in_api_v1_attendance_check_in_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AttendanceCheckInRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceRecordResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_daily_attendance_grid_api_v1_attendance_daily_get: {
+        parameters: {
+            query: {
+                target_date: string;
+                department_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyAttendanceGridResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upsert_daily_attendance_grid_api_v1_attendance_daily_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyAttendanceUpsertRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyAttendanceUpsertResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_attendance_excel_import_api_v1_attendance_import_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_validate_attendance_excel_import_api_v1_attendance_import_validate_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceImportValidationResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    commit_attendance_excel_import_api_v1_attendance_import__batch_id__commit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceImportCommitResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    auto_fill_month_attendance_api_v1_attendance_months__year_month__auto_fill_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year_month: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AttendanceAutoFillRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceAutoFillResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_month_attendance_review_api_v1_attendance_months__year_month__review_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year_month: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceMonthReviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lock_month_attendance_api_v1_attendance_months__year_month__lock_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year_month: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceMonthLockResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_post_lock_attendance_edit_api_v1_attendance_post_lock_edit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttendancePostLockEditRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendancePostLockEditResponse"];
                 };
             };
             /** @description Validation Error */

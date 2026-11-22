@@ -41,7 +41,6 @@ from app.models.leave import (
 )
 from app.models.membership import Membership
 from app.models.role import Role
-from app.models.sheets import SheetsSyncQueue
 from app.models.tenant import set_tenant_context
 from app.models.user import User
 from app.schemas.approval import ApprovalCreateRequest
@@ -572,29 +571,12 @@ async def _enqueue_leave_sheets_once(
     action: str,
     status_label: str,
 ) -> bool:
-    """Idempotently enqueues a Google Sheets Leave view sync row."""
-    existing = (
-        await db.execute(
-            select(SheetsSyncQueue.id)
-            .where(
-                SheetsSyncQueue.tenant_id == tenant_id,
-                SheetsSyncQueue.entity_type == "leave_request",
-                SheetsSyncQueue.entity_id == str(leave_req.id),
-                SheetsSyncQueue.action == action,
-            )
-            .limit(1)
-        )
-    ).scalar_one_or_none()
-    if existing is not None:
-        return False
-
-    await SheetsSyncService.enqueue_sync(
+    """Idempotently enqueues a Google Sheets Leave Tracker view sync row."""
+    queued = await SheetsSyncService.enqueue_leave_tracker_sync(
         session=db,
         tenant_id=tenant_id,
-        entity_type="leave_request",
-        entity_id=str(leave_req.id),
+        leave_request_id=str(leave_req.id),
         action=action,
-        sheet_name="Leave",
         payload={
             "leave_request_id": str(leave_req.id),
             "employee_id": emp.employee_code or str(emp.id)[:8].upper(),
@@ -606,7 +588,7 @@ async def _enqueue_leave_sheets_once(
             "status": status_label,
         },
     )
-    return True
+    return queued is not None
 
 
 async def _safe_send_leave_email(
@@ -666,7 +648,7 @@ async def _signal_leave_workflow(
     try:
         client = await get_temporal_client()
         handle = client.get_workflow_handle(workflow_id)
-        await handle.signal(signal_name, *args)
+        await handle.signal(signal_name, args=list(args))
         return True
     except Exception as exc:
         logger.debug(

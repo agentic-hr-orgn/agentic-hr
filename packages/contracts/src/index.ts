@@ -85,6 +85,29 @@ export type LeaveBalanceItemResponse = components["schemas"]["LeaveBalanceItemRe
 export type TeamCalendarItemResponse = components["schemas"]["TeamCalendarItemResponse"];
 export type LeaveOverviewResponse = components["schemas"]["LeaveOverviewResponse"];
 
+// Stage 6 Attendance, Daily Grid, Import, Auto-Fill, Month Lock & Post-Lock Edit DTOs
+export type AttendanceRecordResponse = components["schemas"]["AttendanceRecordResponse"];
+export type AttendanceTodayResponse = components["schemas"]["AttendanceTodayResponse"];
+export type AttendanceCheckInRequest = components["schemas"]["AttendanceCheckInRequest"];
+export type DailyAttendanceGridRow = components["schemas"]["DailyAttendanceGridRow"];
+export type DailyAttendanceGridResponse = components["schemas"]["DailyAttendanceGridResponse"];
+export type DailyAttendanceUpsertItem = components["schemas"]["DailyAttendanceUpsertItem"];
+export type DailyAttendanceUpsertRequest = components["schemas"]["DailyAttendanceUpsertRequest"];
+export type DailyAttendanceUpsertResponse = components["schemas"]["DailyAttendanceUpsertResponse"];
+export type AttendanceImportRowError = components["schemas"]["AttendanceImportRowError"];
+export type AttendanceImportPreviewRow = components["schemas"]["AttendanceImportPreviewRow"];
+export type AttendanceImportValidationResult =
+  components["schemas"]["AttendanceImportValidationResult"];
+export type AttendanceImportCommitResponse = components["schemas"]["AttendanceImportCommitResponse"];
+export type AttendanceAutoFillRequest = components["schemas"]["AttendanceAutoFillRequest"];
+export type AttendanceAutoFillResponse = components["schemas"]["AttendanceAutoFillResponse"];
+export type EmployeeMonthGapItem = components["schemas"]["EmployeeMonthGapItem"];
+export type AttendanceMonthReviewResponse = components["schemas"]["AttendanceMonthReviewResponse"];
+export type AttendanceMonthLockResponse = components["schemas"]["AttendanceMonthLockResponse"];
+export type AttendancePostLockEditRequest = components["schemas"]["AttendancePostLockEditRequest"];
+export type AttendancePostLockEditResponse =
+  components["schemas"]["AttendancePostLockEditResponse"];
+
 // Google Drive DTOs
 export interface DriveFolderEnsureRequest {
   folder_name?: string;

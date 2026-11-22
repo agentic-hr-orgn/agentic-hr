@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     approvals,
+    attendance,
     audit,
     auth,
     connectors,
@@ -67,4 +68,9 @@ api_router.include_router(
     leave.router,
     prefix="/leave",
     tags=["leave"],
+)
+api_router.include_router(
+    attendance.router,
+    prefix="/attendance",
+    tags=["attendance"],
 )
