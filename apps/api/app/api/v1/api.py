@@ -13,6 +13,7 @@ from app.api.v1.endpoints import (
     employees,
     employees_import,
     health,
+    leave_config,
     notifications,
     onboarding,
     policies,
@@ -55,4 +56,9 @@ api_router.include_router(
     notifications.router,
     prefix="/notifications",
     tags=["notifications"],
+)
+api_router.include_router(
+    leave_config.router,
+    prefix="/leave/config",
+    tags=["leave-config"],
 )

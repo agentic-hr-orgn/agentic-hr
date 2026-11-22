@@ -115,6 +115,86 @@ class PolicyPublishPayload(BaseModel):
     has_prompt_injection_warning: bool = False
 
 
+class LeaveExceptionPayload(BaseModel):
+    """Payload schema for Stage 6 HR exception approvals on policy-violating leave requests."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    leave_request_id: str = Field(..., min_length=1)
+    employee_id: str = Field(..., min_length=1)
+    employee_name: str = Field(..., min_length=1, max_length=255)
+    leave_type_code: str = Field(..., min_length=1, max_length=64)
+    start_date: str = Field(
+        ...,
+        pattern=r"^\d{4}-\d{2}-\d{2}$",
+        description="Leave start date (YYYY-MM-DD)",
+    )
+    end_date: str = Field(
+        ...,
+        pattern=r"^\d{4}-\d{2}-\d{2}$",
+        description="Leave end date (YYYY-MM-DD)",
+    )
+    working_days: float = Field(..., gt=0, le=365)
+    violations: list[str] = Field(default_factory=list)
+    justification: str = Field(..., min_length=3, max_length=1000)
+
+    @field_validator("end_date")
+    @classmethod
+    def validate_date_order(cls, v: str, info) -> str:
+        start = info.data.get("start_date")
+        if start and v < start:
+            raise ValueError("end_date must be greater than or equal to start_date")
+        return v
+
+
+class AttendancePostLockEditPayload(BaseModel):
+    """Payload schema for Stage 6 post-month-lock attendance correction approvals."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    employee_id: str = Field(..., min_length=1)
+    employee_name: str = Field(..., min_length=1, max_length=255)
+    attendance_date: str = Field(
+        ...,
+        pattern=r"^\d{4}-\d{2}-\d{2}$",
+        description="Target attendance date (YYYY-MM-DD)",
+    )
+    year_month: str = Field(
+        ...,
+        pattern=r"^\d{4}-(0[1-9]|1[0-2])$",
+        description="Locked month identifier (YYYY-MM)",
+    )
+    previous_status: (
+        Literal[
+            "PRESENT",
+            "ABSENT",
+            "HALF_DAY",
+            "ON_LEAVE",
+            "WFH",
+            "HOLIDAY",
+            "WEEKEND",
+        ]
+        | None
+    ) = None
+    new_status: Literal[
+        "PRESENT",
+        "ABSENT",
+        "HALF_DAY",
+        "ON_LEAVE",
+        "WFH",
+        "HOLIDAY",
+        "WEEKEND",
+    ]
+    notes: str | None = Field(default=None, max_length=500)
+    reason: str = Field(..., min_length=3, max_length=1000)
+
+    @model_validator(mode="after")
+    def validate_month_matches_date(self) -> "AttendancePostLockEditPayload":
+        if not self.attendance_date.startswith(self.year_month):
+            raise ValueError("attendance_date must fall within the specified year_month.")
+        return self
+
+
 # Payload Schema Registry
 APPROVAL_PAYLOAD_SCHEMAS: dict[str, type[BaseModel]] = {
     "leave_request": LeaveRequestPayload,
@@ -122,6 +202,8 @@ APPROVAL_PAYLOAD_SCHEMAS: dict[str, type[BaseModel]] = {
     "payroll_override": PayrollOverridePayload,
     "policy_exception": PolicyExceptionPayload,
     "policy.publish": PolicyPublishPayload,
+    "leave.exception": LeaveExceptionPayload,
+    "attendance.post_lock_edit": AttendancePostLockEditPayload,
 }
 
 
@@ -148,6 +230,8 @@ class ApprovalCreateRequest(BaseModel):
         "payroll_override",
         "policy_exception",
         "policy.publish",
+        "leave.exception",
+        "attendance.post_lock_edit",
     ] = Field(..., description="Type of approval being requested")
     payload: dict[str, Any] = Field(
         ..., description="Domain-specific payload matching the approval_type"

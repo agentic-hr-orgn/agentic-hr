@@ -61,6 +61,18 @@ export type EmployeeUpdateRequest = components["schemas"]["EmployeeUpdateRequest
 export type MarkAllReadResponse = components["schemas"]["MarkAllReadResponse"];
 export type TriggerExpiryScanRequest = components["schemas"]["TriggerExpiryScanRequest"];
 
+// Stage 6 Leave & Work-Week Configuration DTOs
+export type WorkWeekResponse = components["schemas"]["WorkWeekResponse"];
+export type WorkWeekUpdateRequest = components["schemas"]["WorkWeekUpdateRequest"];
+export type LeaveTypeResponse = components["schemas"]["LeaveTypeResponse"];
+export type LeaveTypeCreateRequest = components["schemas"]["LeaveTypeCreateRequest"];
+export type LeaveTypeUpdateRequest = components["schemas"]["LeaveTypeUpdateRequest"];
+export type LeaveTypeDeleteResponse = components["schemas"]["LeaveTypeDeleteResponse"];
+export type HolidayResponse = components["schemas"]["HolidayResponse"];
+export type HolidayCreateRequest = components["schemas"]["HolidayCreateRequest"];
+export type HolidayUpdateRequest = components["schemas"]["HolidayUpdateRequest"];
+export type HolidayDeleteResponse = components["schemas"]["HolidayDeleteResponse"];
+
 // Google Drive DTOs
 export interface DriveFolderEnsureRequest {
   folder_name?: string;

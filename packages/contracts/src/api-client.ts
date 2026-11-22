@@ -1569,6 +1569,126 @@ export interface paths {
         patch: operations["mark_notification_read_api_v1_notifications__notification_id__read_patch"];
         trace?: never;
     };
+    "/api/v1/leave/config/work-week": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Work Week Config
+         * @description Returns the tenant's work-week, probation, team coverage, and check-in configuration.
+         */
+        get: operations["get_work_week_config_api_v1_leave_config_work_week_get"];
+        /**
+         * Update Work Week Config
+         * @description Updates the tenant's work-week configuration. Restricted to Owner or HR Head.
+         */
+        put: operations["update_work_week_config_api_v1_leave_config_work_week_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/config/types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Leave Types
+         * @description Lists tenant leave types, auto-seeding default Pakistani SME types on first access.
+         */
+        get: operations["list_leave_types_api_v1_leave_config_types_get"];
+        put?: never;
+        /**
+         * Create Leave Type
+         * @description Creates a new tenant leave type. Restricted to Owner or HR Head.
+         */
+        post: operations["create_leave_type_api_v1_leave_config_types_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/config/types/{leave_type_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Leave Type
+         * @description Deletes or soft-deactivates a leave type. Restricted to Owner or HR Head.
+         */
+        delete: operations["delete_leave_type_api_v1_leave_config_types__leave_type_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Leave Type
+         * @description Updates an existing leave type. Restricted to Owner or HR Head.
+         */
+        patch: operations["update_leave_type_api_v1_leave_config_types__leave_type_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/leave/config/holidays": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Holidays
+         * @description Lists tenant public holidays, auto-seeding Pakistan fixed holidays on first access.
+         */
+        get: operations["list_holidays_api_v1_leave_config_holidays_get"];
+        put?: never;
+        /**
+         * Create Holiday
+         * @description Creates a custom or default public holiday. Restricted to Owner or HR Head.
+         */
+        post: operations["create_holiday_api_v1_leave_config_holidays_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/config/holidays/{holiday_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Holiday
+         * @description Deletes a public holiday. Restricted to Owner or HR Head.
+         */
+        delete: operations["delete_holiday_api_v1_leave_config_holidays__holiday_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Holiday
+         * @description Updates an existing public holiday. Restricted to Owner or HR Head.
+         */
+        patch: operations["update_holiday_api_v1_leave_config_holidays__holiday_id__patch"];
+        trace?: never;
+    };
     "/api/synthetic/company": {
         parameters: {
             query?: never;
@@ -1703,7 +1823,7 @@ export interface components {
              * @description Type of approval being requested
              * @enum {string}
              */
-            approval_type: "leave_request" | "candidate_offer" | "payroll_override" | "policy_exception" | "policy.publish";
+            approval_type: "leave_request" | "candidate_offer" | "payroll_override" | "policy_exception" | "policy.publish" | "leave.exception" | "attendance.post_lock_edit";
             /**
              * Payload
              * @description Domain-specific payload matching the approval_type
@@ -2718,6 +2838,104 @@ export interface components {
             request_id?: string | null;
         };
         /**
+         * HolidayCreateRequest
+         * @description Payload accepted by POST /api/v1/leave/config/holidays.
+         */
+        HolidayCreateRequest: {
+            /**
+             * Holiday Date
+             * Format: date
+             */
+            holiday_date: string;
+            /** Name */
+            name: string;
+            /**
+             * Is Optional
+             * @default false
+             */
+            is_optional: boolean;
+            /**
+             * Source
+             * @default custom
+             * @enum {string}
+             */
+            source: "default_pk" | "custom";
+        };
+        /**
+         * HolidayDeleteResponse
+         * @description Response returned by DELETE /api/v1/leave/config/holidays/{holiday_id}.
+         */
+        HolidayDeleteResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Holiday Date
+             * Format: date
+             */
+            holiday_date: string;
+            /**
+             * Action
+             * @default deleted
+             * @constant
+             */
+            action: "deleted";
+        };
+        /**
+         * HolidayResponse
+         * @description Serialized tenant holiday record.
+         */
+        HolidayResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Holiday Date
+             * Format: date
+             */
+            holiday_date: string;
+            /** Name */
+            name: string;
+            /** Is Optional */
+            is_optional: boolean;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "default_pk" | "custom";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * HolidayUpdateRequest
+         * @description Payload accepted by PATCH /api/v1/leave/config/holidays/{holiday_id}.
+         */
+        HolidayUpdateRequest: {
+            /** Holiday Date */
+            holiday_date?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Is Optional */
+            is_optional?: boolean | null;
+        };
+        /**
          * ImportCommitResponse
          * @description Response returned by POST /api/v1/employees/import/{batch_id}/commit.
          */
@@ -2799,6 +3017,162 @@ export interface components {
             preview_rows: components["schemas"]["ImportPreviewRow"][];
             /** Errors */
             errors: components["schemas"]["ImportRowError"][];
+        };
+        /**
+         * LeaveTypeCreateRequest
+         * @description Payload accepted by POST /api/v1/leave/config/types.
+         */
+        LeaveTypeCreateRequest: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Annual Allowance Days
+             * @default 0.00
+             */
+            annual_allowance_days: number | string;
+            /**
+             * Accrual Mode
+             * @default upfront
+             * @enum {string}
+             */
+            accrual_mode: "upfront" | "monthly";
+            /**
+             * Carry Forward Cap Days
+             * @default 0.00
+             */
+            carry_forward_cap_days: number | string;
+            /** Max Consecutive Days */
+            max_consecutive_days?: number | null;
+            /**
+             * Min Notice Days
+             * @default 0
+             */
+            min_notice_days: number;
+            /**
+             * Allow During Probation
+             * @default false
+             */
+            allow_during_probation: boolean;
+            /** Requires Document After Days */
+            requires_document_after_days?: number | null;
+            /**
+             * Allow Half Day
+             * @default true
+             */
+            allow_half_day: boolean;
+            /**
+             * Is Paid
+             * @default true
+             */
+            is_paid: boolean;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+        };
+        /**
+         * LeaveTypeDeleteResponse
+         * @description Response returned by DELETE /api/v1/leave/config/types/{leave_type_id}.
+         */
+        LeaveTypeDeleteResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Code */
+            code: string;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "deleted" | "deactivated";
+            /** Is Active */
+            is_active: boolean;
+        };
+        /**
+         * LeaveTypeResponse
+         * @description Serialized leave type configuration.
+         */
+        LeaveTypeResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Annual Allowance Days */
+            annual_allowance_days: string;
+            /**
+             * Accrual Mode
+             * @enum {string}
+             */
+            accrual_mode: "upfront" | "monthly";
+            /** Carry Forward Cap Days */
+            carry_forward_cap_days: string;
+            /** Max Consecutive Days */
+            max_consecutive_days?: number | null;
+            /** Min Notice Days */
+            min_notice_days: number;
+            /** Allow During Probation */
+            allow_during_probation: boolean;
+            /** Requires Document After Days */
+            requires_document_after_days?: number | null;
+            /** Allow Half Day */
+            allow_half_day: boolean;
+            /** Is Paid */
+            is_paid: boolean;
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * LeaveTypeUpdateRequest
+         * @description Payload accepted by PATCH /api/v1/leave/config/types/{leave_type_id}.
+         */
+        LeaveTypeUpdateRequest: {
+            /** Name */
+            name?: string | null;
+            /** Annual Allowance Days */
+            annual_allowance_days?: number | string | null;
+            /** Accrual Mode */
+            accrual_mode?: ("upfront" | "monthly") | null;
+            /** Carry Forward Cap Days */
+            carry_forward_cap_days?: number | string | null;
+            /** Max Consecutive Days */
+            max_consecutive_days?: number | null;
+            /** Min Notice Days */
+            min_notice_days?: number | null;
+            /** Allow During Probation */
+            allow_during_probation?: boolean | null;
+            /** Requires Document After Days */
+            requires_document_after_days?: number | null;
+            /** Allow Half Day */
+            allow_half_day?: boolean | null;
+            /** Is Paid */
+            is_paid?: boolean | null;
+            /** Is Active */
+            is_active?: boolean | null;
         };
         /**
          * MarkAllReadResponse
@@ -3666,6 +4040,69 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * WorkWeekResponse
+         * @description Serialized per-tenant work-week, probation, team coverage, and check-in settings.
+         */
+        WorkWeekResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Weekend Days */
+            weekend_days: string[];
+            /** Probation Months */
+            probation_months: number;
+            /** Max Team Absent Pct */
+            max_team_absent_pct: string;
+            /** Min Team Present */
+            min_team_present: number;
+            /** Backup Approver User Id */
+            backup_approver_user_id?: string | null;
+            /** Check In Enabled */
+            check_in_enabled: boolean;
+            /** Timezone */
+            timezone: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * WorkWeekUpdateRequest
+         * @description Payload accepted by PUT /api/v1/leave/config/work-week.
+         */
+        WorkWeekUpdateRequest: {
+            /**
+             * Weekend Days
+             * @description Weekend day names (e.g. ['Saturday', 'Sunday'])
+             */
+            weekend_days?: string[] | null;
+            /** Probation Months */
+            probation_months?: number | null;
+            /** Max Team Absent Pct */
+            max_team_absent_pct?: number | string | null;
+            /** Min Team Present */
+            min_team_present?: number | null;
+            /** Backup Approver User Id */
+            backup_approver_user_id?: string | null;
+            /** Check In Enabled */
+            check_in_enabled?: boolean | null;
+            /** Timezone */
+            timezone?: string | null;
         };
         /** WorkflowTriggerRequest */
         WorkflowTriggerRequest: {
@@ -6206,6 +6643,319 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotificationItem"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_work_week_config_api_v1_leave_config_work_week_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkWeekResponse"];
+                };
+            };
+        };
+    };
+    update_work_week_config_api_v1_leave_config_work_week_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkWeekUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkWeekResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_leave_types_api_v1_leave_config_types_get: {
+        parameters: {
+            query?: {
+                include_inactive?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveTypeResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_leave_type_api_v1_leave_config_types_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveTypeCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveTypeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_leave_type_api_v1_leave_config_types__leave_type_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leave_type_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveTypeDeleteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_leave_type_api_v1_leave_config_types__leave_type_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leave_type_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveTypeUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveTypeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_holidays_api_v1_leave_config_holidays_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_holiday_api_v1_leave_config_holidays_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HolidayCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_holiday_api_v1_leave_config_holidays__holiday_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                holiday_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayDeleteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_holiday_api_v1_leave_config_holidays__holiday_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                holiday_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HolidayUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayResponse"];
                 };
             };
             /** @description Validation Error */

@@ -38,6 +38,7 @@ from app.schemas.employee import (
     OrgChartResponse,
 )
 from app.services.audit_service import write_audit
+from app.services.leave_config_service import initialize_employee_leave_balances
 from app.services.sheets_sync_service import SheetsSyncService
 
 if TYPE_CHECKING:
@@ -602,6 +603,13 @@ class EmployeeService:
         )
         session.add(emp)
         await session.flush()
+
+        await initialize_employee_leave_balances(
+            session,
+            tenant_id=t_id,
+            employee_id=emp.id,
+            actor_id=actor.user_id,
+        )
 
         await SheetsSyncService.enqueue_sync(
             session=session,

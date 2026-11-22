@@ -2,6 +2,7 @@
 
 from app.models.approval import Approval
 from app.models.approval_revision import ApprovalRevision
+from app.models.attendance import Attendance, AttendanceMonthLock
 from app.models.audit_log import AuditLog
 from app.models.calendar import CalendarEventRecord
 from app.models.connector import ConnectorCredential, SentMessage
@@ -10,6 +11,14 @@ from app.models.drive import DriveFileRecord
 from app.models.employee import Employee
 from app.models.employee_document import EmployeeDocument
 from app.models.idempotency import IdempotencyRecord
+from app.models.leave import (
+    Holiday,
+    LeaveBalance,
+    LeaveLedger,
+    LeaveRequest,
+    LeaveType,
+    WorkWeek,
+)
 from app.models.membership import Membership
 from app.models.notification import Notification
 from app.models.onboarding_state import OnboardingState
@@ -34,6 +43,8 @@ from app.models.user import User
 __all__ = [
     "Approval",
     "ApprovalRevision",
+    "Attendance",
+    "AttendanceMonthLock",
     "AuditLog",
     "CalendarEventRecord",
     "CompanyProfile",
@@ -43,7 +54,12 @@ __all__ = [
     "Employee",
     "EmployeeDocument",
     "EmployeeRecord",
+    "Holiday",
     "IdempotencyRecord",
+    "LeaveBalance",
+    "LeaveLedger",
+    "LeaveRequest",
+    "LeaveType",
     "Membership",
     "Notification",
     "OnboardingState",
@@ -60,4 +76,5 @@ __all__ = [
     "Tenant",
     "TenantBase",
     "User",
+    "WorkWeek",
 ]

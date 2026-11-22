@@ -57,6 +57,7 @@ from app.services.connector_service import (
     ReadOnlyConnectorError,
 )
 from app.services.email_delivery_service import EmailDeliveryService, RecipientBlockedError
+from app.services.leave_config_service import LeaveConfigService
 from app.services.outbox_service import enqueue_outbox_event
 from app.services.sheets_sync_service import SheetsSyncService
 
@@ -190,6 +191,14 @@ class OnboardingService:
         state.updated_at = datetime.now(UTC)
 
         await session.flush()
+
+        if step == 3:
+            await LeaveConfigService.sync_from_onboarding_step3(
+                session,
+                tenant_id=t_id,
+                structure_config=state.structure_config,
+                actor_id=actor_id,
+            )
 
         await write_audit(
             session,
