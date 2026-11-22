@@ -367,7 +367,7 @@ class ConnectorService:
         cred = result.scalars().first()
         if not cred and settings.USE_FAKE_INTEGRATIONS and settings.is_non_production:
             # Auto-seed a connected credential for synthetic testing / development
-            await ConnectorService.save_credential(
+            await ConnectorService.store_credentials(
                 session=session,
                 tenant_id=t_id,
                 provider=provider.strip().lower(),
@@ -382,7 +382,6 @@ class ConnectorService:
                 access_token="fake_access_token_stage3_auto_seed",
                 refresh_token="fake_refresh_token_stage3_auto_seed",
                 token_expiry=datetime.now(UTC) + timedelta(hours=1),
-                is_read_only=False,
             )
             result = await session.execute(stmt)
             cred = result.scalars().first()

@@ -1689,6 +1689,210 @@ export interface paths {
         patch: operations["update_holiday_api_v1_leave_config_holidays__holiday_id__patch"];
         trace?: never;
     };
+    "/api/v1/leave/intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leave Intake Chat
+         * @description Conversational bilingual leave intake agent. Asks at most ONE focused clarifying
+         *     question if incomplete, or runs deterministic `check_leave` and returns a `confirm_card`.
+         */
+        post: operations["leave_intake_chat_api_v1_leave_intake_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Leave Request
+         * @description Submits a leave request using serialized `SELECT ... FOR UPDATE` balance locking,
+         *     reserves balance, optionally creates a Stage 2 `leave.exception` approval on
+         *     policy violation, and starts durable `LeaveRequestWorkflow`.
+         */
+        post: operations["submit_leave_request_api_v1_leave_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/balances/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get My Leave Balances
+         * @description Returns the caller's leave balances for the requested (or current PKT) year.
+         */
+        get: operations["get_my_leave_balances_api_v1_leave_balances_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List All Leave Balances
+         * @description HR Head / Owner view of tenant leave balances.
+         */
+        get: operations["list_all_leave_balances_api_v1_leave_balances_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/requests/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List My Leave Requests
+         * @description Lists the caller's own submitted leave requests.
+         */
+        get: operations["list_my_leave_requests_api_v1_leave_requests_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Leave Approval Inbox
+         * @description Lists pending leave requests assigned to the caller (or escalated backup approver).
+         *     Owner and HR Head see all pending requests in the tenant.
+         */
+        get: operations["list_leave_approval_inbox_api_v1_leave_inbox_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Team Leave Calendar
+         * @description Lists approved and pending team leaves for calendar visibility.
+         */
+        get: operations["list_team_leave_calendar_api_v1_leave_calendar_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Hr Leave Overview
+         * @description HR Head / Owner overview metrics and full tenant leave request log.
+         */
+        get: operations["get_hr_leave_overview_api_v1_leave_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/requests/{request_id}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide Leave Request
+         * @description Approves or rejects a pending leave request (strict approver/escalated/HR RBAC).
+         */
+        post: operations["decide_leave_request_api_v1_leave_requests__request_id__decide_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leave/requests/{request_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Leave Request
+         * @description Cancels a pending request (releases reservation) or approved request (reverses attendance/balance).
+         */
+        post: operations["cancel_leave_request_api_v1_leave_requests__request_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/synthetic/company": {
         parameters: {
             query?: never;
@@ -3019,6 +3223,328 @@ export interface components {
             errors: components["schemas"]["ImportRowError"][];
         };
         /**
+         * LeaveBalanceItemResponse
+         * @description Serialized leave balance row with computed available_days.
+         */
+        LeaveBalanceItemResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /**
+             * Leave Type Id
+             * Format: uuid
+             */
+            leave_type_id: string;
+            /** Leave Type Code */
+            leave_type_code: string;
+            /** Leave Type Name */
+            leave_type_name: string;
+            /** Year */
+            year: number;
+            /** Allocated Days */
+            allocated_days: string;
+            /** Carried Forward Days */
+            carried_forward_days: string;
+            /** Reserved Days */
+            reserved_days: string;
+            /** Used Days */
+            used_days: string;
+            /** Available Days */
+            available_days: string;
+            /** Is Paid */
+            is_paid: boolean;
+            /** Accrual Mode */
+            accrual_mode: string;
+        };
+        /**
+         * LeaveCancelRequest
+         * @description Payload accepted by POST /api/v1/leave/requests/{request_id}/cancel.
+         */
+        LeaveCancelRequest: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * LeaveConfirmCard
+         * @description Pre-submission confirmation card produced once intake slots are complete.
+         */
+        LeaveConfirmCard: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /**
+             * Leave Type Id
+             * Format: uuid
+             */
+            leave_type_id: string;
+            /** Leave Type Code */
+            leave_type_code: string;
+            /** Leave Type Name */
+            leave_type_name: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /**
+             * Is Half Day
+             * @default false
+             */
+            is_half_day: boolean;
+            /** Half Day Period */
+            half_day_period?: ("morning" | "afternoon") | null;
+            /** Working Days */
+            working_days: string;
+            /** Reason */
+            reason: string;
+            /** Document Id */
+            document_id?: string | null;
+            /** Balance Before */
+            balance_before: string;
+            /** Balance After */
+            balance_after: string;
+            /**
+             * Policy Check Status
+             * @enum {string}
+             */
+            policy_check_status: "OK" | "VIOLATION" | "BLOCKED";
+            /** Policy Check Reasons */
+            policy_check_reasons?: components["schemas"]["RuleOutcome"][];
+        };
+        /**
+         * LeaveDecisionRequest
+         * @description Payload accepted by POST /api/v1/leave/requests/{request_id}/decide.
+         */
+        LeaveDecisionRequest: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approved" | "rejected";
+            /** Note */
+            note?: string | null;
+        };
+        /**
+         * LeaveIntakeRequest
+         * @description Payload accepted by POST /api/v1/leave/intake.
+         */
+        LeaveIntakeRequest: {
+            /** Message */
+            message: string;
+            /** Conversation Context */
+            conversation_context?: {
+                [key: string]: unknown;
+            } | null;
+            /** Employee Id */
+            employee_id?: string | null;
+        };
+        /**
+         * LeaveIntakeResponse
+         * @description Response returned by POST /api/v1/leave/intake.
+         */
+        LeaveIntakeResponse: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "needs_clarification" | "ready_to_confirm";
+            /** Clarifying Question */
+            clarifying_question?: string | null;
+            /** Extracted */
+            extracted?: {
+                [key: string]: unknown;
+            };
+            confirm_card?: components["schemas"]["LeaveConfirmCard"] | null;
+        };
+        /**
+         * LeaveOverviewResponse
+         * @description HR overview counters and list of tenant leave requests.
+         */
+        LeaveOverviewResponse: {
+            /** Total Requests */
+            total_requests: number;
+            /** Pending Count */
+            pending_count: number;
+            /** Pending Hr Exception Count */
+            pending_hr_exception_count: number;
+            /** Approved Count */
+            approved_count: number;
+            /** Rejected Count */
+            rejected_count: number;
+            /** Cancelled Count */
+            cancelled_count: number;
+            /** Expired Count */
+            expired_count: number;
+            /** Requests */
+            requests?: components["schemas"]["LeaveRequestResponse"][];
+        };
+        /**
+         * LeaveRequestCreateRequest
+         * @description Payload accepted by POST /api/v1/leave/requests.
+         */
+        LeaveRequestCreateRequest: {
+            /** Leave Type Id */
+            leave_type_id?: string | null;
+            /** Leave Type Code */
+            leave_type_code?: string | null;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /**
+             * Is Half Day
+             * @default false
+             */
+            is_half_day: boolean;
+            /** Half Day Period */
+            half_day_period?: ("morning" | "afternoon") | null;
+            /** Reason */
+            reason: string;
+            /** Document Id */
+            document_id?: string | null;
+            /** Employee Id */
+            employee_id?: string | null;
+            /** As Of Date */
+            as_of_date?: string | null;
+            /**
+             * Start Workflow
+             * @default true
+             */
+            start_workflow: boolean;
+            /** Reminder Hours */
+            reminder_hours?: number | null;
+            /** Escalation Hours */
+            escalation_hours?: number | null;
+            /** Expiry Hours */
+            expiry_hours?: number | null;
+        };
+        /**
+         * LeaveRequestResponse
+         * @description Serialized leave request DTO with joined employee & leave type metadata.
+         */
+        LeaveRequestResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /** Employee Email */
+            employee_email?: string | null;
+            /** Department Name */
+            department_name?: string | null;
+            /**
+             * Leave Type Id
+             * Format: uuid
+             */
+            leave_type_id: string;
+            /** Leave Type Code */
+            leave_type_code: string;
+            /** Leave Type Name */
+            leave_type_name: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Is Half Day */
+            is_half_day: boolean;
+            /** Half Day Period */
+            half_day_period?: string | null;
+            /** Working Days */
+            working_days: string;
+            /** Reason */
+            reason: string;
+            /** Document Id */
+            document_id?: string | null;
+            /** Policy Check Status */
+            policy_check_status: string;
+            /** Policy Check Reasons */
+            policy_check_reasons?: {
+                [key: string]: unknown;
+            }[];
+            /** Status */
+            status: string;
+            /** Approver User Id */
+            approver_user_id?: string | null;
+            /** Escalated To User Id */
+            escalated_to_user_id?: string | null;
+            /** Hr Exception Approval Id */
+            hr_exception_approval_id?: string | null;
+            /** Hr Exception Status */
+            hr_exception_status?: string | null;
+            /** Workflow Id */
+            workflow_id?: string | null;
+            /** Calendar Event Id */
+            calendar_event_id?: string | null;
+            /**
+             * Sheets Row Synced
+             * @default false
+             */
+            sheets_row_synced: boolean;
+            /** Decided By */
+            decided_by?: string | null;
+            /** Decided At */
+            decided_at?: string | null;
+            /** Decision Note */
+            decision_note?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
          * LeaveTypeCreateRequest
          * @description Payload accepted by POST /api/v1/leave/config/types.
          */
@@ -3787,6 +4313,23 @@ export interface components {
             /** Is Read Only */
             is_read_only: boolean;
         };
+        /**
+         * RuleOutcome
+         * @description Structured diagnostic outcome for a single policy rule evaluation.
+         */
+        RuleOutcome: {
+            /** Rule */
+            rule: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "OK" | "VIOLATION" | "BLOCKED";
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
         /** SendEmailRequest */
         SendEmailRequest: {
             /** To Email */
@@ -3964,6 +4507,48 @@ export interface components {
             details?: {
                 [key: string]: unknown;
             }[];
+        };
+        /**
+         * TeamCalendarItemResponse
+         * @description Team calendar entry for approved/pending leaves.
+         */
+        TeamCalendarItemResponse: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /** Department Name */
+            department_name?: string | null;
+            /** Leave Type Code */
+            leave_type_code: string;
+            /** Leave Type Name */
+            leave_type_name: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Is Half Day */
+            is_half_day: boolean;
+            /** Half Day Period */
+            half_day_period?: string | null;
+            /** Working Days */
+            working_days: string;
+            /** Status */
+            status: string;
         };
         /**
          * TenantKillSwitchRequest
@@ -6956,6 +7541,309 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HolidayResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    leave_intake_chat_api_v1_leave_intake_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveIntakeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveIntakeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_leave_request_api_v1_leave_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveRequestCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_my_leave_balances_api_v1_leave_balances_me_get: {
+        parameters: {
+            query?: {
+                year?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveBalanceItemResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_all_leave_balances_api_v1_leave_balances_get: {
+        parameters: {
+            query?: {
+                employee_id?: string | null;
+                year?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveBalanceItemResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_leave_requests_api_v1_leave_requests_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveRequestResponse"][];
+                };
+            };
+        };
+    };
+    list_leave_approval_inbox_api_v1_leave_inbox_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveRequestResponse"][];
+                };
+            };
+        };
+    };
+    list_team_leave_calendar_api_v1_leave_calendar_get: {
+        parameters: {
+            query?: {
+                start_date?: string | null;
+                end_date?: string | null;
+                department_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamCalendarItemResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_hr_leave_overview_api_v1_leave_overview_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveOverviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_leave_request_api_v1_leave_requests__request_id__decide_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveRequestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_leave_request_api_v1_leave_requests__request_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LeaveCancelRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveRequestResponse"];
                 };
             };
             /** @description Validation Error */

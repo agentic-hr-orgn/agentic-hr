@@ -171,6 +171,68 @@ Sign in with your company email to view your profile, company policies, and team
 Warm regards,
 {company_name} People Operations""",
     },
+    "leave_request_submitted": {
+        "subject": "Leave Request Pending Review: {employee_name} ({leave_type_name})",
+        "html": """<div style="font-family: Arial, sans-serif; color: #102C54; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #2A5BDB;">Leave Request Pending Approval</h2>
+    <p>Hello {approver_name},</p>
+    <p><strong>{employee_name}</strong> has submitted a <strong>{leave_type_name}</strong> request.</p>
+    <div style="background-color: #F8F9FD; border-left: 4px solid #2A5BDB; padding: 12px; margin: 16px 0;">
+        <p style="margin: 4px 0;"><strong>Dates:</strong> {date_range}</p>
+        <p style="margin: 4px 0;"><strong>Working Days:</strong> {working_days}</p>
+        <p style="margin: 4px 0;"><strong>Policy Status:</strong> {policy_status}</p>
+        <p style="margin: 4px 0;"><strong>Reason:</strong> {reason}</p>
+    </div>
+    <p>Please review and decide in the Agentic HR Leave Inbox.</p>
+</div>""",
+        "text": """Hello {approver_name},
+
+{employee_name} has submitted a {leave_type_name} request.
+Dates: {date_range}
+Working Days: {working_days}
+Policy Status: {policy_status}
+Reason: {reason}
+
+Please review and decide in the Agentic HR Leave Inbox.""",
+    },
+    "leave_request_reminder": {
+        "subject": "Reminder: Pending Leave Request from {employee_name}",
+        "html": """<div style="font-family: Arial, sans-serif; color: #102C54; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #2A5BDB;">24-Hour Leave Approval Reminder</h2>
+    <p>Hello {approver_name},</p>
+    <p>A leave request from <strong>{employee_name}</strong> ({leave_type_name}, {date_range}) is still awaiting your decision.</p>
+    <p>If no action is taken, it will automatically escalate to the backup approver.</p>
+</div>""",
+        "text": """Hello {approver_name},
+
+Reminder: {employee_name}'s {leave_type_name} request ({date_range}) is still awaiting your decision.
+If no action is taken, it will escalate to the backup approver.""",
+    },
+    "leave_request_escalated": {
+        "subject": "Escalated Leave Request: {employee_name} ({leave_type_name})",
+        "html": """<div style="font-family: Arial, sans-serif; color: #102C54; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #2A5BDB;">Escalated Leave Request</h2>
+    <p>Hello {approver_name},</p>
+    <p>A leave request from <strong>{employee_name}</strong> ({leave_type_name}, {date_range}, {working_days} day(s)) has been escalated to you as backup approver.</p>
+    <p>Please review and decide before it expires.</p>
+</div>""",
+        "text": """Hello {approver_name},
+
+Escalated: {employee_name}'s {leave_type_name} request ({date_range}, {working_days} day(s)) has been assigned to you as backup approver.""",
+    },
+    "leave_decision_notification": {
+        "subject": "Leave Request {decision_label}: {leave_type_name} ({date_range})",
+        "html": """<div style="font-family: Arial, sans-serif; color: #102C54; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #2A5BDB;">Leave Request {decision_label}</h2>
+    <p>Hello {employee_name},</p>
+    <p>Your <strong>{leave_type_name}</strong> request for <strong>{date_range}</strong> ({working_days} working day(s)) is now <strong>{decision_label}</strong>.</p>
+    <p><strong>Note:</strong> {decision_note}</p>
+</div>""",
+        "text": """Hello {employee_name},
+
+Your {leave_type_name} request for {date_range} ({working_days} working day(s)) is now {decision_label}.
+Note: {decision_note}""",
+    },
 }
 
 

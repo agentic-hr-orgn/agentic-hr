@@ -73,6 +73,18 @@ export type HolidayCreateRequest = components["schemas"]["HolidayCreateRequest"]
 export type HolidayUpdateRequest = components["schemas"]["HolidayUpdateRequest"];
 export type HolidayDeleteResponse = components["schemas"]["HolidayDeleteResponse"];
 
+// Stage 6 Leave Intake, Requests, Balances & Overview DTOs
+export type LeaveIntakeRequest = components["schemas"]["LeaveIntakeRequest"];
+export type LeaveIntakeResponse = components["schemas"]["LeaveIntakeResponse"];
+export type LeaveConfirmCard = components["schemas"]["LeaveConfirmCard"];
+export type LeaveRequestCreateRequest = components["schemas"]["LeaveRequestCreateRequest"];
+export type LeaveDecisionRequest = components["schemas"]["LeaveDecisionRequest"];
+export type LeaveCancelRequest = components["schemas"]["LeaveCancelRequest"];
+export type LeaveRequestResponse = components["schemas"]["LeaveRequestResponse"];
+export type LeaveBalanceItemResponse = components["schemas"]["LeaveBalanceItemResponse"];
+export type TeamCalendarItemResponse = components["schemas"]["TeamCalendarItemResponse"];
+export type LeaveOverviewResponse = components["schemas"]["LeaveOverviewResponse"];
+
 // Google Drive DTOs
 export interface DriveFolderEnsureRequest {
   folder_name?: string;

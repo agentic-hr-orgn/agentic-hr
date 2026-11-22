@@ -270,6 +270,14 @@ async def decide_approval(
             decision=decision,
             actor_id=current_user.user_id,
         )
+    elif approval.approval_type == "leave.exception":
+        await _apply_leave_exception_decision(
+            db,
+            approval=approval,
+            decision=decision,
+            actor_id=current_user.user_id,
+            reason=clean_reason,
+        )
 
     # 9. Write transactional audit log
     await write_audit(
@@ -322,6 +330,19 @@ async def decide_approval(
             reason=clean_reason,
             workflow_id=loaded_approval.workflow_id,
         )
+        if loaded_approval.approval_type == "leave.exception":
+            leave_req_id = (loaded_approval.payload or {}).get("leave_request_id")
+            if leave_req_id:
+                from app.core.temporal import get_temporal_client
+
+                client = await get_temporal_client()
+                handle = client.get_workflow_handle(str(leave_req_id))
+                await handle.signal(
+                    "hr_exception_decision",
+                    decision,
+                    str(current_user.user_id),
+                    clean_reason,
+                )
     except Exception as exc:
         logger.warning(f"Temporal workflow signaling skipped: {exc}")
 
@@ -790,3 +811,69 @@ async def _apply_policy_publish_decision(
                 "approval_id": str(approval.id),
             },
         )
+
+
+async def _apply_leave_exception_decision(
+    db: AsyncSession,
+    *,
+    approval: Approval,
+    decision: str,
+    actor_id: str,
+    reason: str | None = None,
+) -> None:
+    """
+    Executes atomic Stage 6 `leave.exception` side effects inside `decide_approval`:
+    - On `rejected`: releases reserved balance (`release:{request_id}`) and transitions
+      the linked `LeaveRequest` to `rejected`.
+    - On `approved`: records HR exception approval audit; if manager already approved
+      (`status == 'pending_hr_exception'`), completes atomic balance deduction,
+      working-dates attendance upsert, `leave.approved` outbox, and Sheets sync.
+    """
+    from app.models.leave import LeaveRequest
+    from app.services.leave_service import LeaveService
+
+    raw_req_id = (approval.payload or {}).get("leave_request_id")
+    if not raw_req_id:
+        return
+    req_uuid = UUID(str(raw_req_id))
+
+    leave_req = (
+        await db.execute(
+            select(LeaveRequest)
+            .where(
+                LeaveRequest.tenant_id == approval.tenant_id,
+                LeaveRequest.id == req_uuid,
+            )
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    if leave_req is None:
+        return
+
+    if decision == "rejected":
+        await LeaveService.release_leave_reservation_in_tx(
+            db,
+            tenant_id=approval.tenant_id,
+            leave_req=leave_req,
+            target_status="rejected",
+            actor_id=actor_id,
+            note=reason or "HR exception rejected",
+        )
+    elif decision == "approved":
+        await write_audit(
+            session=db,
+            tenant_id=approval.tenant_id,
+            actor_id=UUID(actor_id),
+            action="leave.hr_exception_approved",
+            target_type="leave_request",
+            target_id=leave_req.id,
+            details={"approval_id": str(approval.id), "reason": reason},
+        )
+        if leave_req.status == "pending_hr_exception":
+            await LeaveService.approve_leave_request_phase1_in_tx(
+                db,
+                tenant_id=approval.tenant_id,
+                leave_req=leave_req,
+                decided_by=actor_id,
+                decision_note=reason or leave_req.decision_note,
+            )
