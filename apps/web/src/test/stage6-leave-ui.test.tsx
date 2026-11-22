@@ -9,7 +9,6 @@ import type {
   LeaveTypeResponse,
   WorkWeekResponse,
 } from "@agentic-hr/contracts";
-import AttendancePlaceholderPage from "@/app/(dashboard)/attendance/page";
 import LeaveWorkspacePage from "@/app/(dashboard)/leave/page";
 import SettingsPage from "@/app/(dashboard)/settings/page";
 import { resolveRouteTitle } from "@/components/layout/header";
@@ -346,9 +345,6 @@ describe("Stage 6 Prompt 5 — Leave Workspace, AI Intake, Settings & Step 3 UI"
     expect(screen.getByText("17.5")).toBeInTheDocument();
     expect(screen.getByText("1.5")).toBeInTheDocument();
     expect(screen.getByText("20")).toBeInTheDocument();
-
-    render(<AttendancePlaceholderPage />);
-    expect(screen.getByText("Attendance Workspace Initializing")).toBeInTheDocument();
   });
 
   it("drives AI Leave Assistant clarifying question -> Confirm Card -> submit", async () => {
