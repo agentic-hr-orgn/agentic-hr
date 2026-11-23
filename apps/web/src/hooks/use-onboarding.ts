@@ -9,7 +9,7 @@ import type {
   ReadinessChecklist,
 } from "@agentic-hr/contracts";
 import { ApiHttpError, ApiOfflineError, apiRequest } from "@/lib/api-request";
-import { getAuthHeader } from "@/lib/auth-header";
+import { getAuthHeader, isAuthQueryReady } from "@/lib/auth-header";
 import { API_BASE_URL } from "@/lib/platform";
 
 function buildJsonHeaders(
@@ -45,7 +45,7 @@ export function useOnboardingState() {
       }
       throw new ApiOfflineError("OFFLINE: FastAPI backend is unreachable.");
     },
-    enabled: isLoaded,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn),
     staleTime: 1000 * 30,
     retry: false,
   });
@@ -102,7 +102,7 @@ export function useOnboardingReadiness() {
       }
       throw new ApiOfflineError("OFFLINE: FastAPI backend is unreachable.");
     },
-    enabled: isLoaded,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn),
     staleTime: 1000 * 15,
     retry: false,
   });

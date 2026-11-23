@@ -14,10 +14,12 @@ import { Step5TestLaunch } from "@/components/onboarding/step5-test-launch";
 import { WizardStepper } from "@/components/onboarding/wizard-stepper";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { useOnboardingState, useSaveOnboardingStep } from "@/hooks/use-onboarding";
 import { isOfflineError } from "@/lib/api-request";
 
 export default function OnboardingPage() {
+  const hydrated = useHydrated();
   const { data: currentUser } = useCurrentUser();
   const {
     isStandby,
@@ -49,9 +51,12 @@ export default function OnboardingPage() {
     }
   }, [onboardingState]);
 
-  const isOffline = isStandby || isOfflineError(stateError);
+  const effectiveOnboardingState = hydrated ? onboardingState : undefined;
+  const effectiveStateLoading = hydrated ? isStateLoading : false;
+  const isOffline = hydrated && (isStandby || isOfflineError(stateError));
   const liveHttpError =
-    stepSaveError || (stateError && !isOfflineError(stateError) ? stateError.message : null);
+    stepSaveError ||
+    (hydrated && stateError && !isOfflineError(stateError) ? stateError.message : null);
 
   const handleSaveStep = async (
     step: number,
@@ -107,7 +112,7 @@ export default function OnboardingPage() {
 
         <div className="flex items-center gap-2">
           <Badge variant="primary">{currentUser?.tenant_name || "Workspace"}</Badge>
-          {onboardingState?.is_live ? (
+          {effectiveOnboardingState?.is_live ? (
             <Badge variant="success">Live</Badge>
           ) : (
             <Badge variant={useFakeIntegrations ? "warning" : "success"}>
@@ -175,13 +180,13 @@ export default function OnboardingPage() {
       {/* Horizontal Progress Bar & Stepper */}
       <WizardStepper
         currentStep={activeStep}
-        completedSteps={onboardingState?.completed_steps ?? []}
-        isLiveWorkspace={onboardingState?.is_live ?? false}
+        completedSteps={effectiveOnboardingState?.completed_steps ?? []}
+        isLiveWorkspace={effectiveOnboardingState?.is_live ?? false}
         onSelectStep={handleSelectStep}
       />
 
       {/* Active Step Panel */}
-      {isStateLoading && !onboardingState ? (
+      {effectiveStateLoading && !effectiveOnboardingState ? (
         <div
           aria-busy="true"
           className="h-64 animate-pulse rounded-medium border border-appBorder bg-white p-6"
@@ -203,7 +208,7 @@ export default function OnboardingPage() {
           )}
           {activeStep === 3 && (
             <Step3CompanyStructure
-              onboardingState={onboardingState}
+              onboardingState={effectiveOnboardingState}
               isSavingStep={saveStepMutation.isPending}
               onBack={() => handleSelectStep(2)}
               onSaveAndContinue={(payload) => void handleSaveStep(3, payload)}
@@ -218,7 +223,7 @@ export default function OnboardingPage() {
           )}
           {activeStep === 5 && (
             <Step5TestLaunch
-              onboardingState={onboardingState}
+              onboardingState={effectiveOnboardingState}
               onBack={() => handleSelectStep(4)}
               onNavigateToStep={handleSelectStep}
             />

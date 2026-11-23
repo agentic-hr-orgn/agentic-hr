@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useId, useRef, useState } from "react";
+import React, { useId, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CalendarCheck2, Info, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import { SelfCheckInCard } from "@/components/attendance/self-check-in-card";
 import { useMyTodayAttendance } from "@/hooks/use-attendance";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { isOfflineError } from "@/lib/api-request";
 
 type AttendanceTabId = "daily-grid" | "excel-import" | "month-review";
@@ -27,10 +28,7 @@ export default function AttendanceWorkspacePage() {
   const tabReviewId = useId();
   const tabRefs = useRef<Partial<Record<AttendanceTabId, HTMLButtonElement | null>>>({});
 
-  const [isHydrated, setIsHydrated] = useState(false);
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
+  const isHydrated = useHydrated();
 
   const [activeTab, setActiveTab] = useState<AttendanceTabId>("daily-grid");
 

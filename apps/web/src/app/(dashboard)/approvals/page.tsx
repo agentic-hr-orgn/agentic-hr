@@ -26,6 +26,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StandbyBanner } from "@/components/ui/standby-banner";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useHydrated } from "@/hooks/use-hydrated";
 import {
   ApprovalItem,
   useApprovals,
@@ -36,6 +37,7 @@ import {
 import { formatPKT } from "@/lib/format";
 
 export default function ApprovalsPage() {
+  const hydrated = useHydrated();
   const { data: currentUser } = useCurrentUser();
   const { isStandby: isBackendStandby } = useBackendStatus();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -59,19 +61,27 @@ export default function ApprovalsPage() {
   const rejectMutation = useRejectMutation();
   const requestChangesMutation = useRequestChangesMutation();
 
+  const effectiveApprovals = hydrated ? approvals : [];
+  const effectiveIsLoading = hydrated ? isLoading : false;
+  const effectiveIsFetching = hydrated ? isFetching : false;
+  const effectiveError = hydrated ? error : null;
+
   // Find currently selected approval, default to first in list
-  const activeApproval = approvals.find((a) => a.id === selectedApprovalId) || approvals[0] || null;
+  const activeApproval =
+    effectiveApprovals.find((a) => a.id === selectedApprovalId) || effectiveApprovals[0] || null;
 
   // Counts for summary metrics
-  const pendingCount = approvals.filter((a) => a.status === "pending").length;
-  const changesCount = approvals.filter((a) => a.status === "changes_requested").length;
-  const approvedCount = approvals.filter((a) => a.status === "approved").length;
-  const rejectedCount = approvals.filter((a) => a.status === "rejected").length;
+  const pendingCount = effectiveApprovals.filter((a) => a.status === "pending").length;
+  const changesCount = effectiveApprovals.filter((a) => a.status === "changes_requested").length;
+  const approvedCount = effectiveApprovals.filter((a) => a.status === "approved").length;
+  const rejectedCount = effectiveApprovals.filter((a) => a.status === "rejected").length;
 
-  const isOfflineStandby = isBackendStandby || (!!error && error.message.startsWith("OFFLINE:"));
-  const isHttpAuthOrApiError = !!error && !isOfflineStandby;
+  const isOfflineStandby =
+    hydrated &&
+    (isBackendStandby || (!!effectiveError && effectiveError.message.startsWith("OFFLINE:")));
+  const isHttpAuthOrApiError = hydrated && !!effectiveError && !isOfflineStandby;
   const isOfflineOrError = isOfflineStandby || isHttpAuthOrApiError;
-  const cleanErrorMessage = error ? error.message.replace(/\.+$/, "") : "";
+  const cleanErrorMessage = effectiveError ? effectiveError.message.replace(/\.+$/, "") : "";
 
   const handleApprove = async (id: string) => {
     setActionError(null);
@@ -232,10 +242,10 @@ export default function ApprovalsPage() {
             variant="outline"
             size="sm"
             onClick={() => refetch()}
-            disabled={isFetching}
+            disabled={effectiveIsFetching}
             className="flex items-center gap-1.5"
           >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-4 w-4 ${effectiveIsFetching ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
@@ -247,7 +257,7 @@ export default function ApprovalsPage() {
           title="Approvals Inbox in Read-Only Standby"
           message="FastAPI backend is offline. Governance records are never fabricated in standby mode and decision actions are disabled."
           onRetry={() => refetch()}
-          isRetrying={isFetching}
+          isRetrying={effectiveIsFetching}
         />
       )}
 
@@ -270,10 +280,12 @@ export default function ApprovalsPage() {
             variant="outline"
             size="sm"
             onClick={() => refetch()}
-            disabled={isFetching}
+            disabled={effectiveIsFetching}
             className="text-xs h-7 px-3 border-rose-300 bg-white text-rose-800 hover:bg-rose-100 shrink-0"
           >
-            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isFetching ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-3.5 w-3.5 mr-1.5 ${effectiveIsFetching ? "animate-spin" : ""}`}
+            />
             Retry
           </Button>
         </div>
@@ -398,7 +410,7 @@ export default function ApprovalsPage() {
 
           {/* List Cards */}
           <div className="space-y-2.5 max-h-[700px] overflow-y-auto pr-1">
-            {isLoading ? (
+            {effectiveIsLoading ? (
               <div className="space-y-2.5 animate-pulse" aria-busy="true">
                 {Array.from({ length: 3 }).map((_, idx) => (
                   <div key={idx} className="h-24 rounded-lg border border-slate-200 bg-slate-100" />
@@ -417,10 +429,12 @@ export default function ApprovalsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => refetch()}
-                  disabled={isFetching}
+                  disabled={effectiveIsFetching}
                   className="mt-4"
                 >
-                  <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isFetching ? "animate-spin" : ""}`} />
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 mr-1.5 ${effectiveIsFetching ? "animate-spin" : ""}`}
+                  />
                   Retry Connection
                 </Button>
               </div>
@@ -435,14 +449,16 @@ export default function ApprovalsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => refetch()}
-                  disabled={isFetching}
+                  disabled={effectiveIsFetching}
                   className="mt-4"
                 >
-                  <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isFetching ? "animate-spin" : ""}`} />
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 mr-1.5 ${effectiveIsFetching ? "animate-spin" : ""}`}
+                  />
                   Retry
                 </Button>
               </div>
-            ) : approvals.length === 0 ? (
+            ) : effectiveApprovals.length === 0 ? (
               <div className="rounded-lg border border-dashed p-8 text-center">
                 <Clock className="mx-auto h-8 w-8 text-slate-300" />
                 <p className="mt-2 text-sm font-medium text-slate-600">
@@ -453,7 +469,7 @@ export default function ApprovalsPage() {
                 </p>
               </div>
             ) : (
-              approvals.map((item) => {
+              effectiveApprovals.map((item) => {
                 const isSelected = activeApproval?.id === item.id;
                 return (
                   <div

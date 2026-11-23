@@ -18,8 +18,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useApprovalDetails, useResubmitMutation } from "@/hooks/use-approvals";
+import { useHydrated } from "@/hooks/use-hydrated";
 
 export default function ApprovalCorrectionPage() {
+  const hydrated = useHydrated();
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
@@ -37,7 +39,7 @@ export default function ApprovalCorrectionPage() {
     }
   }, [approval]);
 
-  if (isLoading) {
+  if (!hydrated || isLoading) {
     return (
       <div className="flex h-64 items-center justify-center p-8 text-sm text-slate-500">
         Loading approval draft for correction...

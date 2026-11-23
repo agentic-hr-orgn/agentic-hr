@@ -2,8 +2,9 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { ApiHttpError, apiRequest } from "@/lib/api-request";
-import { getAuthHeader } from "@/lib/auth-header";
+import { getAuthHeader, isAuthQueryReady } from "@/lib/auth-header";
 import { API_BASE_URL } from "@/lib/platform";
 
 export interface AuthenticatedUserContext {
@@ -21,9 +22,10 @@ export interface AuthenticatedUserContext {
 }
 
 export function useCurrentUser() {
+  const hydrated = useHydrated();
   const { getToken, orgId, isLoaded, isSignedIn } = useAuth();
 
-  return useQuery<AuthenticatedUserContext | null, Error>({
+  const query = useQuery<AuthenticatedUserContext | null, Error>({
     queryKey: ["auth", "me", orgId, isSignedIn],
     queryFn: async () => {
       const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
@@ -44,7 +46,22 @@ export function useCurrentUser() {
       }
       throw new Error("OFFLINE: FastAPI backend is unreachable.");
     },
+    enabled: hydrated && isAuthQueryReady(isLoaded, isSignedIn),
     staleTime: 1000 * 60 * 5,
     retry: 1,
   });
+
+  if (!hydrated) {
+    return {
+      ...query,
+      data: undefined,
+      error: null,
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      isSuccess: false,
+    } as typeof query;
+  }
+
+  return query;
 }

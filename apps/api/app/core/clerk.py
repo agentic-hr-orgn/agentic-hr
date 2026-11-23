@@ -6,8 +6,10 @@ and extracts verified subject (user) and organization claims.
 """
 
 import logging
+import time
 from typing import Any
 
+import httpx
 import jwt
 from fastapi import HTTPException, status
 from jwt import PyJWKClient
@@ -23,6 +25,65 @@ DEFAULT_DEV_OWNER_EMAIL = "agentic.hr.test.ubaid.owner@gmail.com"
 # Global PyJWKClient cache
 _jwks_client: PyJWKClient | None = None
 _jwks_override_keys: dict[str, Any] = {}
+_clerk_email_cache: dict[str, tuple[str, float]] = {}
+_CLERK_EMAIL_CACHE_TTL_SECONDS = 300.0
+
+
+async def resolve_clerk_user_email(clerk_user_id: str) -> str | None:
+    """
+    Resolves a Clerk user's primary verified email via Clerk Backend API when standard
+    Clerk session JWTs omit the email claim. Cached in-memory for 5 minutes per clerk_user_id.
+    Returns None if CLERK_SECRET_KEY is not configured or the lookup fails.
+    """
+    if not clerk_user_id or not settings.CLERK_SECRET_KEY:
+        return None
+
+    now = time.monotonic()
+    cached = _clerk_email_cache.get(clerk_user_id)
+    if cached and cached[1] > now:
+        return cached[0]
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                f"https://api.clerk.com/v1/users/{clerk_user_id}",
+                headers={"Authorization": f"Bearer {settings.CLERK_SECRET_KEY}"},
+            )
+            if resp.status_code != 200:
+                logger.warning(
+                    f"Clerk Backend API user lookup failed for '{clerk_user_id}': HTTP {resp.status_code}"
+                )
+                return None
+            data = resp.json()
+    except Exception as exc:
+        logger.warning(f"Clerk Backend API user lookup error for '{clerk_user_id}': {exc}")
+        return None
+
+    primary_id = data.get("primary_email_address_id")
+    email_entries = data.get("email_addresses") or []
+    resolved: str | None = None
+    for entry in email_entries:
+        if not isinstance(entry, dict):
+            continue
+        addr = entry.get("email_address")
+        verification = entry.get("verification") or {}
+        is_verified = verification.get("status") == "verified"
+        if addr and entry.get("id") == primary_id and is_verified:
+            resolved = str(addr).strip().lower()
+            break
+    if not resolved:
+        for entry in email_entries:
+            if not isinstance(entry, dict):
+                continue
+            addr = entry.get("email_address")
+            verification = entry.get("verification") or {}
+            if addr and verification.get("status") == "verified":
+                resolved = str(addr).strip().lower()
+                break
+
+    if resolved:
+        _clerk_email_cache[clerk_user_id] = (resolved, now + _CLERK_EMAIL_CACHE_TTL_SECONDS)
+    return resolved
 
 
 def get_jwks_client() -> PyJWKClient:

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { getApiHostLabel, PLATFORM_STAGE } from "@/lib/platform";
 import { useUIStore } from "@/stores/ui-store";
 
@@ -100,9 +101,11 @@ export function resolveRouteTitle(pathname: string): { title: string; subtitle: 
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
+  const hydrated = useHydrated();
   const pathname = usePathname();
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const { isLoaded, isSignedIn } = useAuth();
+  const showClerkSession = hydrated && isLoaded && isSignedIn;
 
   // FastAPI backend health status
   const { status: backendStatus } = useBackendStatus();
@@ -117,8 +120,8 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   const userDisplayName =
     currentUser?.name || currentUser?.email?.split("@")[0] || "Authorized User";
-  const tenantDisplayName = currentUser?.tenant_name || "Acme Tech Solutions";
-  const userRole = currentUser?.role ? currentUser.role.toUpperCase() : "OWNER";
+  const tenantDisplayName = currentUser?.tenant_name || "Workspace";
+  const userRole = currentUser?.role ? currentUser.role.toUpperCase() : "—";
 
   return (
     <header className="sticky top-0 z-30 flex min-h-16 py-2 w-full items-center justify-between gap-2 border-b border-appBorder bg-surface px-4 md:px-8 shadow-sm">
@@ -153,7 +156,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       <div className="flex items-center gap-2.5 md:gap-4 shrink-0">
         {/* Clerk Organization Switcher */}
-        {isLoaded && isSignedIn ? (
+        {showClerkSession ? (
           <div className="hidden sm:block shrink-0">
             <OrganizationSwitcher
               hidePersonal={true}
@@ -215,7 +218,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
         {/* User Account / Profile */}
         <div className="flex items-center gap-2 pl-2 border-l border-appBorder shrink-0">
-          {isLoaded && isSignedIn ? (
+          {showClerkSession ? (
             <div className="flex items-center gap-2">
               <UserButton afterSignOutUrl="/sign-in" />
               <div className="hidden md:block text-left text-xs leading-tight">

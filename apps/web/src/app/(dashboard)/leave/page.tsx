@@ -14,6 +14,7 @@ import { canApproveLeave, canManageLeave } from "@/components/leave/leave-status
 import { TeamCalendarTab } from "@/components/leave/team-calendar-tab";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useHydrated } from "@/hooks/use-hydrated";
 import {
   useLeaveInbox,
   useLeaveTypes,
@@ -34,10 +35,9 @@ export default function LeaveWorkspacePage() {
   const tabRefs = useRef<Partial<Record<LeaveTabId, HTMLButtonElement | null>>>({});
 
   // SSR/hydration guard & deterministic year synced after mount
-  const [isHydrated, setIsHydrated] = useState(false);
+  const isHydrated = useHydrated();
   const [currentYear, setCurrentYear] = useState(2026);
   useEffect(() => {
-    setIsHydrated(true);
     setCurrentYear(new Date().getFullYear());
   }, []);
 
@@ -95,7 +95,12 @@ export default function LeaveWorkspacePage() {
 
   const visibleTabs: Array<{ id: LeaveTabId; domId: string; label: string; count?: number }> = [
     { id: "request", domId: tabReqId, label: "Request Leave" },
-    { id: "my-requests", domId: tabMyId, label: "My Requests", count: myRequests.length },
+    {
+      id: "my-requests",
+      domId: tabMyId,
+      label: "My Requests",
+      count: isHydrated ? myRequests.length : 0,
+    },
     ...(canApprove
       ? [
           {
@@ -158,7 +163,9 @@ export default function LeaveWorkspacePage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="primary">Stage 6 Deterministic Policy</Badge>
-          <Badge variant="outline">PKT ({workWeek?.timezone || "Asia/Karachi"})</Badge>
+          <Badge variant="outline">
+            PKT ({(isHydrated && workWeek?.timezone) || "Asia/Karachi"})
+          </Badge>
         </div>
       </div>
 
@@ -259,7 +266,7 @@ export default function LeaveWorkspacePage() {
         )}
 
         {resolvedTab === "calendar" && (
-          <TeamCalendarTab workWeek={workWeek} isOffline={isOffline} />
+          <TeamCalendarTab workWeek={isHydrated ? workWeek : undefined} isOffline={isOffline} />
         )}
 
         {resolvedTab === "overview" && canManage && (

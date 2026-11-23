@@ -30,6 +30,7 @@ import { ApiHttpError } from "@/lib/api-request";
 import { sendTestEmail, type TestEmailResult } from "@/lib/api-client";
 import { PLATFORM_STAGE } from "@/lib/platform";
 import { useBackendStatus } from "@/hooks/use-backend-status";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { useOnboardingReadiness } from "@/hooks/use-onboarding";
 
 type EmailOutcome =
@@ -43,9 +44,10 @@ export default function DashboardPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
 
   // Live backend telemetry powered by TanStack Query & generated OpenAPI client
+  const hydrated = useHydrated();
   const { health, isStandby, useFakeIntegrations, refetch, isFetching } = useBackendStatus();
   const { data: readiness } = useOnboardingReadiness();
-  const hasLiveCounts = !isStandby && Boolean(readiness?.counts);
+  const hasLiveCounts = hydrated && !isStandby && Boolean(readiness?.counts);
 
   const handleTestEmail = async () => {
     setIsSending(true);

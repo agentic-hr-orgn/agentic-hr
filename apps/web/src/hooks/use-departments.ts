@@ -4,7 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Department, DepartmentCreateRequest } from "@agentic-hr/contracts";
 import { ApiHttpError, ApiOfflineError, apiRequest } from "@/lib/api-request";
-import { getAuthHeader } from "@/lib/auth-header";
+import { getAuthHeader, isAuthQueryReady } from "@/lib/auth-header";
 import { API_BASE_URL } from "@/lib/platform";
 
 function buildJsonHeaders(authHeader: string | null): Record<string, string> {
@@ -34,7 +34,7 @@ export function useDepartments() {
       }
       throw new ApiOfflineError("OFFLINE: FastAPI backend is unreachable.");
     },
-    enabled: isLoaded,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn),
     staleTime: 1000 * 30,
     retry: false,
   });

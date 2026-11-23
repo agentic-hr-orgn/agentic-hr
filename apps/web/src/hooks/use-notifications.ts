@@ -10,7 +10,7 @@ import type {
   TriggerExpiryScanRequest,
 } from "@agentic-hr/contracts";
 import { ApiHttpError, ApiOfflineError, apiRequest } from "@/lib/api-request";
-import { getAuthHeader } from "@/lib/auth-header";
+import { getAuthHeader, isAuthQueryReady } from "@/lib/auth-header";
 import { API_BASE_URL } from "@/lib/platform";
 
 export interface NotificationListParams {
@@ -54,7 +54,7 @@ export function useNotifications(params: NotificationListParams = {}) {
       }
       throw new ApiOfflineError("OFFLINE: FastAPI backend is unreachable.");
     },
-    enabled: isLoaded,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn),
     staleTime: 1000 * 30,
     retry: false,
   });

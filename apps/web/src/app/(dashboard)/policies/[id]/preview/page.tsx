@@ -32,6 +32,7 @@ import {
 } from "@/components/policies/policy-status-badges";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useHydrated } from "@/hooks/use-hydrated";
 import {
   useFixPolicyChunk,
   useFixPolicyPage,
@@ -52,8 +53,9 @@ export default function PolicyPreviewPage() {
   const markReviewedId = useId();
   const pageTextInputId = useId();
 
+  const hydrated = useHydrated();
   const { data: currentUser } = useCurrentUser();
-  const canManage = canManagePolicies(currentUser);
+  const canManage = hydrated && canManagePolicies(currentUser);
 
   const {
     isStandby: isBackendStandby,
@@ -83,8 +85,9 @@ export default function PolicyPreviewPage() {
   const [chunkMarkReviewed, setChunkMarkReviewed] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const isOffline = isBackendStandby || isOfflineError(previewError);
-  const liveHttpError = previewError && !isOfflineError(previewError) ? previewError.message : null;
+  const isOffline = hydrated && (isBackendStandby || isOfflineError(previewError));
+  const liveHttpError =
+    hydrated && previewError && !isOfflineError(previewError) ? previewError.message : null;
   const displayedError = actionError || liveHttpError;
 
   const openPageEditor = (page: PolicyPagePreviewItem) => {
@@ -199,9 +202,10 @@ export default function PolicyPreviewPage() {
     }
   };
 
-  const doc = preview?.document;
-  const pages = preview?.pages ?? [];
-  const chunks = preview?.chunks ?? [];
+  const effectivePreview = hydrated ? preview : undefined;
+  const doc = effectivePreview?.document;
+  const pages = effectivePreview?.pages ?? [];
+  const chunks = effectivePreview?.chunks ?? [];
   const lifecycle = (doc?.lifecycle_status ?? "draft").toLowerCase();
   const isDraft = lifecycle === "draft";
   const canPublish = Boolean(
@@ -233,7 +237,7 @@ export default function PolicyPreviewPage() {
             refetchHealth();
             refetchPreview();
           }}
-          isRetrying={isHealthFetching || isPreviewFetching}
+          isRetrying={isHealthFetching || (hydrated && isPreviewFetching)}
         />
       )}
 
@@ -259,7 +263,7 @@ export default function PolicyPreviewPage() {
         </div>
       )}
 
-      {isLoading ? (
+      {!hydrated || isLoading ? (
         <Card className="border border-appBorder bg-white">
           <CardContent className="py-12 text-center text-xs text-textSecondary">
             Loading extracted policy pages and chunks...

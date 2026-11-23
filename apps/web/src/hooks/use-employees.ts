@@ -17,7 +17,7 @@ import {
   apiRequest,
   triggerBrowserBlobDownload,
 } from "@/lib/api-request";
-import { getAuthHeader } from "@/lib/auth-header";
+import { getAuthHeader, isAuthQueryReady } from "@/lib/auth-header";
 import { API_BASE_URL } from "@/lib/platform";
 
 export interface EmployeeListParams {
@@ -81,7 +81,7 @@ export function useEmployees(params: EmployeeListParams = {}) {
       }
       throw new ApiOfflineError("OFFLINE: FastAPI backend is unreachable.");
     },
-    enabled: isLoaded && enabled,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled,
     staleTime: 1000 * 30,
     retry: false,
   });
@@ -107,7 +107,7 @@ export function useEmployeeProfile(employeeId: string | null) {
       }
       throw new ApiOfflineError("OFFLINE: FastAPI backend is unreachable.");
     },
-    enabled: isLoaded && Boolean(employeeId),
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && Boolean(employeeId),
     staleTime: 1000 * 15,
     retry: false,
   });
@@ -205,7 +205,7 @@ export function useOrgChart(enabled = true) {
       }
       throw new ApiOfflineError("OFFLINE: FastAPI backend is unreachable.");
     },
-    enabled: isLoaded && enabled,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled,
     staleTime: 1000 * 30,
     retry: false,
   });
@@ -231,7 +231,7 @@ export function useEmployeeDocuments(employeeId: string | null) {
       }
       throw new ApiOfflineError("OFFLINE: FastAPI backend is unreachable.");
     },
-    enabled: isLoaded && Boolean(employeeId),
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && Boolean(employeeId),
     staleTime: 1000 * 15,
     retry: false,
   });

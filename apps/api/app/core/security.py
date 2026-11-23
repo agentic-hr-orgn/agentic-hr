@@ -10,14 +10,14 @@ from collections.abc import Callable
 from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.clerk import (
     DEFAULT_DEV_CLERK_ORG_ID,
-    DEFAULT_DEV_OWNER_EMAIL,
     require_active_organization_claim,
+    resolve_clerk_user_email,
     verify_clerk_token,
 )
 from app.core.config import settings
@@ -174,17 +174,24 @@ async def _resolve_authenticated_context(
             detail="Tenant organization is suspended. Access to protected operations is denied.",
         )
 
-    # Step 6: Resolve User in local PostgreSQL records (permitted by users RLS under app.clerk_user_id)
+    # Step 6: Resolve User in local PostgreSQL records (permitted by users RLS under app.tenant_id / app.clerk_user_id)
     stmt_user = select(User).where((User.clerk_user_id == sub) | (User.email == sub))
     user = (await db.execute(stmt_user)).scalar_one_or_none()
-    if not user and is_live_dev_fallback:
-        logger.info(
-            f"Local dev Clerk user '{sub}' not found in public.users; "
-            f"mapping to seeded demo owner '{DEFAULT_DEV_OWNER_EMAIL}'."
+    if not user and not claims.get("mock"):
+        # Resolve verified email from JWT claims first, then Clerk Backend API for unlinked seeded users
+        raw_email = (
+            claims.get("email") or claims.get("primary_email") or claims.get("email_address")
         )
-        await set_tenant_context(db, str(tenant_id), DEFAULT_DEV_OWNER_EMAIL)
-        stmt_demo_user = select(User).where(User.email == DEFAULT_DEV_OWNER_EMAIL)
-        user = (await db.execute(stmt_demo_user)).scalar_one_or_none()
+        resolved_email = (
+            str(raw_email).strip().lower()
+            if raw_email
+            else await resolve_clerk_user_email(str(sub))
+        )
+        if resolved_email:
+            stmt_email_user = select(User).where(func.lower(User.email) == resolved_email)
+            user = (await db.execute(stmt_email_user)).scalar_one_or_none()
+            if user is not None:
+                await set_tenant_context(db, str(tenant_id), user.clerk_user_id)
 
     if not user:
         logger.warning(f"User '{sub}' not found in local PostgreSQL users")
@@ -203,21 +210,6 @@ async def _resolve_authenticated_context(
         )
     )
     membership = (await db.execute(stmt_membership)).scalar_one_or_none()
-    if not membership and is_live_dev_fallback and user.email != DEFAULT_DEV_OWNER_EMAIL:
-        await set_tenant_context(db, str(tenant_id), DEFAULT_DEV_OWNER_EMAIL)
-        stmt_demo_user = select(User).where(User.email == DEFAULT_DEV_OWNER_EMAIL)
-        demo_user = (await db.execute(stmt_demo_user)).scalar_one_or_none()
-        if demo_user:
-            user = demo_user
-            stmt_demo_mem = (
-                select(Membership)
-                .options(joinedload(Membership.role))
-                .where(
-                    Membership.tenant_id == tenant.id,
-                    Membership.user_id == user.id,
-                )
-            )
-            membership = (await db.execute(stmt_demo_mem)).scalar_one_or_none()
     if not membership:
         logger.warning(f"User '{user.email}' lacks membership in tenant '{tenant.name}'")
         raise HTTPException(

@@ -5,6 +5,7 @@ import { AlertTriangle, Bell, CheckCheck, Info, RefreshCw, ShieldAlert, X } from
 import { Badge } from "@/components/ui/badge";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useHydrated } from "@/hooks/use-hydrated";
 import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
@@ -19,6 +20,7 @@ export function NotificationBell() {
   const dialogId = useId();
   const titleId = useId();
 
+  const hydrated = useHydrated();
   const { isStandby } = useBackendStatus();
   const { data: currentUser } = useCurrentUser();
   const { data, isLoading, error } = useNotifications({ limit: 20 });
@@ -30,12 +32,12 @@ export function NotificationBell() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
-  const isOffline = isStandby || isOfflineError(error);
-  const unreadCount = !isOffline ? (data?.unread_count ?? 0) : 0;
-  const items = data?.items ?? [];
+  const isOffline = hydrated && (isStandby || isOfflineError(error));
+  const unreadCount = hydrated && !isOffline ? (data?.unread_count ?? 0) : 0;
+  const items = hydrated ? (data?.items ?? []) : [];
 
-  const userRole = currentUser?.role?.toLowerCase() || "employee";
-  const canTriggerScan = userRole === "owner" || currentUser?.is_hr_head === true;
+  const userRole = hydrated ? currentUser?.role?.toLowerCase() || "employee" : "employee";
+  const canTriggerScan = hydrated && (userRole === "owner" || currentUser?.is_hr_head === true);
 
   useEffect(() => {
     if (!isOpen) return;

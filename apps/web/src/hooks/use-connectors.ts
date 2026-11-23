@@ -7,8 +7,9 @@ import type {
   ConnectDirectRequest,
   ReadOnlyToggleRequest,
 } from "@agentic-hr/contracts";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { ApiHttpError, apiRequest } from "@/lib/api-request";
-import { getAuthHeader } from "@/lib/auth-header";
+import { getAuthHeader, isAuthQueryReady } from "@/lib/auth-header";
 import { API_BASE_URL } from "@/lib/platform";
 import { DEFAULT_MOCK_CONNECTOR, useConnectorStore } from "@/stores/connector-store";
 
@@ -28,9 +29,10 @@ function buildHeaders(authHeader: string | null): Record<string, string> {
 }
 
 export function useConnectors() {
+  const hydrated = useHydrated();
   const { getToken, isLoaded, isSignedIn } = useAuth();
 
-  return useQuery<ConnectorResponse[], Error>({
+  const query = useQuery<ConnectorResponse[], Error>({
     queryKey: ["connectors"],
     queryFn: async () => {
       const authHeader = await getAuthHeader(getToken, isLoaded, isSignedIn);
@@ -58,9 +60,24 @@ export function useConnectors() {
       // Network / offline standby fallback ONLY
       return [useConnectorStore.getState().connector];
     },
+    enabled: hydrated && isAuthQueryReady(isLoaded, isSignedIn),
     staleTime: 1000 * 30,
     retry: false,
   });
+
+  if (!hydrated) {
+    return {
+      ...query,
+      data: undefined,
+      error: null,
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      isSuccess: false,
+    } as typeof query;
+  }
+
+  return query;
 }
 
 export function useToggleReadOnly() {

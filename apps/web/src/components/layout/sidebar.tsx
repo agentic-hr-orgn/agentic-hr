@@ -80,7 +80,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [activeIsOpen, onClose, setSidebarOpen]);
 
-  const userRole = currentUser?.role || "owner";
+  const userRole = currentUser?.role ? currentUser.role.toUpperCase() : "—";
+  const tenantLabel = currentUser?.tenant_name || "Workspace";
 
   return (
     <aside
@@ -168,9 +169,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="mb-1 flex items-center justify-between">
           <div className="flex items-center gap-1.5 overflow-hidden">
             <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
-            <span className="font-semibold text-slate-200 truncate">
-              {currentUser?.tenant_name || "Acme Tech Solutions"}
-            </span>
+            <span className="font-semibold text-slate-200 truncate">{tenantLabel}</span>
           </div>
           <span className="rounded bg-navy-light px-1.5 py-0.5 text-[10px] font-bold text-amber-300 uppercase tracking-wider">
             {userRole}
@@ -179,7 +178,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex items-center gap-1 mt-1 text-[11px] text-slate-400">
           <ShieldAlert className="h-3 w-3 text-emerald-400" />
           <span>
-            {currentUser?.is_hr_head ? "HR Head" : "Staff"}
+            {currentUser ? (currentUser.is_hr_head ? "HR Head" : "Staff") : "Syncing session..."}
             {currentUser?.is_payroll_admin ? " • Payroll Admin" : ""}
           </span>
         </div>

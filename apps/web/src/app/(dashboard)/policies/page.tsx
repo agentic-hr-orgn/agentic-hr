@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useId, useRef, useState } from "react";
+import React, { useId, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Archive,
@@ -34,6 +34,7 @@ import {
 import { PolicyUploadForm } from "@/components/policies/policy-upload-form";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useHydrated } from "@/hooks/use-hydrated";
 import {
   useDeletePolicy,
   usePolicies,
@@ -63,10 +64,7 @@ export default function PoliciesPage() {
 
   // Keep SSR and initial client hydration deterministic even if Header/Sidebar
   // populated React Query cache (e.g. /api/v1/auth/me) before this Suspense chunk hydrated.
-  const [isHydrated, setIsHydrated] = useState(false);
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
+  const isHydrated = useHydrated();
 
   const { data: currentUser } = useCurrentUser();
   const canManage = isHydrated && canManagePolicies(currentUser);

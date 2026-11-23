@@ -19,7 +19,7 @@ import type {
   DailyAttendanceUpsertResponse,
 } from "@agentic-hr/contracts";
 import { ApiHttpError, ApiOfflineError, apiRequest } from "@/lib/api-request";
-import { getAuthHeader } from "@/lib/auth-header";
+import { getAuthHeader, isAuthQueryReady } from "@/lib/auth-header";
 import { API_BASE_URL } from "@/lib/platform";
 
 function buildAuthHeaders(authHeader: string | null, json = false): Record<string, string> {
@@ -58,7 +58,7 @@ export function useMyTodayAttendance(enabled = true) {
       );
       return unwrapApiResult(res);
     },
-    enabled: isLoaded && enabled,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled,
     staleTime: 1000 * 30,
     retry: false,
   });
@@ -113,7 +113,7 @@ export function useDailyAttendanceGrid(targetDate: string, departmentId?: string
       );
       return unwrapApiResult(res);
     },
-    enabled: isLoaded && enabled && Boolean(targetDate),
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled && Boolean(targetDate),
     staleTime: 1000 * 20,
     retry: false,
   });
@@ -239,7 +239,7 @@ export function useMonthAttendanceReview(yearMonth: string, enabled = true) {
       );
       return unwrapApiResult(res);
     },
-    enabled: isLoaded && enabled && Boolean(yearMonth),
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled && Boolean(yearMonth),
     staleTime: 1000 * 15,
     retry: false,
   });

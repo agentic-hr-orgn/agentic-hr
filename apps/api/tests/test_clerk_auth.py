@@ -302,13 +302,15 @@ async def test_10_live_clerk_dev_session_fallback_and_production_fail_closed(
     monkeypatch: pytest.MonkeyPatch,
 ):
     """
-    Verifies live Clerk dev browser session handling (e.g. Clerk Personal Account with no org_id
-    or an unseeded Clerk dev org_id/user_id):
-    1. In local development (is_non_production and USE_FAKE_INTEGRATIONS), maps cleanly to
-       the seeded demo tenant ('Acme Tech Solutions' / owner context) without 403 loops.
-    2. In production (ENVIRONMENT='production'), strictly fails closed with HTTP 403.
+    Verifies live Clerk dev browser session handling without privilege escalation:
+    1. In local development (is_non_production and USE_FAKE_INTEGRATIONS), a live Clerk JWT
+       whose resolved email matches a seeded non-owner ('agentic.hr.test.ubaid.employee@gmail.com')
+       maps strictly to that employee's real role ('employee', is_hr_head=False) — never 'owner'.
+    2. An unknown/unlinked Clerk user (resolved email None or unseeded) fails closed with HTTP 403
+       in both local dev and production (ENVIRONMENT='production').
     """
     import app.core.clerk as clerk_mod
+    import app.core.security as security_mod
 
     class _FakeSigningKey:
         key = _public_key
@@ -317,44 +319,69 @@ async def test_10_live_clerk_dev_session_fallback_and_production_fail_closed(
         def get_signing_key_from_jwt(self, _token: str) -> _FakeSigningKey:
             return _FakeSigningKey()
 
-    monkeypatch.setattr(clerk_mod, "get_jwks_client", lambda: _FakeJWKSClient())
+    async def _fake_resolve_clerk_user_email(clerk_user_id: str) -> str | None:
+        if clerk_user_id == "user_2clerk_dev_employee_01":
+            return "agentic.hr.test.ubaid.employee@gmail.com"
+        return None
 
-    # Sign a token with a kid NOT in _jwks_override_keys so it goes through the live JWKS path
-    live_no_org_token = create_signed_token(
+    monkeypatch.setattr(clerk_mod, "get_jwks_client", lambda: _FakeJWKSClient())
+    monkeypatch.setattr(clerk_mod, "resolve_clerk_user_email", _fake_resolve_clerk_user_email)
+    monkeypatch.setattr(security_mod, "resolve_clerk_user_email", _fake_resolve_clerk_user_email)
+
+    # Sign tokens with a kid NOT in _jwks_override_keys so they go through the live JWKS path
+    live_emp_no_org_token = create_signed_token(
+        sub="user_2clerk_dev_employee_01",
+        org_id=None,
+        kid="live-clerk-jwks-kid-01",
+    )
+    live_emp_unseeded_org_token = create_signed_token(
+        sub="user_2clerk_dev_employee_01",
+        org_id="org_2clerk_dev_unseeded_99",
+        kid="live-clerk-jwks-kid-01",
+    )
+    live_unknown_user_token = create_signed_token(
         sub="user_2clerk_personal_alex_halam",
         org_id=None,
         kid="live-clerk-jwks-kid-01",
     )
-    live_unseeded_org_token = create_signed_token(
-        sub="user_2clerk_personal_alex_halam",
-        org_id="org_2clerk_dev_unseeded_99",
-        kid="live-clerk-jwks-kid-01",
-    )
 
-    # 1a. Local dev: Personal Account (no org_id) maps to Acme Tech Solutions owner
+    # 1a. Local dev: Personal Account (no org_id) for seeded employee resolves strictly to employee
     resp_no_org = await async_client.get(
         "/api/v1/auth/me",
-        headers={"Authorization": f"Bearer {live_no_org_token}"},
+        headers={"Authorization": f"Bearer {live_emp_no_org_token}"},
     )
     assert resp_no_org.status_code == 200, resp_no_org.text
     data_no_org = resp_no_org.json()
     assert data_no_org["tenant_name"] == "Acme Tech Solutions"
     assert data_no_org["clerk_org_id"] == "org_acme_tech_01"
-    assert data_no_org["role"] == "owner"
+    assert data_no_org["email"] == "agentic.hr.test.ubaid.employee@gmail.com"
+    assert data_no_org["role"] == "employee"
+    assert data_no_org["is_hr_head"] is False
 
-    # 1b. Local dev: Unseeded Clerk dev org_id also maps to Acme Tech Solutions owner
+    # 1b. Local dev: Unseeded Clerk dev org_id still resolves strictly to that employee's real role
     resp_unseeded_org = await async_client.get(
         "/api/v1/auth/me",
-        headers={"Authorization": f"Bearer {live_unseeded_org_token}"},
+        headers={"Authorization": f"Bearer {live_emp_unseeded_org_token}"},
     )
     assert resp_unseeded_org.status_code == 200, resp_unseeded_org.text
-    assert resp_unseeded_org.json()["tenant_name"] == "Acme Tech Solutions"
+    data_unseeded_org = resp_unseeded_org.json()
+    assert data_unseeded_org["tenant_name"] == "Acme Tech Solutions"
+    assert data_unseeded_org["email"] == "agentic.hr.test.ubaid.employee@gmail.com"
+    assert data_unseeded_org["role"] == "employee"
+    assert data_unseeded_org["is_hr_head"] is False
 
-    # 2. Production: strictly fails closed with HTTP 403 (never falls back to demo tenant)
+    # 2. Local dev: Unknown/unlinked Clerk user fails closed with HTTP 403 (never elevates to owner)
+    resp_unknown = await async_client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {live_unknown_user_token}"},
+    )
+    assert resp_unknown.status_code == 403
+
+    # 3. Production: strictly fails closed with HTTP 403 (never falls back to demo tenant)
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
     resp_prod = await async_client.get(
         "/api/v1/auth/me",
-        headers={"Authorization": f"Bearer {live_no_org_token}"},
+        headers={"Authorization": f"Bearer {live_unknown_user_token}"},
     )
     assert resp_prod.status_code == 403
     assert (

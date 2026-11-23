@@ -22,6 +22,7 @@ import { StandbyBanner } from "@/components/ui/standby-banner";
 import { LeaveAttendanceConfigPanel } from "@/components/leave/leave-attendance-config-panel";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useHydrated } from "@/hooks/use-hydrated";
 import {
   useConnectors,
   useToggleReadOnly,
@@ -30,7 +31,7 @@ import {
   useReconnectConnector,
   useGoogleAuthorize,
 } from "@/hooks/use-connectors";
-import { useConnectorStore } from "@/stores/connector-store";
+import { DEFAULT_MOCK_CONNECTOR, useConnectorStore } from "@/stores/connector-store";
 
 export default function SettingsPage() {
   const { data: currentUser } = useCurrentUser();
@@ -55,17 +56,13 @@ export default function SettingsPage() {
   const setErrorMessage = useConnectorStore((s) => s.setErrorMessage);
   const setConnector = useConnectorStore((s) => s.setConnector);
 
-  const [isHydrated, setIsHydrated] = useState(false);
+  const isHydrated = useHydrated();
   const [activeTab, setActiveTab] = useState<"connectors" | "leave-rules">("connectors");
   const tabConnId = useId();
   const tabLeaveId = useId();
   const tabRefs = useRef<Partial<Record<"connectors" | "leave-rules", HTMLButtonElement | null>>>(
     {}
   );
-
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
 
   useEffect(() => {
     if (connectors && connectors.length > 0) {
@@ -76,11 +73,21 @@ export default function SettingsPage() {
     }
   }, [connectors, setConnector]);
 
+  // Gate client-fetched React Query / Zustand state behind isHydrated so SSR HTML
+  // and the first client hydration pass are 100% identical.
+  const hydratedUser = isHydrated ? currentUser : undefined;
+  const hydratedStandby = isHydrated ? isStandby : false;
+  const hydratedFakeIntegrations = isHydrated ? useFakeIntegrations : true;
+  const hydratedConnectorsLoading = isHydrated ? isLoading : false;
+  const hydratedConnector = isHydrated ? connector : DEFAULT_MOCK_CONNECTOR;
+  const hydratedBannerMessage = isHydrated ? bannerMessage : null;
+  const hydratedErrorMessage = isHydrated ? errorMessage : null;
+
   // Role permissions: Only Owner, Manager, or HR Head can mutate connectors
-  const userRole = currentUser?.role?.toLowerCase() || "owner";
+  const userRole = hydratedUser?.role?.toLowerCase() || "owner";
   const canManage =
-    userRole === "owner" || userRole === "manager" || currentUser?.is_hr_head === true;
-  const canManageLeaveRules = userRole === "owner" || currentUser?.is_hr_head === true;
+    userRole === "owner" || userRole === "manager" || hydratedUser?.is_hr_head === true;
+  const canManageLeaveRules = userRole === "owner" || hydratedUser?.is_hr_head === true;
 
   const settingsTabs = [
     { id: "connectors" as const, domId: tabConnId, label: "Platform & Connectors" },
@@ -96,7 +103,7 @@ export default function SettingsPage() {
     }
   };
 
-  const activeConnector = connector;
+  const activeConnector = hydratedConnector;
   const isReadOnly = activeConnector.is_read_only;
   const status = activeConnector.status;
   const isNeedsReconnect = status === "needs_reconnect" || activeConnector.jobs_paused;
@@ -191,15 +198,15 @@ export default function SettingsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="primary">{currentUser?.tenant_name || "Acme Tech Solutions"}</Badge>
-          <Badge variant={useFakeIntegrations ? "warning" : "success"}>
-            {useFakeIntegrations ? "Fake Mode (ADR 006)" : "Live Mode (ADR 006)"}
+          <Badge variant="primary">{hydratedUser?.tenant_name || "Acme Tech Solutions"}</Badge>
+          <Badge variant={hydratedFakeIntegrations ? "warning" : "success"}>
+            {hydratedFakeIntegrations ? "Fake Mode (ADR 006)" : "Live Mode (ADR 006)"}
           </Badge>
         </div>
       </div>
 
       {/* Standby Banner when FastAPI is offline */}
-      {isStandby && (
+      {hydratedStandby && (
         <StandbyBanner
           message="Connector actions are running in local simulation mode — changes are not persisted to PostgreSQL until FastAPI is online."
           onRetry={handleRetryBackend}
@@ -208,14 +215,14 @@ export default function SettingsPage() {
       )}
 
       {/* Error Banner (Server HTTP 4xx/5xx failures — never fabricated as success) */}
-      {errorMessage && (
+      {hydratedErrorMessage && (
         <div
           role="alert"
           className="p-3 bg-rose-50 border border-rose-200 rounded-medium text-rose-800 text-xs flex items-center justify-between shadow-sm"
         >
           <div className="flex items-center gap-2">
             <XCircle className="h-4 w-4 text-rose-600 flex-shrink-0" />
-            <span className="font-medium">{errorMessage}</span>
+            <span className="font-medium">{hydratedErrorMessage}</span>
           </div>
           <button
             type="button"
@@ -229,7 +236,7 @@ export default function SettingsPage() {
       )}
 
       {/* Dynamic Status / Notification Banner */}
-      {bannerMessage && (
+      {hydratedBannerMessage && (
         <div
           role="status"
           aria-live="polite"
@@ -237,7 +244,7 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-            <span className="font-medium">{bannerMessage}</span>
+            <span className="font-medium">{hydratedBannerMessage}</span>
           </div>
           <button
             type="button"
@@ -314,7 +321,7 @@ export default function SettingsPage() {
           <LeaveAttendanceConfigPanel
             mode="settings"
             canManage={canManageLeaveRules}
-            isOffline={isStandby}
+            isOffline={hydratedStandby}
           />
         </div>
       ) : (
@@ -381,7 +388,7 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="text-xs text-textSecondary space-y-4">
-              {isLoading ? (
+              {hydratedConnectorsLoading ? (
                 <div className="space-y-3 animate-pulse" aria-busy="true">
                   <div className="h-10 rounded-small bg-slate-100" />
                   <div className="h-16 rounded-medium bg-slate-100" />
@@ -552,7 +559,7 @@ export default function SettingsPage() {
               <div className="border-b border-appBorder pb-2">
                 <span className="text-textMuted block">Active Tenant Scope</span>
                 <span className="font-semibold text-textPrimary font-mono">
-                  {currentUser?.tenant_id || "Standby (connect FastAPI to resolve tenant UUID)"}
+                  {hydratedUser?.tenant_id || "Standby (connect FastAPI to resolve tenant UUID)"}
                 </span>
               </div>
               <div className="border-b border-appBorder pb-2">

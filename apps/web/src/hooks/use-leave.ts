@@ -24,7 +24,7 @@ import type {
   WorkWeekUpdateRequest,
 } from "@agentic-hr/contracts";
 import { ApiHttpError, ApiOfflineError, apiRequest } from "@/lib/api-request";
-import { getAuthHeader } from "@/lib/auth-header";
+import { getAuthHeader, isAuthQueryReady } from "@/lib/auth-header";
 import { API_BASE_URL } from "@/lib/platform";
 
 function buildAuthHeaders(authHeader: string | null, json = false): Record<string, string> {
@@ -67,7 +67,7 @@ export function useWorkWeek(enabled = true) {
       );
       return unwrapApiResult(res);
     },
-    enabled: isLoaded && enabled,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled,
     staleTime: 1000 * 60,
     retry: false,
   });
@@ -116,7 +116,7 @@ export function useLeaveTypes(includeInactive = false, enabled = true) {
       );
       return unwrapApiResult(res);
     },
-    enabled: isLoaded && enabled,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled,
     staleTime: 1000 * 60,
     retry: false,
   });
@@ -223,7 +223,7 @@ export function useHolidays(year?: number, enabled = true) {
       );
       return unwrapApiResult(res);
     },
-    enabled: isLoaded && enabled,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled,
     staleTime: 1000 * 60,
     retry: false,
   });
@@ -328,7 +328,7 @@ export function useMyLeaveBalances(year?: number, enabled = true) {
       );
       return unwrapApiResult(res);
     },
-    enabled: isLoaded && enabled,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled,
     staleTime: 1000 * 30,
     retry: false,
   });
@@ -357,7 +357,7 @@ export function useAllLeaveBalances(
       );
       return unwrapApiResult(res);
     },
-    enabled: isLoaded && enabled,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled,
     staleTime: 1000 * 30,
     retry: false,
   });
@@ -377,7 +377,7 @@ export function useMyLeaveRequests(enabled = true) {
       );
       return unwrapApiResult(res);
     },
-    enabled: isLoaded && enabled,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled,
     staleTime: 1000 * 20,
     retry: false,
   });
@@ -397,7 +397,7 @@ export function useLeaveInbox(enabled = true) {
       );
       return unwrapApiResult(res);
     },
-    enabled: isLoaded && enabled,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled,
     staleTime: 1000 * 20,
     retry: false,
   });
@@ -428,7 +428,7 @@ export function useTeamLeaveCalendar(
       );
       return unwrapApiResult(res);
     },
-    enabled: isLoaded && enabled,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled,
     staleTime: 1000 * 30,
     retry: false,
   });
@@ -449,7 +449,7 @@ export function useLeaveOverview(statusFilter?: string, enabled = true) {
       );
       return unwrapApiResult(res);
     },
-    enabled: isLoaded && enabled,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled,
     staleTime: 1000 * 30,
     retry: false,
   });

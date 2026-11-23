@@ -26,6 +26,7 @@ import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useDepartments } from "@/hooks/use-departments";
 import { useEmployees } from "@/hooks/use-employees";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { isOfflineError } from "@/lib/api-request";
 import { formatPKTTime } from "@/lib/format";
 
@@ -38,6 +39,7 @@ export default function EmployeesPage() {
   const typeSelectId = useId();
   const tableCaptionId = useId();
 
+  const hydrated = useHydrated();
   const { data: currentUser } = useCurrentUser();
   const {
     isStandby: isBackendStandby,
@@ -66,23 +68,29 @@ export default function EmployeesPage() {
     pageSize: PAGE_SIZE,
   });
 
+  const effectiveDepartments = hydrated ? departments : [];
+  const effectiveIsLoading = hydrated ? isLoading : false;
+  const effectiveIsFetching = hydrated ? isFetching : false;
+
   const lastReloadedAt =
-    manualReloadedAt || (dataUpdatedAt ? formatPKTTime(new Date(dataUpdatedAt)) : null);
+    manualReloadedAt || (hydrated && dataUpdatedAt ? formatPKTTime(new Date(dataUpdatedAt)) : null);
 
-  const employees = data?.items ?? [];
-  const total = data?.total ?? 0;
-  const totalPages = Math.max(1, data?.total_pages ?? 1);
+  const employees = hydrated ? (data?.items ?? []) : [];
+  const total = hydrated ? (data?.total ?? 0) : 0;
+  const totalPages = Math.max(1, hydrated ? (data?.total_pages ?? 1) : 1);
 
-  const isOffline = isBackendStandby || isOfflineError(error);
-  const liveHttpError = error && !isOfflineError(error) ? error.message : null;
+  const isOffline = hydrated && (isBackendStandby || isOfflineError(error));
+  const liveHttpError = hydrated && error && !isOfflineError(error) ? error.message : null;
 
-  const userRole = currentUser?.role?.toLowerCase() || "employee";
+  const userRole = hydrated ? currentUser?.role?.toLowerCase() || "employee" : "employee";
   const canManage =
-    userRole === "owner" || userRole === "manager" || currentUser?.is_hr_head === true;
+    hydrated &&
+    (userRole === "owner" || userRole === "manager" || currentUser?.is_hr_head === true);
   const canEditSensitive =
-    userRole === "owner" ||
-    currentUser?.is_hr_head === true ||
-    currentUser?.is_payroll_admin === true;
+    hydrated &&
+    (userRole === "owner" ||
+      currentUser?.is_hr_head === true ||
+      currentUser?.is_payroll_admin === true);
 
   const handleReload = async () => {
     refetchHealth();
@@ -129,7 +137,7 @@ export default function EmployeesPage() {
           title="Directory in Standby Mode"
           message="FastAPI backend is currently unreachable. Live PostgreSQL directory records, encrypted profiles, and document vaults will load when connected."
           onRetry={() => void handleReload()}
-          isRetrying={isFetching}
+          isRetrying={effectiveIsFetching}
         />
       )}
 
@@ -148,7 +156,7 @@ export default function EmployeesPage() {
             variant="outline"
             size="sm"
             onClick={() => void handleReload()}
-            disabled={isFetching}
+            disabled={effectiveIsFetching}
             className="border-rose-300 bg-white text-rose-800 hover:bg-rose-100 h-7 px-3 text-xs"
           >
             Retry
@@ -207,14 +215,14 @@ export default function EmployeesPage() {
             variant="outline"
             size="sm"
             onClick={() => void handleReload()}
-            disabled={isFetching}
+            disabled={effectiveIsFetching}
             className="bg-white text-xs inline-flex items-center gap-1.5"
           >
             <RefreshCw
-              className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`}
+              className={`h-3.5 w-3.5 ${effectiveIsFetching ? "animate-spin" : ""}`}
               aria-hidden="true"
             />
-            {isFetching ? "Reloading..." : "Reload Postgres Data"}
+            {effectiveIsFetching ? "Reloading..." : "Reload Postgres Data"}
           </Button>
 
           <Link
@@ -246,7 +254,7 @@ export default function EmployeesPage() {
               <div className="flex items-center gap-2">
                 <Database className="h-4 w-4 text-[#2A5BDB]" aria-hidden="true" />
                 <CardTitle className="text-base text-[#102C54]">
-                  Employees ({isLoading ? "..." : total})
+                  Employees ({effectiveIsLoading ? "..." : total})
                 </CardTitle>
               </div>
               <span className="text-[11px] text-textSecondary">
@@ -303,7 +311,7 @@ export default function EmployeesPage() {
                   className="w-full rounded-small border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-textPrimary focus:border-[#2A5BDB] focus:outline-none focus:ring-2 focus:ring-[#2A5BDB]/20"
                 >
                   <option value="">All Departments</option>
-                  {departments.map((dept) => (
+                  {effectiveDepartments.map((dept) => (
                     <option key={dept.id} value={dept.id}>
                       {dept.name}
                     </option>
@@ -363,7 +371,7 @@ export default function EmployeesPage() {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {isLoading ? (
+            {effectiveIsLoading ? (
               <div className="space-y-2.5 animate-pulse" aria-busy="true">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="h-10 rounded-small bg-slate-100" />
@@ -504,7 +512,7 @@ export default function EmployeesPage() {
       {isAddModalOpen && (
         <AddEmployeeModal
           onClose={() => setIsAddModalOpen(false)}
-          departments={departments}
+          departments={effectiveDepartments}
           managerOptions={employees}
           canEditSensitive={canEditSensitive}
         />
@@ -514,7 +522,7 @@ export default function EmployeesPage() {
       <EmployeeProfileDrawer
         employeeId={selectedEmployeeId}
         onClose={() => setSelectedEmployeeId(null)}
-        departments={departments}
+        departments={effectiveDepartments}
         managerOptions={employees}
       />
     </div>

@@ -3,7 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiHttpError, apiRequest } from "@/lib/api-request";
-import { getAuthHeader } from "@/lib/auth-header";
+import { getAuthHeader, isAuthQueryReady } from "@/lib/auth-header";
 import { API_BASE_URL } from "@/lib/platform";
 
 export interface ApprovalRevisionItem {
@@ -80,6 +80,7 @@ export function useApprovals(statusFilter?: string) {
       }
       throw new Error("OFFLINE: FastAPI backend is currently unreachable.");
     },
+    enabled: isAuthQueryReady(isLoaded, isSignedIn),
     staleTime: 1000 * 30,
     retry: 1,
   });
@@ -106,7 +107,7 @@ export function useApprovalDetails(id: string | null) {
       }
       throw new Error("OFFLINE: FastAPI backend is currently unreachable.");
     },
-    enabled: !!id,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && !!id,
     retry: 1,
   });
 }
@@ -132,7 +133,7 @@ export function useApprovalRevisions(id: string | null) {
       }
       throw new Error("OFFLINE: FastAPI backend is currently unreachable.");
     },
-    enabled: !!id,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && !!id,
     retry: 1,
   });
 }

@@ -16,7 +16,7 @@ import type {
   PolicySearchResponse,
 } from "@agentic-hr/contracts";
 import { ApiHttpError, ApiOfflineError, apiRequest } from "@/lib/api-request";
-import { getAuthHeader } from "@/lib/auth-header";
+import { getAuthHeader, isAuthQueryReady } from "@/lib/auth-header";
 import { API_BASE_URL } from "@/lib/platform";
 
 function buildAuthHeaders(authHeader: string | null, json = false): Record<string, string> {
@@ -90,7 +90,7 @@ export function usePolicies(filters?: PolicyListFilters) {
       }
       throw new ApiOfflineError("OFFLINE: FastAPI backend is unreachable.");
     },
-    enabled: isLoaded,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn),
     staleTime: 1000 * 30,
     retry: false,
     refetchInterval: (query) => {
@@ -233,7 +233,7 @@ export function usePolicyReviewQueue(enabled = true) {
       }
       throw new ApiOfflineError("OFFLINE: FastAPI backend is unreachable.");
     },
-    enabled: isLoaded && enabled,
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && enabled,
     staleTime: 1000 * 30,
     retry: false,
   });
@@ -258,7 +258,7 @@ export function usePolicyPreview(policyId: string | null | undefined) {
       }
       throw new ApiOfflineError("OFFLINE: FastAPI backend is unreachable.");
     },
-    enabled: isLoaded && Boolean(policyId),
+    enabled: isAuthQueryReady(isLoaded, isSignedIn) && Boolean(policyId),
     retry: false,
     refetchInterval: (query) => {
       if (query.state.error) return false;
