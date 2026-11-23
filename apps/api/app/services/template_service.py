@@ -233,6 +233,81 @@ Escalated: {employee_name}'s {leave_type_name} request ({date_range}, {working_d
 Your {leave_type_name} request for {date_range} ({working_days} working day(s)) is now {decision_label}.
 Note: {decision_note}""",
     },
+    "ticket_created": {
+        "subject": "[{ticket_number}] New Ticket Assigned: {subject}",
+        "html": """<div style="font-family: Arial, sans-serif; color: #102C54; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #2A5BDB;">New Helpdesk Ticket Assigned</h2>
+    <p>Hello {assignee_name},</p>
+    <p>Ticket <strong>{ticket_number}</strong> has been created by <strong>{requester_name}</strong> and assigned to you.</p>
+    <div style="background-color: #F8F9FD; border-left: 4px solid #2A5BDB; padding: 12px; margin: 16px 0;">
+        <p style="margin: 4px 0;"><strong>Subject:</strong> {subject}</p>
+        <p style="margin: 4px 0;"><strong>Category:</strong> {category}</p>
+        <p style="margin: 4px 0;"><strong>Priority:</strong> {priority}</p>
+        <p style="margin: 4px 0;"><strong>SLA Due (PKT):</strong> {sla_due_pkt}</p>
+    </div>
+</div>""",
+        "text": """Hello {assignee_name},
+
+Ticket {ticket_number} has been created by {requester_name} and assigned to you.
+Subject: {subject}
+Category: {category}
+Priority: {priority}
+SLA Due (PKT): {sla_due_pkt}""",
+    },
+    "ticket_public_reply": {
+        "subject": "[{ticket_number}] New Reply on Your Ticket: {subject}",
+        "html": """<div style="font-family: Arial, sans-serif; color: #102C54; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #2A5BDB;">Ticket Update: {ticket_number}</h2>
+    <p>Hello {requester_name},</p>
+    <p><strong>{author_name}</strong> posted a reply on your ticket <strong>{subject}</strong>:</p>
+    <div style="background-color: #F8F9FD; border-left: 4px solid #2A5BDB; padding: 12px; margin: 16px 0;">
+        <p style="margin: 4px 0;">{reply_preview}</p>
+    </div>
+</div>""",
+        "text": """Hello {requester_name},
+
+{author_name} posted a reply on your ticket {ticket_number} ({subject}):
+{reply_preview}""",
+    },
+    "ticket_status_updated": {
+        "subject": "[{ticket_number}] Ticket {status_label}: {subject}",
+        "html": """<div style="font-family: Arial, sans-serif; color: #102C54; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #2A5BDB;">Ticket {status_label}</h2>
+    <p>Hello {requester_name},</p>
+    <p>Your Helpdesk ticket <strong>{ticket_number}</strong> (<strong>{subject}</strong>) is now <strong>{status_label}</strong>.</p>
+    <div style="background-color: #F8F9FD; border-left: 4px solid #2A5BDB; padding: 12px; margin: 16px 0;">
+        <p style="margin: 4px 0;"><strong>Reopen Window Until (PKT):</strong> {reopen_until_pkt}</p>
+    </div>
+    <p>You may rate your support experience or reopen the ticket within the reopen window.</p>
+</div>""",
+        "text": """Hello {requester_name},
+
+Your Helpdesk ticket {ticket_number} ({subject}) is now {status_label}.
+Reopen Window Until (PKT): {reopen_until_pkt}""",
+    },
+    "ticket_sla_reminder": {
+        "subject": "SLA Reminder: [{ticket_number}] {subject}",
+        "html": """<div style="font-family: Arial, sans-serif; color: #102C54; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #2A5BDB;">Ticket SLA Pre-Breach Reminder</h2>
+    <p>Hello {assignee_name},</p>
+    <p>Ticket <strong>{ticket_number}</strong> (<strong>{subject}</strong>) is approaching its SLA deadline.</p>
+    <p><strong>SLA Due (PKT):</strong> {sla_due_pkt}</p>
+</div>""",
+        "text": """Hello {assignee_name},
+
+Reminder: Ticket {ticket_number} ({subject}) is approaching its SLA deadline ({sla_due_pkt} PKT).""",
+    },
+    "ticket_sla_escalated": {
+        "subject": "SLA BREACH ESCALATION: [{ticket_number}] {subject}",
+        "html": """<div style="font-family: Arial, sans-serif; color: #102C54; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2 style="color: #B91C1C;">Ticket SLA Breached — Escalated</h2>
+    <p>Hello {escalation_target_name},</p>
+    <p>Ticket <strong>{ticket_number}</strong> (<strong>{subject}</strong>, {category}, priority: {priority}) breached its SLA deadline at <strong>{sla_due_pkt}</strong> PKT and has been escalated to you.</p>
+</div>""",
+        "text": """Hello {escalation_target_name},
+
+Escalation: Ticket {ticket_number} ({subject}, {category}, priority: {priority}) breached its SLA deadline at {sla_due_pkt} PKT.""",
+    },
 }
 
 

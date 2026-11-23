@@ -20,6 +20,7 @@ class PolicyDocumentResponse(BaseModel):
     tenant_id: UUID
     title: str
     doc_type: str = "company_policy"
+    doc_scope: str = "hr_policy"
     visibility: str = "all"
     version: int = 1
     file_name: str

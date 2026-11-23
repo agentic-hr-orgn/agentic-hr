@@ -5,6 +5,7 @@ from app.models.approval_revision import ApprovalRevision
 from app.models.attendance import Attendance, AttendanceMonthLock
 from app.models.audit_log import AuditLog
 from app.models.calendar import CalendarEventRecord
+from app.models.chat import AnswerFeedback, ChatMessage, ChatSession
 from app.models.connector import ConnectorCredential, SentMessage
 from app.models.department import Department
 from app.models.drive import DriveFileRecord
@@ -38,15 +39,19 @@ from app.models.synthetic import (
 )
 from app.models.tenant import TenantBase
 from app.models.tenant_entity import Tenant
+from app.models.ticket import Ticket, TicketAssignmentRule, TicketMessage
 from app.models.user import User
 
 __all__ = [
+    "AnswerFeedback",
     "Approval",
     "ApprovalRevision",
     "Attendance",
     "AttendanceMonthLock",
     "AuditLog",
     "CalendarEventRecord",
+    "ChatMessage",
+    "ChatSession",
     "CompanyProfile",
     "ConnectorCredential",
     "Department",
@@ -75,6 +80,9 @@ __all__ = [
     "SyntheticPolicyDocument",
     "Tenant",
     "TenantBase",
+    "Ticket",
+    "TicketAssignmentRule",
+    "TicketMessage",
     "User",
     "WorkWeek",
 ]

@@ -32,6 +32,7 @@ class PolicySearchRequest(BaseModel):
     query: str = Field(..., min_length=2, max_length=500)
     top_k: int = Field(default=5, ge=1, le=20)
     doc_type: Literal["company_policy", "labour_law", "helpdesk_knowledge"] | None = None
+    doc_scope: Literal["hr_policy", "helpdesk_kb"] | None = None
     language: Literal["en", "ur", "mixed"] | None = None
     document_id: UUID | None = None
     effective_as_of: date | None = None

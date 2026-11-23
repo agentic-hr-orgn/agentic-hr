@@ -32,6 +32,7 @@ from app.services.leave_accrual_service import (
 )
 from app.services.leave_service import LeaveService
 from app.services.policy_ingestion_service import PolicyIngestionService
+from app.services.ticket_service import TicketService
 
 
 def _require_fake_integrations(activity_name: str) -> None:
@@ -793,3 +794,48 @@ async def approve_leave_request_activity(
             decided_by=req.actor_id,
             decision_note=req.note,
         )
+
+
+# ==============================================================================
+# Stage 7 Prompt 2: Helpdesk Ticket SLA Reminder & Breach Escalation Activities
+# ==============================================================================
+
+
+@dataclass
+class TicketSLAActivityRequest:
+    """Tenant-scoped identifier payload for `TicketSLAWorkflow` activities."""
+
+    tenant_id: str
+    ticket_id: str
+
+
+def _parse_ticket_uuids(tenant_id: str, ticket_id: str) -> tuple[UUID, UUID]:
+    try:
+        return UUID(str(tenant_id).strip()), UUID(str(ticket_id).strip())
+    except ValueError as exc:
+        raise ApplicationError(
+            f"Invalid UUID in ticket SLA activity: ({tenant_id}, {ticket_id})",
+            non_retryable=True,
+        ) from exc
+
+
+@activity.defn
+async def send_ticket_sla_reminder_activity(
+    req: TicketSLAActivityRequest,
+) -> dict[str, Any]:
+    """Sends pre-breach reminder notification + email to assigned ticket handler."""
+    t_id, tk_id = _parse_ticket_uuids(req.tenant_id, req.ticket_id)
+    async with AsyncSessionLocal() as session:
+        await set_tenant_context(session, str(t_id))
+        return await TicketService.send_sla_reminder(session, tenant_id=t_id, ticket_id=tk_id)
+
+
+@activity.defn
+async def escalate_ticket_sla_breach_activity(
+    req: TicketSLAActivityRequest,
+) -> dict[str, Any]:
+    """Escalates an unresolved breached ticket to HR Head / Owner and records outbox + email."""
+    t_id, tk_id = _parse_ticket_uuids(req.tenant_id, req.ticket_id)
+    async with AsyncSessionLocal() as session:
+        await set_tenant_context(session, str(t_id))
+        return await TicketService.escalate_sla_breach(session, tenant_id=t_id, ticket_id=tk_id)

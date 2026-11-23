@@ -46,6 +46,10 @@ class PolicyDocument(Base):
             name="ck_policy_documents_doc_type",
         ),
         CheckConstraint(
+            "doc_scope IN ('hr_policy', 'helpdesk_kb')",
+            name="ck_policy_documents_doc_scope",
+        ),
+        CheckConstraint(
             "visibility IN ('all', 'managers', 'hr_only')",
             name="ck_policy_documents_visibility",
         ),
@@ -75,6 +79,7 @@ class PolicyDocument(Base):
         Index("ix_policy_documents_tenant_lifecycle", "tenant_id", "lifecycle_status"),
         Index("ix_policy_documents_tenant_ingestion", "tenant_id", "ingestion_status"),
         Index("ix_policy_documents_tenant_doc_type", "tenant_id", "doc_type", "visibility"),
+        Index("ix_policy_documents_tenant_doc_scope", "tenant_id", "doc_scope", "visibility"),
         Index("ix_policy_documents_approval_id", "approval_id"),
     )
 
@@ -95,6 +100,12 @@ class PolicyDocument(Base):
         String(32),
         default="company_policy",
         server_default="company_policy",
+        nullable=False,
+    )
+    doc_scope: Mapped[str] = mapped_column(
+        String(24),
+        default="hr_policy",
+        server_default="hr_policy",
         nullable=False,
     )
     visibility: Mapped[str] = mapped_column(

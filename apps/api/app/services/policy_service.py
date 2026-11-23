@@ -349,6 +349,9 @@ class PolicyService:
                 tenant_id=t_id,
                 title=resolved_title,
                 doc_type=clean_doc_type,
+                doc_scope=(
+                    "helpdesk_kb" if clean_doc_type == "helpdesk_knowledge" else "hr_policy"
+                ),
                 visibility=clean_visibility,
                 version=next_version,
                 file_name=clean_file_name[:255],

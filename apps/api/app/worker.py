@@ -38,11 +38,13 @@ from app.workflows import (
     LeaveRequestWorkflow,
     PolicyIngestionWorkflow,
     SampleOnboardingWorkflow,
+    TicketSLAWorkflow,
     WaitForApprovalWorkflow,
     approve_leave_request_activity,
     chunk_policy_document_activity,
     embed_policy_chunks_activity,
     escalate_leave_request_activity,
+    escalate_ticket_sla_breach_activity,
     execute_dummy_approved_action_activity,
     execute_dummy_rejected_action_activity,
     expire_leave_request_activity,
@@ -63,6 +65,7 @@ from app.workflows import (
     schedule_interview_activity,
     send_leave_reminder_activity,
     send_tenant_email_activity,
+    send_ticket_sla_reminder_activity,
     send_welcome_notification,
     verify_approval_record_activity,
 )
@@ -249,6 +252,7 @@ async def run_worker() -> None:
             LeaveAccrualWorkflow,
             LeaveCarryForwardWorkflow,
             LeaveRequestWorkflow,
+            TicketSLAWorkflow,
         ],
         activities=[
             greeting_activity,
@@ -277,6 +281,8 @@ async def run_worker() -> None:
             expire_leave_request_activity,
             release_leave_reservation_activity,
             approve_leave_request_activity,
+            send_ticket_sla_reminder_activity,
+            escalate_ticket_sla_breach_activity,
         ],
     )
 
