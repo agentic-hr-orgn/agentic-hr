@@ -266,6 +266,8 @@ def _base_prefilter_conditions(
     ]
     if request.doc_type is not None:
         conditions.append(PolicyDocument.doc_type == request.doc_type)
+    if request.doc_scope is not None:
+        conditions.append(PolicyDocument.doc_scope == request.doc_scope)
     if request.language is not None:
         conditions.append(PolicyChunk.language == request.language)
     if request.document_id is not None:

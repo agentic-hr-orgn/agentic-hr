@@ -870,7 +870,7 @@ async def test_03_views_three_month_seed_and_platform_stage_gate(
     # 1. Verify root stage progression string
     root_resp = await async_client.get("/")
     assert root_resp.status_code == 200
-    assert root_resp.json()["stage"] == "Stage 6 complete — Stage 7 next"
+    assert root_resp.json()["stage"] == "Stage 7 complete — Stage 8 next"
 
     await _setup_globex_exit_state(
         tenant_id=globex.tenant_id,

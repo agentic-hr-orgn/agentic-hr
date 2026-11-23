@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useId, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   ArrowLeft,
+  BookmarkCheck,
   CheckCircle2,
   Edit3,
   FileText,
@@ -44,9 +45,16 @@ import { isOfflineError } from "@/lib/api-request";
 import { formatPKT } from "@/lib/format";
 import { useToastStore } from "@/stores/toast-store";
 
-export default function PolicyPreviewPage() {
+function PolicyPreviewContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const policyId = typeof params?.id === "string" ? params.id : "";
+
+  const citedPageRaw = searchParams.get("page");
+  const parsedCitedPage = citedPageRaw ? Number.parseInt(citedPageRaw, 10) : Number.NaN;
+  const citedPageNumber =
+    Number.isFinite(parsedCitedPage) && parsedCitedPage > 0 ? parsedCitedPage : null;
+  const citedChunkId = (searchParams.get("chunk") ?? "").trim() || null;
 
   const sectionInputId = useId();
   const chunkTextInputId = useId();
@@ -84,6 +92,8 @@ export default function PolicyPreviewPage() {
   const [chunkDraftSection, setChunkDraftSection] = useState("");
   const [chunkMarkReviewed, setChunkMarkReviewed] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [citationBannerDismissed, setCitationBannerDismissed] = useState(false);
+  const scrolledCitationKeyRef = useRef<string | null>(null);
 
   const isOffline = hydrated && (isBackendStandby || isOfflineError(previewError));
   const liveHttpError =
@@ -212,6 +222,36 @@ export default function PolicyPreviewPage() {
     doc && canManage && doc.ingestion_status === "indexed" && isDraft && !isOffline
   );
 
+  const citedChunk = citedChunkId ? chunks.find((c) => c.id === citedChunkId) : undefined;
+  const hasCitationDeepLink = citedPageNumber !== null || Boolean(citedChunkId);
+
+  const scrollToCitedSource = useCallback(() => {
+    if (typeof document === "undefined") return false;
+    const target =
+      (citedChunkId ? document.getElementById(`policy-chunk-${citedChunkId}`) : null) ??
+      (citedPageNumber !== null ? document.getElementById(`policy-page-${citedPageNumber}`) : null);
+    if (!target || typeof target.scrollIntoView !== "function") return false;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    return true;
+  }, [citedChunkId, citedPageNumber]);
+
+  useEffect(() => {
+    if (!hydrated || !effectivePreview || !hasCitationDeepLink) return;
+    const key = `${policyId}:${citedPageNumber ?? ""}:${citedChunkId ?? ""}`;
+    if (scrolledCitationKeyRef.current === key) return;
+    if (scrollToCitedSource()) {
+      scrolledCitationKeyRef.current = key;
+    }
+  }, [
+    hydrated,
+    effectivePreview,
+    hasCitationDeepLink,
+    policyId,
+    citedPageNumber,
+    citedChunkId,
+    scrollToCitedSource,
+  ]);
+
   return (
     <div className="space-y-6 bg-[#F8F9FD] pb-10">
       {/* Top Breadcrumb */}
@@ -260,6 +300,44 @@ export default function PolicyPreviewPage() {
               &times;
             </button>
           )}
+        </div>
+      )}
+
+      {hydrated && doc && hasCitationDeepLink && !citationBannerDismissed && (
+        <div
+          role="region"
+          aria-label="Cited policy source highlight"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-medium border border-[#2A5BDB]/40 bg-blue-50/70 px-4 py-3 text-xs text-[#102C54]"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <BookmarkCheck className="h-4 w-4 text-[#2A5BDB] shrink-0" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="font-semibold text-[#102C54]">Cited Policy Source Highlighted</p>
+              <p className="text-[11px] text-textSecondary truncate">
+                {citedPageNumber !== null ? `Page ${citedPageNumber}` : "Matched passage"}
+                {citedChunk?.section_path ? ` • ${citedChunk.section_path}` : ""}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => scrollToCitedSource()}
+              className="text-xs border-[#2A5BDB] text-[#2A5BDB] hover:bg-blue-100/60"
+            >
+              Jump to Cited Source
+            </Button>
+            <button
+              type="button"
+              onClick={() => setCitationBannerDismissed(true)}
+              aria-label="Dismiss cited source banner"
+              className="px-1.5 text-sm font-bold text-[#102C54] hover:text-[#2A5BDB]"
+            >
+              &times;
+            </button>
+          </div>
         </div>
       )}
 
@@ -414,14 +492,18 @@ export default function PolicyPreviewPage() {
                 pages.map((page) => {
                   const isLowQuality = page.needs_ocr || page.quality_score < 0.7;
                   const isEditingThisPage = editingPageNumber === page.page_number;
+                  const isCitedPage = citedPageNumber === page.page_number;
 
                   return (
                     <div
                       key={page.id}
-                      className={`rounded-medium border p-4 space-y-3 ${
-                        isLowQuality
-                          ? "border-amber-300 bg-amber-50/40"
-                          : "border-appBorder bg-[#F8F9FD]"
+                      id={`policy-page-${page.page_number}`}
+                      className={`rounded-medium border p-4 space-y-3 transition-colors ${
+                        isCitedPage
+                          ? "border-[#2A5BDB] ring-2 ring-[#2A5BDB]/30 bg-blue-50/40"
+                          : isLowQuality
+                            ? "border-amber-300 bg-amber-50/40"
+                            : "border-appBorder bg-[#F8F9FD]"
                       }`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -429,6 +511,14 @@ export default function PolicyPreviewPage() {
                           <span className="text-xs font-bold text-[#102C54]">
                             Page {page.page_number}
                           </span>
+                          {isCitedPage && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] border-[#2A5BDB] text-[#2A5BDB] bg-white"
+                            >
+                              Cited Page
+                            </Badge>
+                          )}
                           <Badge variant="outline" className="text-[10px] font-mono">
                             {formatLanguageLabel(page.language)}
                           </Badge>
@@ -552,10 +642,16 @@ export default function PolicyPreviewPage() {
               ) : (
                 chunks.map((chunk) => {
                   const isEditingThisChunk = editingChunkId === chunk.id;
+                  const isCitedChunk = citedChunkId === chunk.id;
                   return (
                     <div
                       key={chunk.id}
-                      className="rounded-medium border border-appBorder bg-[#F8F9FD] p-4 space-y-2.5"
+                      id={`policy-chunk-${chunk.id}`}
+                      className={`rounded-medium border p-4 space-y-2.5 transition-colors ${
+                        isCitedChunk
+                          ? "border-[#2A5BDB] ring-2 ring-[#2A5BDB]/30 bg-blue-50/40"
+                          : "border-appBorder bg-[#F8F9FD]"
+                      }`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="space-y-1 min-w-0">
@@ -563,6 +659,14 @@ export default function PolicyPreviewPage() {
                             <span className="text-xs font-bold text-[#102C54]">
                               Chunk #{chunk.chunk_index + 1}
                             </span>
+                            {isCitedChunk && (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] border-[#2A5BDB] text-[#2A5BDB] bg-white"
+                              >
+                                Cited Source
+                              </Badge>
+                            )}
                             <Badge variant="outline" className="text-[10px] font-mono">
                               {chunk.page_range}
                             </Badge>
@@ -693,5 +797,23 @@ export default function PolicyPreviewPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function PolicyPreviewPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6 bg-[#F8F9FD] pb-10">
+          <Card className="border border-appBorder bg-white">
+            <CardContent className="py-12 text-center text-xs text-textSecondary">
+              Loading extracted policy pages and chunks...
+            </CardContent>
+          </Card>
+        </div>
+      }
+    >
+      <PolicyPreviewContent />
+    </Suspense>
   );
 }

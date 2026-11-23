@@ -2077,6 +2077,383 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Ticket
+         * @description Creates a Helpdesk ticket, routes to category assignee, and starts SLA workflow.
+         */
+        post: operations["create_ticket_api_v1_tickets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List My Tickets
+         * @description Lists only the caller's own submitted Helpdesk tickets.
+         */
+        get: operations["list_my_tickets_api_v1_tickets_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Staff Ticket Queue
+         * @description Lists the Helpdesk staff queue across the tenant with optional filters.
+         */
+        get: operations["list_staff_ticket_queue_api_v1_tickets_queue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Ticket Assignment Rules
+         * @description Lists per-category ticket routing and SLA configuration (Owner / HR Head only).
+         */
+        get: operations["list_ticket_assignment_rules_api_v1_tickets_rules_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/rules/{category}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Ticket Assignment Rule
+         * @description Configures routing assignee, SLA hours, reminder lead time, and reopen window.
+         */
+        put: operations["update_ticket_assignment_rule_api_v1_tickets_rules__category__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Ticket Summary
+         * @description Queries secure view `public.pub_ticket_summary` (strictly excludes internal notes).
+         */
+        get: operations["list_ticket_summary_api_v1_tickets_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ticket Detail
+         * @description Returns ticket detail + thread (internal notes stripped for plain employees).
+         */
+        get: operations["get_ticket_detail_api_v1_tickets__ticket_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Ticket
+         * @description Updates ticket status, priority, category, or assignee (Helpdesk staff only).
+         */
+        patch: operations["update_ticket_api_v1_tickets__ticket_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Ticket Message
+         * @description Posts a public reply (or HR/staff internal note; forced false for employees).
+         */
+        post: operations["add_ticket_message_api_v1_tickets__ticket_id__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rate Ticket
+         * @description Submits requester CSAT rating (`1..5`) on a resolved or closed ticket.
+         */
+        post: operations["rate_ticket_api_v1_tickets__ticket_id__rate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopen Ticket
+         * @description Reopens a resolved/closed ticket while within its `reopen_until` window (`409` after).
+         */
+        post: operations["reopen_ticket_api_v1_tickets__ticket_id__reopen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/helpdesk/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask Helpdesk Agent
+         * @description Read-only Helpdesk KB assistant:
+         *     - Answers with verified `helpdesk_kb` citations when grounded.
+         *     - Blocks privileged action requests and opens a routed ticket instead.
+         *     - Escalates unanswerable questions into a categorized, prioritized ticket.
+         */
+        post: operations["ask_helpdesk_agent_api_v1_helpdesk_ask_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Chat Sessions
+         * @description Lists chat sessions belonging to `current_user` in the active tenant.
+         */
+        get: operations["list_chat_sessions_api_v1_chat_sessions_get"];
+        put?: never;
+        /**
+         * Create Chat Session
+         * @description Creates a new Policy Brain chat session scoped to `current_user.user_id`.
+         */
+        post: operations["create_chat_session_api_v1_chat_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/sessions/{session_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Session Messages
+         * @description Lists chronological messages (with persisted `ticket_number`) for an owned session.
+         */
+        get: operations["list_session_messages_api_v1_chat_sessions__session_id__messages_get"];
+        put?: never;
+        /**
+         * Send Chat Message
+         * @description Runs the compiled Policy Brain LangGraph pipeline synchronously and persists both turns.
+         */
+        post: operations["send_chat_message_api_v1_chat_sessions__session_id__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Chat Session
+         * @description Deletes a chat session owned by `current_user`.
+         */
+        delete: operations["delete_chat_session_api_v1_chat_sessions__session_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/sessions/{session_id}/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stream Chat Message
+         * @description Validates auth + session ownership synchronously, then streams Policy Brain LangGraph
+         *     progress (`status`) and verified answer tokens (`token` + `done`) using a dedicated
+         *     `AsyncSessionLocal()` inside the async generator.
+         */
+        post: operations["stream_chat_message_api_v1_chat_sessions__session_id__stream_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/messages/{message_id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Answer Feedback
+         * @description Upserts thumbs up/down feedback on a message owned by `current_user`.
+         */
+        post: operations["submit_answer_feedback_api_v1_chat_messages__message_id__feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/messages/{message_id}/ask-hr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask Hr From Message
+         * @description Escalates a Policy Brain message to HR via `TicketService` (`source='chat_ask_hr'`).
+         */
+        post: operations["ask_hr_from_message_api_v1_chat_messages__message_id__ask_hr_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chat/policy-gaps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Policy Gaps
+         * @description Aggregates abstained & down-voted Policy Brain messages grouped by `topic_tag` (HR/Owner only).
+         */
+        get: operations["list_policy_gaps_api_v1_chat_policy_gaps_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/synthetic/company": {
         parameters: {
             query?: never;
@@ -2201,6 +2578,61 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AnswerFeedbackRequest
+         * @description Request payload for per-message thumbs up/down feedback.
+         */
+        AnswerFeedbackRequest: {
+            /**
+             * Rating
+             * @enum {string}
+             */
+            rating: "up" | "down";
+            /** Comment */
+            comment?: string | null;
+            /** Topic Tag */
+            topic_tag?: string | null;
+        };
+        /**
+         * AnswerFeedbackResponse
+         * @description Serialized feedback record.
+         */
+        AnswerFeedbackResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /**
+             * Rating
+             * @enum {string}
+             */
+            rating: "up" | "down";
+            /** Comment */
+            comment?: string | null;
+            /** Topic Tag */
+            topic_tag?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /**
          * ApprovalCreateRequest
          * @description DTO for submitting a new human approval request.
@@ -2349,6 +2781,55 @@ export interface components {
             decided_at?: string | null;
             /** Created At */
             created_at: string;
+        };
+        /**
+         * AskHRRequest
+         * @description Request payload for escalating an assistant reply via the Ask HR action.
+         */
+        AskHRRequest: {
+            /** Category */
+            category?: ("hr_policy" | "leave_attendance" | "payroll" | "it_access" | "facilities" | "general") | null;
+            /**
+             * Priority
+             * @default medium
+             * @enum {string}
+             */
+            priority: "low" | "medium" | "high" | "urgent";
+            /** Note */
+            note?: string | null;
+            /**
+             * Start Workflow
+             * @default true
+             */
+            start_workflow: boolean;
+        };
+        /**
+         * AskHRResponse
+         * @description Response returned when an Ask HR ticket is created or reused for a message.
+         */
+        AskHRResponse: {
+            /**
+             * Ticket Id
+             * Format: uuid
+             */
+            ticket_id: string;
+            /** Ticket Number */
+            ticket_number: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "hr_policy" | "leave_attendance" | "payroll" | "it_access" | "facilities" | "general";
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "low" | "medium" | "high" | "urgent";
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
         };
         /**
          * AttendanceAutoFillRequest
@@ -2948,6 +3429,186 @@ export interface components {
             description?: string | null;
             /** Location */
             location?: string | null;
+        };
+        /**
+         * ChatMessageResponse
+         * @description Serialized persisted turn in `chat_messages`.
+         */
+        ChatMessageResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Session Id
+             * Format: uuid
+             */
+            session_id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant" | "system";
+            /** Content */
+            content: string;
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "en" | "ur" | "roman_ur" | "mixed";
+            /** Intent */
+            intent?: string | null;
+            /** Citations */
+            citations?: components["schemas"]["CitationItem"][];
+            /** Tool Calls */
+            tool_calls?: components["schemas"]["ToolCallTrace"][];
+            /**
+             * Abstained
+             * @default false
+             */
+            abstained: boolean;
+            /** Ticket Id */
+            ticket_id?: string | null;
+            /** Ticket Number */
+            ticket_number?: string | null;
+            /** Handoff Payload */
+            handoff_payload?: {
+                [key: string]: unknown;
+            } | null;
+            /** Topic Tag */
+            topic_tag?: string | null;
+            /** Latency Ms */
+            latency_ms?: number | null;
+            /** Model Tier */
+            model_tier?: string | null;
+            /** Token Usage */
+            token_usage?: {
+                [key: string]: unknown;
+            } | null;
+            /** Cost Usd */
+            cost_usd?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * ChatSessionCreateRequest
+         * @description Request payload to open a new bilingual Policy Brain chat session.
+         */
+        ChatSessionCreateRequest: {
+            /** Title */
+            title?: string | null;
+            /**
+             * Language
+             * @default en
+             * @enum {string}
+             */
+            language: "en" | "ur" | "roman_ur" | "mixed";
+        };
+        /**
+         * ChatSessionResponse
+         * @description Serialized Policy Brain chat session.
+         */
+        ChatSessionResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Title */
+            title: string;
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "en" | "ur" | "roman_ur" | "mixed";
+            /** Last Message At */
+            last_message_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * ChatTurnRequest
+         * @description Request payload for submitting a turn to an existing chat session.
+         */
+        ChatTurnRequest: {
+            /** Message */
+            message: string;
+            /** Language */
+            language?: ("en" | "ur" | "roman_ur" | "mixed") | null;
+            /**
+             * Start Workflow
+             * @default true
+             */
+            start_workflow: boolean;
+        };
+        /**
+         * ChatTurnResponse
+         * @description Synchronous Policy Brain response pairing persisted user + assistant turns.
+         */
+        ChatTurnResponse: {
+            /**
+             * Session Id
+             * Format: uuid
+             */
+            session_id: string;
+            user_message: components["schemas"]["ChatMessageResponse"];
+            assistant_message: components["schemas"]["ChatMessageResponse"];
+        };
+        /**
+         * CitationItem
+         * @description Strict citation reference verified against the active turn's retrieved chunks.
+         */
+        CitationItem: {
+            /**
+             * Chunk Id
+             * Format: uuid
+             */
+            chunk_id: string;
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Title */
+            title: string;
+            /** Version */
+            version: number;
+            /**
+             * Section
+             * @default
+             */
+            section: string;
+            /** Page */
+            page?: number | string | null;
+            /** Snippet */
+            snippet: string;
         };
         /** CompanyProfile */
         CompanyProfile: {
@@ -3751,6 +4412,52 @@ export interface components {
             models: components["schemas"]["ModelRoutingInfo"];
             /** Request Id */
             request_id?: string | null;
+        };
+        /**
+         * HelpdeskAskRequest
+         * @description Request payload for `POST /api/v1/helpdesk/ask`.
+         */
+        HelpdeskAskRequest: {
+            /** Question */
+            question: string;
+            /**
+             * Start Workflow
+             * @default true
+             */
+            start_workflow: boolean;
+            /** Reminder Delay Seconds */
+            reminder_delay_seconds?: number | null;
+            /** Breach Delay Seconds */
+            breach_delay_seconds?: number | null;
+        };
+        /**
+         * HelpdeskAskResponse
+         * @description Response envelope emitted by the Helpdesk read-only KB & ticket routing agent.
+         */
+        HelpdeskAskResponse: {
+            /** Answered */
+            answered: boolean;
+            /** Answer */
+            answer: string;
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "en" | "ur" | "roman_ur" | "mixed";
+            /** Citations */
+            citations?: components["schemas"]["CitationItem"][];
+            ticket?: components["schemas"]["TicketResponse"] | null;
+            /** Ticket Number */
+            ticket_number?: string | null;
+            /** Category */
+            category?: ("hr_policy" | "leave_attendance" | "payroll" | "it_access" | "facilities" | "general") | null;
+            /** Priority */
+            priority?: ("low" | "medium" | "high" | "urgent") | null;
+            /**
+             * Privileged Request Blocked
+             * @default false
+             */
+            privileged_request_blocked: boolean;
         };
         /**
          * HolidayCreateRequest
@@ -4790,6 +5497,11 @@ export interface components {
              */
             doc_type: string;
             /**
+             * Doc Scope
+             * @default hr_policy
+             */
+            doc_scope: string;
+            /**
              * Visibility
              * @default all
              */
@@ -4867,6 +5579,39 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * PolicyGapGroup
+         * @description Aggregated Policy Brain knowledge gap grouped by `topic_tag`.
+         */
+        PolicyGapGroup: {
+            /** Topic Tag */
+            topic_tag: string;
+            /** Total Count */
+            total_count: number;
+            /** Abstained Count */
+            abstained_count: number;
+            /** Downvoted Count */
+            downvoted_count: number;
+            /** Sample Questions */
+            sample_questions?: string[];
+            /** Ticket Numbers */
+            ticket_numbers?: string[];
+            /**
+             * Latest At
+             * Format: date-time
+             */
+            latest_at: string;
+        };
+        /**
+         * PolicyGapsResponse
+         * @description HR Head / Owner dashboard payload summarizing policy knowledge gaps.
+         */
+        PolicyGapsResponse: {
+            /** Total Gaps */
+            total_gaps: number;
+            /** Groups */
+            groups?: components["schemas"]["PolicyGapGroup"][];
         };
         /**
          * PolicyPageFixRequest
@@ -4989,6 +5734,8 @@ export interface components {
             top_k: number;
             /** Doc Type */
             doc_type?: ("company_policy" | "labour_law" | "helpdesk_knowledge") | null;
+            /** Doc Scope */
+            doc_scope?: ("hr_policy" | "helpdesk_kb") | null;
             /** Language */
             language?: ("en" | "ur" | "mixed") | null;
             /** Document Id */
@@ -5302,6 +6049,464 @@ export interface components {
              */
             updated_at: string;
         };
+        /**
+         * TicketAssignmentRuleResponse
+         * @description Serialized per-category ticket assignment and SLA rule.
+         */
+        TicketAssignmentRuleResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "hr_policy" | "leave_attendance" | "payroll" | "it_access" | "facilities" | "general";
+            /** Default Assignee User Id */
+            default_assignee_user_id?: string | null;
+            /**
+             * Default Assignee Role
+             * @enum {string}
+             */
+            default_assignee_role: "hr_head" | "owner" | "manager";
+            /** Sla Hours */
+            sla_hours: number;
+            /** Reminder Before Hours */
+            reminder_before_hours: number;
+            /** Reopen Window Days */
+            reopen_window_days: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * TicketCloseRequest
+         * @description Requester close & CSAT rating payload (`satisfaction_rating` 1..5).
+         */
+        TicketCloseRequest: {
+            /** Satisfaction Rating */
+            satisfaction_rating?: number | null;
+            /** Satisfaction Comment */
+            satisfaction_comment?: string | null;
+        };
+        /**
+         * TicketCreateRequest
+         * @description Request payload to create an HR/IT/Facilities Helpdesk ticket.
+         */
+        TicketCreateRequest: {
+            /**
+             * Category
+             * @default general
+             * @enum {string}
+             */
+            category: "hr_policy" | "leave_attendance" | "payroll" | "it_access" | "facilities" | "general";
+            /**
+             * Priority
+             * @default medium
+             * @enum {string}
+             */
+            priority: "low" | "medium" | "high" | "urgent";
+            /** Subject */
+            subject: string;
+            /** Description */
+            description: string;
+            /**
+             * Source
+             * @default manual
+             * @enum {string}
+             */
+            source: "chat_abstain" | "chat_ask_hr" | "helpdesk_agent" | "manual";
+            /** Source Session Id */
+            source_session_id?: string | null;
+            /** Assigned To User Id */
+            assigned_to_user_id?: string | null;
+            /**
+             * Start Workflow
+             * @default true
+             */
+            start_workflow: boolean;
+            /** Reminder Delay Seconds */
+            reminder_delay_seconds?: number | null;
+            /** Breach Delay Seconds */
+            breach_delay_seconds?: number | null;
+        };
+        /**
+         * TicketDetailResponse
+         * @description Ticket detail envelope including authorized thread messages.
+         */
+        TicketDetailResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Ticket Number */
+            ticket_number: string;
+            /**
+             * Requester User Id
+             * Format: uuid
+             */
+            requester_user_id: string;
+            /** Assigned To User Id */
+            assigned_to_user_id?: string | null;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "hr_policy" | "leave_attendance" | "payroll" | "it_access" | "facilities" | "general";
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "low" | "medium" | "high" | "urgent";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "in_progress" | "waiting_on_employee" | "resolved" | "closed";
+            /** Subject */
+            subject: string;
+            /** Description */
+            description: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "chat_abstain" | "chat_ask_hr" | "helpdesk_agent" | "manual";
+            /** Source Session Id */
+            source_session_id?: string | null;
+            /**
+             * Sla Due At
+             * Format: date-time
+             */
+            sla_due_at: string;
+            /**
+             * Sla Reminder At
+             * Format: date-time
+             */
+            sla_reminder_at: string;
+            /** Sla Reminder Sent At */
+            sla_reminder_sent_at?: string | null;
+            /** Sla Escalated At */
+            sla_escalated_at?: string | null;
+            /** Resolved At */
+            resolved_at?: string | null;
+            /** Closed At */
+            closed_at?: string | null;
+            /** Reopen Until */
+            reopen_until?: string | null;
+            /** Satisfaction Rating */
+            satisfaction_rating?: number | null;
+            /** Satisfaction Comment */
+            satisfaction_comment?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Messages */
+            messages?: components["schemas"]["TicketMessageResponse"][];
+        };
+        /**
+         * TicketMessageCreateRequest
+         * @description Payload to append a public reply or HR-only internal note to a ticket.
+         */
+        TicketMessageCreateRequest: {
+            /** Body */
+            body: string;
+            /**
+             * Is Internal
+             * @default false
+             */
+            is_internal: boolean;
+        };
+        /**
+         * TicketMessageResponse
+         * @description Serialized ticket message row (internal notes stripped for unauthorized callers).
+         */
+        TicketMessageResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Ticket Id
+             * Format: uuid
+             */
+            ticket_id: string;
+            /**
+             * Author User Id
+             * Format: uuid
+             */
+            author_user_id: string;
+            /** Body */
+            body: string;
+            /** Is Internal */
+            is_internal: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * TicketReopenRequest
+         * @description Requester reopen payload within the rule's `reopen_window_days`.
+         */
+        TicketReopenRequest: {
+            /** Reason */
+            reason: string;
+            /**
+             * Start Workflow
+             * @default true
+             */
+            start_workflow: boolean;
+            /** Reminder Delay Seconds */
+            reminder_delay_seconds?: number | null;
+            /** Breach Delay Seconds */
+            breach_delay_seconds?: number | null;
+        };
+        /**
+         * TicketResponse
+         * @description Full tenant-scoped ticket metadata response.
+         */
+        TicketResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Ticket Number */
+            ticket_number: string;
+            /**
+             * Requester User Id
+             * Format: uuid
+             */
+            requester_user_id: string;
+            /** Assigned To User Id */
+            assigned_to_user_id?: string | null;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "hr_policy" | "leave_attendance" | "payroll" | "it_access" | "facilities" | "general";
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "low" | "medium" | "high" | "urgent";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "in_progress" | "waiting_on_employee" | "resolved" | "closed";
+            /** Subject */
+            subject: string;
+            /** Description */
+            description: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "chat_abstain" | "chat_ask_hr" | "helpdesk_agent" | "manual";
+            /** Source Session Id */
+            source_session_id?: string | null;
+            /**
+             * Sla Due At
+             * Format: date-time
+             */
+            sla_due_at: string;
+            /**
+             * Sla Reminder At
+             * Format: date-time
+             */
+            sla_reminder_at: string;
+            /** Sla Reminder Sent At */
+            sla_reminder_sent_at?: string | null;
+            /** Sla Escalated At */
+            sla_escalated_at?: string | null;
+            /** Resolved At */
+            resolved_at?: string | null;
+            /** Closed At */
+            closed_at?: string | null;
+            /** Reopen Until */
+            reopen_until?: string | null;
+            /** Satisfaction Rating */
+            satisfaction_rating?: number | null;
+            /** Satisfaction Comment */
+            satisfaction_comment?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * TicketRuleUpdateRequest
+         * @description Request payload for `PUT /api/v1/tickets/rules/{category}`.
+         */
+        TicketRuleUpdateRequest: {
+            /** Default Assignee User Id */
+            default_assignee_user_id?: string | null;
+            /**
+             * Default Assignee Role
+             * @default hr_head
+             * @enum {string}
+             */
+            default_assignee_role: "hr_head" | "owner" | "manager";
+            /**
+             * Sla Hours
+             * @default 24
+             */
+            sla_hours: number;
+            /**
+             * Reminder Before Hours
+             * @default 4
+             */
+            reminder_before_hours: number;
+            /**
+             * Reopen Window Days
+             * @default 7
+             */
+            reopen_window_days: number;
+        };
+        /**
+         * TicketSummaryResponse
+         * @description Serialized projection matching secure view `public.pub_ticket_summary`.
+         */
+        TicketSummaryResponse: {
+            /**
+             * Ticket Id
+             * Format: uuid
+             */
+            ticket_id: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Ticket Number */
+            ticket_number: string;
+            /**
+             * Requester User Id
+             * Format: uuid
+             */
+            requester_user_id: string;
+            /** Requester Name */
+            requester_name?: string | null;
+            /** Assigned To User Id */
+            assigned_to_user_id?: string | null;
+            /** Assignee Name */
+            assignee_name?: string | null;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "hr_policy" | "leave_attendance" | "payroll" | "it_access" | "facilities" | "general";
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "low" | "medium" | "high" | "urgent";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "in_progress" | "waiting_on_employee" | "resolved" | "closed";
+            /** Subject */
+            subject: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "chat_abstain" | "chat_ask_hr" | "helpdesk_agent" | "manual";
+            /**
+             * Sla Due At
+             * Format: date-time
+             */
+            sla_due_at: string;
+            /**
+             * Sla Reminder At
+             * Format: date-time
+             */
+            sla_reminder_at: string;
+            /** Sla Escalated At */
+            sla_escalated_at?: string | null;
+            /** Is Sla Breached */
+            is_sla_breached: boolean;
+            /** Public Message Count */
+            public_message_count: number;
+            /** Resolved At */
+            resolved_at?: string | null;
+            /** Closed At */
+            closed_at?: string | null;
+            /** Satisfaction Rating */
+            satisfaction_rating?: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * TicketUpdateRequest
+         * @description Handler update payload for ticket assignment, priority, or status.
+         */
+        TicketUpdateRequest: {
+            /** Status */
+            status?: ("open" | "in_progress" | "waiting_on_employee" | "resolved" | "closed") | null;
+            /** Priority */
+            priority?: ("low" | "medium" | "high" | "urgent") | null;
+            /** Category */
+            category?: ("hr_policy" | "leave_attendance" | "payroll" | "it_access" | "facilities" | "general") | null;
+            /** Assigned To User Id */
+            assigned_to_user_id?: string | null;
+        };
         /** TimeSlotSchema */
         TimeSlotSchema: {
             /**
@@ -5314,6 +6519,22 @@ export interface components {
              * Format: date-time
              */
             end_time: string;
+        };
+        /**
+         * ToolCallTrace
+         * @description Auditable trace of a server-session-bound Policy Brain tool invocation.
+         */
+        ToolCallTrace: {
+            /** Tool Name */
+            tool_name: string;
+            /**
+             * Status
+             * @default ok
+             * @enum {string}
+             */
+            status: "ok" | "error" | "denied";
+            /** Summary */
+            summary?: string | null;
         };
         /**
          * TriggerExpiryScanRequest
@@ -8876,6 +10097,668 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_ticket_api_v1_tickets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_my_tickets_api_v1_tickets_me_get: {
+        parameters: {
+            query?: {
+                status?: ("open" | "in_progress" | "waiting_on_employee" | "resolved" | "closed") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_staff_ticket_queue_api_v1_tickets_queue_get: {
+        parameters: {
+            query?: {
+                status?: ("open" | "in_progress" | "waiting_on_employee" | "resolved" | "closed") | null;
+                category?: ("hr_policy" | "leave_attendance" | "payroll" | "it_access" | "facilities" | "general") | null;
+                priority?: ("low" | "medium" | "high" | "urgent") | null;
+                assigned_to_user_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_ticket_assignment_rules_api_v1_tickets_rules_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketAssignmentRuleResponse"][];
+                };
+            };
+        };
+    };
+    update_ticket_assignment_rule_api_v1_tickets_rules__category__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                category: "hr_policy" | "leave_attendance" | "payroll" | "it_access" | "facilities" | "general";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketRuleUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketAssignmentRuleResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_ticket_summary_api_v1_tickets_summary_get: {
+        parameters: {
+            query?: {
+                status?: ("open" | "in_progress" | "waiting_on_employee" | "resolved" | "closed") | null;
+                category?: ("hr_policy" | "leave_attendance" | "payroll" | "it_access" | "facilities" | "general") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketSummaryResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ticket_detail_api_v1_tickets__ticket_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_ticket_api_v1_tickets__ticket_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_ticket_message_api_v1_tickets__ticket_id__messages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketMessageCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketMessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rate_ticket_api_v1_tickets__ticket_id__rate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketCloseRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reopen_ticket_api_v1_tickets__ticket_id__reopen_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketReopenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ask_helpdesk_agent_api_v1_helpdesk_ask_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HelpdeskAskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HelpdeskAskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_chat_sessions_api_v1_chat_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSessionResponse"][];
+                };
+            };
+        };
+    };
+    create_chat_session_api_v1_chat_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatSessionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSessionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_session_messages_api_v1_chat_sessions__session_id__messages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatMessageResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_chat_message_api_v1_chat_sessions__session_id__messages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatTurnRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatTurnResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_chat_session_api_v1_chat_sessions__session_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_chat_message_api_v1_chat_sessions__session_id__stream_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatTurnRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_answer_feedback_api_v1_chat_messages__message_id__feedback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerFeedbackRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnswerFeedbackResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ask_hr_from_message_api_v1_chat_messages__message_id__ask_hr_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskHRRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskHRResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_policy_gaps_api_v1_chat_policy_gaps_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyGapsResponse"];
                 };
             };
         };

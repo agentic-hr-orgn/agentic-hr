@@ -53,6 +53,21 @@ const routeTitles: Array<{ prefix: string; title: string; subtitle: string }> = 
     subtitle: "Policy Library, Bilingual Search & OCR Review",
   },
   {
+    prefix: "/chat",
+    title: "Policy Brain Chat",
+    subtitle: "Grounded Bilingual Policy QA & Tools",
+  },
+  {
+    prefix: "/policy-gaps",
+    title: "HR Policy Gaps",
+    subtitle: "Abstained & Down-Voted Policy Topics",
+  },
+  {
+    prefix: "/helpdesk",
+    title: "HR & IT Helpdesk",
+    subtitle: "Read-Only KB Assistant, Tickets & SLA",
+  },
+  {
     prefix: "/leave",
     title: "Leave Management",
     subtitle: "Balances, AI Intake, Approvals & Team Calendar",

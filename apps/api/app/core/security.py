@@ -338,6 +338,9 @@ async def require_hr_head(
     return current_user
 
 
+require_owner_or_hr_head = require_hr_head
+
+
 async def require_owner_manager_or_hr_head(
     current_user: AuthenticatedUserContext = Depends(get_current_user),
 ) -> AuthenticatedUserContext:

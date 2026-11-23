@@ -4,6 +4,7 @@ API V1 router aggregator for Agentic HR Core.
 
 from fastapi import APIRouter
 
+from app.api.v1 import chat, tickets
 from app.api.v1.endpoints import (
     approvals,
     attendance,
@@ -74,3 +75,7 @@ api_router.include_router(
     prefix="/attendance",
     tags=["attendance"],
 )
+# Stage 7: Helpdesk Tickets, Assignment Rules & Read-Only Helpdesk Agent
+api_router.include_router(tickets.router)
+# Stage 7: Policy Brain LangGraph Chat, SSE Streaming & HR Policy Gaps
+api_router.include_router(chat.router)

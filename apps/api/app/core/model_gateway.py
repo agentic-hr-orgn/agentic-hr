@@ -35,6 +35,29 @@ EmbeddingTaskType = Literal["RETRIEVAL_DOCUMENT", "RETRIEVAL_QUERY"]
 DEFAULT_STAGE5_EMBEDDING_MODEL = "gemini-embedding-001"
 PRIVATE_EMBEDDING_MODEL_ID = "bge-m3"
 
+# Per-1M-token (input, output) USD fallback pricing for newer Gemini 3+ models when LiteLLM lacks cost map entries
+_FALLBACK_MODEL_PRICING_PER_1M_USD: dict[str, tuple[float, float]] = {
+    "gemini-3.5-flash-lite": (0.10, 0.40),
+    "gemini-3.5-flash": (0.30, 2.50),
+    "gemini-3.8-flash": (0.30, 2.50),
+}
+
+
+def estimate_model_cost_usd(
+    model_id: str,
+    prompt_tokens: int,
+    completion_tokens: int,
+) -> float | None:
+    """Returns fallback estimated USD cost for known Gemini 3+ models, or None when unknown."""
+    bare_id = model_id.strip().rsplit("/", 1)[-1].lower()
+    rates = _FALLBACK_MODEL_PRICING_PER_1M_USD.get(bare_id)
+    if rates is None:
+        return None
+    in_rate, out_rate = rates
+    total = (max(0, prompt_tokens) * in_rate + max(0, completion_tokens) * out_rate) / 1_000_000.0
+    return round(total, 8)
+
+
 logger = logging.getLogger("agentic_hr.model_gateway")
 
 T = TypeVar("T", bound=BaseModel)
@@ -816,6 +839,8 @@ class ModelGateway:
                     p_tok = response.usage.prompt_tokens
                     c_tok = response.usage.completion_tokens
                     cost = getattr(response, "_response_cost", None)
+                    if cost is None:
+                        cost = estimate_model_cost_usd(model_id, p_tok, c_tok)
 
                 latency_ms = (time.perf_counter() - start_time) * 1000.0
                 usage = TokenUsage(
