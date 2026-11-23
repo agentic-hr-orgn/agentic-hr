@@ -37,6 +37,7 @@ function makePolicyDoc(overrides: Partial<PolicyDocumentItem> = {}): PolicyDocum
     tenant_id: "t-acme",
     title: "Leave & Attendance Handbook",
     doc_type: "company_policy",
+    doc_scope: "hr_policy",
     visibility: "all",
     version: 1,
     file_name: "leave_v1.pdf",
