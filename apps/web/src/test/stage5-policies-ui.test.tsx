@@ -22,6 +22,7 @@ const mockParamsId = vi.fn<() => string>(() => "pol-v3");
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: mockParamsId() }),
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
   usePathname: () => "/policies",
 }));

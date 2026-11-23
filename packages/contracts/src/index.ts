@@ -243,6 +243,302 @@ export interface AgentStatus {
   lastRun?: string;
 }
 
+// ============================================================================
+// Stage 7 Policy Brain Chat, Citations, SSE Streaming & Policy Gaps DTOs
+// ============================================================================
+
+export type ChatLanguage = "en" | "ur" | "roman_ur" | "mixed";
+export type ChatRole = "user" | "assistant" | "system";
+export type FeedbackRating = "up" | "down";
+
+export type TicketCategory =
+  "hr_policy" | "leave_attendance" | "payroll" | "it_access" | "facilities" | "general";
+export type TicketPriority = "low" | "medium" | "high" | "urgent";
+export type TicketStatus = "open" | "in_progress" | "waiting_on_employee" | "resolved" | "closed";
+export type TicketSource = "chat_abstain" | "chat_ask_hr" | "helpdesk_agent" | "manual";
+export type AssigneeRole = "hr_head" | "owner" | "manager";
+
+export interface CitationItem {
+  chunk_id: string;
+  document_id: string;
+  title: string;
+  version: number;
+  section: string;
+  page?: number | string | null;
+  snippet: string;
+}
+
+export interface ToolCallTrace {
+  tool_name: string;
+  status: "ok" | "error" | "denied";
+  summary?: string | null;
+}
+
+export interface ChatSession {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  title: string;
+  language: ChatLanguage;
+  last_message_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatSessionCreateRequest {
+  title?: string | null;
+  language?: ChatLanguage;
+}
+
+export interface ChatMessage {
+  id: string;
+  tenant_id: string;
+  session_id: string;
+  role: ChatRole;
+  content: string;
+  language: ChatLanguage;
+  intent?: string | null;
+  citations: CitationItem[];
+  tool_calls: ToolCallTrace[];
+  abstained: boolean;
+  ticket_id?: string | null;
+  ticket_number?: string | null;
+  handoff_payload?: Record<string, unknown> | null;
+  topic_tag?: string | null;
+  latency_ms?: number | null;
+  model_tier?: string | null;
+  token_usage?: Record<string, unknown> | null;
+  cost_usd?: string | number | null;
+  created_at: string;
+}
+
+export interface ChatTurnRequest {
+  message: string;
+  language?: ChatLanguage | null;
+  start_workflow?: boolean;
+}
+
+export interface ChatTurnResponse {
+  session_id: string;
+  user_message: ChatMessage;
+  assistant_message: ChatMessage;
+}
+
+export interface PolicyBrainStreamDonePayload {
+  message_id: string;
+  session_id: string;
+  answer: string;
+  language: ChatLanguage;
+  intent: string;
+  citations: CitationItem[];
+  tool_calls: ToolCallTrace[];
+  abstained: boolean;
+  ticket_id?: string | null;
+  ticket_number?: string | null;
+  handoff_payload?: Record<string, unknown> | null;
+  topic_tag?: string | null;
+  latency_ms?: number | null;
+}
+
+export type PolicyBrainStreamEvent =
+  | { type: "status"; data: { node: string } }
+  | { type: "token"; data: { text: string } }
+  | { type: "done"; data: PolicyBrainStreamDonePayload }
+  | { type: "error"; data: { detail: string } };
+
+export interface AnswerFeedbackRequest {
+  rating: FeedbackRating;
+  comment?: string | null;
+  topic_tag?: string | null;
+}
+
+export interface AnswerFeedbackResponse {
+  id: string;
+  tenant_id: string;
+  message_id: string;
+  user_id: string;
+  rating: FeedbackRating;
+  comment?: string | null;
+  topic_tag?: string | null;
+  created_at: string;
+}
+
+export interface AskHrRequest {
+  category?: TicketCategory | null;
+  priority?: TicketPriority;
+  note?: string | null;
+  start_workflow?: boolean;
+}
+
+export interface AskHrResponse {
+  ticket_id: string;
+  ticket_number: string;
+  category: TicketCategory;
+  priority: TicketPriority;
+  message_id: string;
+}
+
+export interface PolicyGapGroup {
+  topic_tag: string;
+  total_count: number;
+  abstained_count: number;
+  downvoted_count: number;
+  sample_questions: string[];
+  ticket_numbers: string[];
+  latest_at: string;
+}
+
+export interface PolicyGapsResponse {
+  total_gaps: number;
+  groups: PolicyGapGroup[];
+}
+
+// ============================================================================
+// Stage 7 Helpdesk Ticketing, Assignment Rules & Read-Only Agent DTOs
+// ============================================================================
+
+export interface TicketMessage {
+  id: string;
+  tenant_id: string;
+  ticket_id: string;
+  author_user_id: string;
+  body: string;
+  is_internal: boolean;
+  created_at: string;
+}
+
+export interface Ticket {
+  id: string;
+  tenant_id: string;
+  ticket_number: string;
+  requester_user_id: string;
+  assigned_to_user_id?: string | null;
+  category: TicketCategory;
+  priority: TicketPriority;
+  status: TicketStatus;
+  subject: string;
+  description: string;
+  source: TicketSource;
+  source_session_id?: string | null;
+  sla_due_at: string;
+  sla_reminder_at: string;
+  sla_reminder_sent_at?: string | null;
+  sla_escalated_at?: string | null;
+  resolved_at?: string | null;
+  closed_at?: string | null;
+  reopen_until?: string | null;
+  satisfaction_rating?: number | null;
+  satisfaction_comment?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TicketDetail extends Ticket {
+  messages: TicketMessage[];
+}
+
+export interface TicketSummaryItem {
+  ticket_id: string;
+  tenant_id: string;
+  ticket_number: string;
+  requester_user_id: string;
+  requester_name?: string | null;
+  assigned_to_user_id?: string | null;
+  assignee_name?: string | null;
+  category: TicketCategory;
+  priority: TicketPriority;
+  status: TicketStatus;
+  subject: string;
+  source: TicketSource;
+  sla_due_at: string;
+  sla_reminder_at: string;
+  sla_escalated_at?: string | null;
+  is_sla_breached: boolean;
+  public_message_count: number;
+  resolved_at?: string | null;
+  closed_at?: string | null;
+  satisfaction_rating?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TicketCreateRequest {
+  category?: TicketCategory;
+  priority?: TicketPriority;
+  subject: string;
+  description: string;
+  source?: TicketSource;
+  source_session_id?: string | null;
+  assigned_to_user_id?: string | null;
+  start_workflow?: boolean;
+  reminder_delay_seconds?: number | null;
+  breach_delay_seconds?: number | null;
+}
+
+export interface TicketUpdateRequest {
+  status?: TicketStatus | null;
+  priority?: TicketPriority | null;
+  category?: TicketCategory | null;
+  assigned_to_user_id?: string | null;
+}
+
+export interface TicketMessageCreateRequest {
+  body: string;
+  is_internal?: boolean;
+}
+
+export interface TicketRateRequest {
+  satisfaction_rating?: number | null;
+  satisfaction_comment?: string | null;
+}
+
+export interface TicketReopenRequest {
+  reason: string;
+  start_workflow?: boolean;
+  reminder_delay_seconds?: number | null;
+  breach_delay_seconds?: number | null;
+}
+
+export interface TicketAssignmentRule {
+  id: string;
+  tenant_id: string;
+  category: TicketCategory;
+  default_assignee_user_id?: string | null;
+  default_assignee_role: AssigneeRole;
+  sla_hours: number;
+  reminder_before_hours: number;
+  reopen_window_days: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TicketRuleUpdateRequest {
+  default_assignee_user_id?: string | null;
+  default_assignee_role?: AssigneeRole;
+  sla_hours?: number;
+  reminder_before_hours?: number;
+  reopen_window_days?: number;
+}
+
+export interface HelpdeskAskRequest {
+  question: string;
+  start_workflow?: boolean;
+  reminder_delay_seconds?: number | null;
+  breach_delay_seconds?: number | null;
+}
+
+export interface HelpdeskAskResponse {
+  answered: boolean;
+  answer: string;
+  language: ChatLanguage;
+  citations: CitationItem[];
+  ticket?: Ticket | null;
+  ticket_number?: string | null;
+  category?: TicketCategory | null;
+  priority?: TicketPriority | null;
+  privileged_request_blocked: boolean;
+}
+
 // Type-safe OpenAPI client and factory
 export * from "./client";
 

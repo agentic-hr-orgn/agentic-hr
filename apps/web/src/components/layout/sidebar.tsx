@@ -17,18 +17,22 @@ import {
   CalendarDays,
   CheckCircle2,
   Rocket,
+  MessageSquareText,
+  LifeBuoy,
+  Sparkles,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import { useUIStore } from "@/stores/ui-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useHydrated } from "@/hooks/use-hydrated";
 
 interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   href: string;
   badge?: string;
-  roles?: string[]; // optional role gating
+  hrOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -38,6 +42,15 @@ const navItems: NavItem[] = [
   { label: "Candidates", icon: Users2, href: "/candidates", badge: "DocuVerify & Screener" },
   { label: "Code Tester", icon: TerminalSquare, href: "/assessments", badge: "E2B Sandbox" },
   { label: "Policy Brain", icon: BookOpenCheck, href: "/policies", badge: "Bilingual RAG" },
+  { label: "Policy Chat", icon: MessageSquareText, href: "/chat", badge: "Grounded QA" },
+  {
+    label: "Policy Gaps",
+    icon: Sparkles,
+    href: "/policy-gaps",
+    badge: "HR Insights",
+    hrOnly: true,
+  },
+  { label: "Helpdesk", icon: LifeBuoy, href: "/helpdesk", badge: "Tickets & SLA" },
   { label: "Leave", icon: CalendarDays, href: "/leave", badge: "AI Intake" },
   { label: "Attendance", icon: CalendarCheck2, href: "/attendance", badge: "Month Lock" },
   { label: "Directory", icon: FolderGit2, href: "/employees", badge: "Sheets View" },
@@ -51,10 +64,15 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const hydrated = useHydrated();
   const storeIsOpen = useUIStore((state) => state.isSidebarOpen);
   const setSidebarOpen = useUIStore((state) => state.setSidebarOpen);
   const { data: currentUser } = useCurrentUser();
   const { useFakeIntegrations } = useBackendStatus();
+
+  const canViewHrInsights =
+    hydrated && (currentUser?.role === "owner" || Boolean(currentUser?.is_hr_head));
+  const visibleNavItems = navItems.filter((item) => !item.hrOnly || canViewHrInsights);
 
   const activeIsOpen = isOpen !== undefined ? isOpen : storeIsOpen;
   const handleClose = () => {
@@ -127,7 +145,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {/* Role-Aware Navigation Links */}
         <nav className="mt-4 space-y-1 px-3">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive =
               item.href === "/"
