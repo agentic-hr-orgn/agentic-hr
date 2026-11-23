@@ -94,7 +94,7 @@ async def root() -> dict[str, object]:
     """Root platform metadata endpoint."""
     return {
         "app": settings.PROJECT_NAME,
-        "stage": "Stage 6 complete — Stage 7 next",
+        "stage": "Stage 7 complete — Stage 8 next",
         "docs": "/docs",
         "health": "/health",
         "use_fake_integrations": settings.USE_FAKE_INTEGRATIONS,

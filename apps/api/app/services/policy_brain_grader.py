@@ -19,6 +19,7 @@ from app.core.untrusted import wrap_untrusted_text
 from app.services.text_normalizer import normalize_for_search
 
 _TOKEN_RE = re.compile(r"[\u0600-\u06FFa-z0-9]+")
+_CODE_IDENT_RE = re.compile(r"\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b")
 
 _STOPWORDS: frozenset[str] = frozenset(
     {
@@ -143,17 +144,34 @@ def _deterministic_grade_chunk(
     chunk: dict[str, Any],
     *,
     language: str = "en",
+    original_question: str | None = None,
 ) -> ChunkGrade:
-    q_tokens = _extract_content_tokens(query)
     chunk_text = f"{chunk.get('title', '')} {chunk.get('section', '')} {chunk.get('content', '')}"
+    code_source = f"{original_question or ''} {query}"
+    code_idents = list(dict.fromkeys(m.lower() for m in _CODE_IDENT_RE.findall(code_source)))
+    if code_idents and not any(ident in chunk_text.lower() for ident in code_idents):
+        return ChunkGrade(
+            chunk_id=str(chunk["chunk_id"]),
+            relevant=False,
+            reason="Chunk does not contain the requested policy identifier.",
+        )
+
+    q_tokens = _extract_content_tokens(query)
     c_tokens = _extract_content_tokens(chunk_text)
+    body_tokens = _extract_content_tokens(f"{chunk.get('section', '')} {chunk.get('content', '')}")
 
     direct_overlap = sorted(q_tokens & c_tokens)
     concept_overlap = _concept_indices(q_tokens) & _concept_indices(c_tokens)
     fts_rank = chunk.get("fts_rank")
     score = float(chunk.get("score") or 0.0)
 
-    if direct_overlap:
+    is_incidental_title_only = (
+        language == "en"
+        and len(q_tokens) >= 4
+        and len(direct_overlap) == 1
+        and not (q_tokens & body_tokens)
+    )
+    if direct_overlap and not is_incidental_title_only:
         return ChunkGrade(
             chunk_id=str(chunk["chunk_id"]),
             relevant=True,
@@ -189,6 +207,7 @@ async def grade_retrieved_chunks(
     chunks: list[dict[str, Any]],
     *,
     language: str = "en",
+    original_question: str | None = None,
 ) -> tuple[list[dict[str, Any]], list[ChunkGrade], dict[str, Any]]:
     """
     Evaluates retrieved chunks via `ModelRoute.CHEAP` (live) or deterministic bilingual
@@ -198,7 +217,15 @@ async def grade_retrieved_chunks(
         return [], [], {"model_tier": "cheap", "latency_ms": 0, "tokens": 0, "cost_usd": None}
 
     if settings.USE_FAKE_INTEGRATIONS:
-        grades = [_deterministic_grade_chunk(query, ch, language=language) for ch in chunks]
+        grades = [
+            _deterministic_grade_chunk(
+                query,
+                ch,
+                language=language,
+                original_question=original_question,
+            )
+            for ch in chunks
+        ]
         rel_ids = {g.chunk_id for g in grades if g.relevant}
         relevant_chunks = [ch for ch in chunks if str(ch["chunk_id"]) in rel_ids]
         return (

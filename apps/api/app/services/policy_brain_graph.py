@@ -41,6 +41,7 @@ _PRONOUN_OR_FOLLOWUP_RE = re.compile(
     r"us\s+ki|us\s+ka|us\s+mein|is\s+ki|is\s+ka|is\s+mein|iska|iski|woh|unka|unki)\b",
     re.IGNORECASE,
 )
+_CODE_IDENT_RE = re.compile(r"\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b")
 
 _CROSS_USER_POSSESSIVE_RE = re.compile(
     r"\b([A-Z][a-z]{1,30}|[a-z]{3,20})'s\s+(?:leave|leaves|balance|balances|requests?|manager)\b"
@@ -50,6 +51,13 @@ _CROSS_USER_FOR_RE = re.compile(
 )
 _EMP_CODE_RE = re.compile(r"\b(?:EMP|GLX|ACM)-[A-Z0-9-]+\b", re.IGNORECASE)
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+
+_LEAVE_BOOKING_RE = re.compile(
+    r"(?:\b(?:i\s+want|i\s+need|i\s+would\s+like|i'd\s+like|apply|submit|request|book|start|take)\b"
+    r".{0,40}\b(?:leave|chutti|chhutti)\b|"
+    r"\b(?:leave|chutti|chhutti)\s+(?:from|on)\s+\d{4}-\d{2}-\d{2}\b)",
+    re.IGNORECASE,
+)
 
 _INJECTION_LINE_RE = re.compile(
     r"(?:ignore\s+(?:all\s+)?(?:previous|prior|above|company|hr|policy)|"
@@ -124,6 +132,13 @@ def strip_injection_lines(text: str) -> str:
         safe_lines.append(line)
     cleaned = " ".join(safe_lines).strip()
     return cleaned
+
+
+def _sum_optional_cost(existing: float | None, added: float | None) -> float | None:
+    """Accumulates optional USD cost across LangGraph nodes while preserving None when unpriced."""
+    if existing is None and added is None:
+        return None
+    return round(float(existing or 0.0) + float(added or 0.0), 8)
 
 
 def _detect_topic_tag(question: str) -> str:
@@ -286,13 +301,16 @@ def _classify_intent(
     ) and _asks_for_other_person_data(question, caller_email=caller_email, caller_name=caller_name):
         return "tools", "cross_user_denied"
 
-    # 6. Leave application handoff intent (applying/requesting leave, NOT asking policy rules)
+    # 6. Leave application handoff intent (applying/requesting leave, NOT asking policy/balance rules)
     is_policy_question = any(
         q_lower.startswith(prefix)
         for prefix in ("what is", "how many", "can i", "do we", "is there", "tell me about")
-    ) or any(kw in q_lower for kw in ("policy", "rule", "پالیسی", "entitlement", "carry forward"))
+    ) or any(
+        kw in q_lower
+        for kw in ("policy", "rule", "rules", "پالیسی", "entitlement", "carry forward", "balance")
+    )
 
-    wants_to_apply_leave = any(
+    wants_to_apply_leave = bool(_LEAVE_BOOKING_RE.search(q_lower)) or any(
         phrase in q_lower
         for phrase in (
             "apply for leave",
@@ -324,7 +342,9 @@ def _classify_intent(
 
 def _build_bilingual_reformulation(query: str, attempt: int) -> str:
     """Expands Roman Urdu / Urdu / narrow queries for up to 2 retrieval reformulation loops."""
-    norm = normalize_for_search(query)
+    code_idents = list(dict.fromkeys(_CODE_IDENT_RE.findall(query)))
+    query_wo_codes = _CODE_IDENT_RE.sub(" ", query)
+    norm = normalize_for_search(query_wo_codes)
     substitutions = {
         "chutti": "leave annual sick casual",
         "chhutti": "leave annual sick casual",
@@ -339,15 +359,15 @@ def _build_bilingual_reformulation(query: str, attempt: int) -> str:
     }
     tokens = list(dict.fromkeys(_extract_content_tokens(norm)))
     if attempt == 1:
-        expanded: list[str] = list(tokens)
+        expanded: list[str] = [*code_idents, *tokens]
         for tok in tokens:
             if tok in substitutions:
                 expanded.append(substitutions[tok])
         joined = " ".join(expanded).strip()
         return joined if len(joined) >= 2 else query
 
-    # Attempt 2: broadest core keyword subset
-    core = tokens[:4]
+    # Attempt 2: broadest core keyword subset (always retaining uppercase policy identifiers)
+    core = [*code_idents, *tokens[:4]]
     broad = " ".join(core).strip()
     return broad if len(broad) >= 2 else query
 
@@ -775,7 +795,10 @@ def build_policy_brain_graph(
             return {"standalone_query": question}
 
         last_user_q = prior_user_msgs[-1]
-        needs_context = len(question.split()) <= 3 or bool(_PRONOUN_OR_FOLLOWUP_RE.search(question))
+        has_explicit_code = bool(_CODE_IDENT_RE.search(question))
+        needs_context = (not has_explicit_code) and (
+            len(question.split()) <= 3 or bool(_PRONOUN_OR_FOLLOWUP_RE.search(question))
+        )
         if not needs_context:
             return {"standalone_query": question}
 
@@ -806,6 +829,7 @@ def build_policy_brain_graph(
                 int(state.get("completion_tokens") or 0) + resp.usage.completion_tokens
             ),
             "total_tokens": int(state.get("total_tokens") or 0) + resp.usage.total_tokens,
+            "cost_usd": _sum_optional_cost(state.get("cost_usd"), resp.cost_usd),
         }
 
     async def retrieve_node(state: PolicyBrainState) -> dict[str, Any]:
@@ -829,7 +853,8 @@ def build_policy_brain_graph(
         }
 
     async def grade_node(state: PolicyBrainState) -> dict[str, Any]:
-        query = (state.get("standalone_query") or state["question"]).strip()
+        original_question = state["question"].strip()
+        query = (state.get("standalone_query") or original_question).strip()
         language: ChatLanguage = state.get("language", "en")
         chunks = list(state.get("latest_chunks") or [])
 
@@ -837,12 +862,20 @@ def build_policy_brain_graph(
             query,
             chunks,
             language=language,
+            original_question=original_question,
         )
+        added_prompt = int(telemetry.get("prompt_tokens") or 0)
+        added_completion = int(telemetry.get("completion_tokens") or 0)
         added_tokens = int(telemetry.get("tokens") or 0)
+        if added_tokens > 0 and added_prompt == 0 and added_completion == 0:
+            added_prompt = added_tokens
         return {
             "relevant_chunks": relevant,
             "grades": [g.model_dump() for g in grades],
+            "prompt_tokens": int(state.get("prompt_tokens") or 0) + added_prompt,
+            "completion_tokens": int(state.get("completion_tokens") or 0) + added_completion,
             "total_tokens": int(state.get("total_tokens") or 0) + added_tokens,
+            "cost_usd": _sum_optional_cost(state.get("cost_usd"), telemetry.get("cost_usd")),
         }
 
     async def reformulate_node(state: PolicyBrainState) -> dict[str, Any]:
@@ -875,6 +908,7 @@ def build_policy_brain_graph(
                 int(state.get("completion_tokens") or 0) + resp.usage.completion_tokens
             ),
             "total_tokens": int(state.get("total_tokens") or 0) + resp.usage.total_tokens,
+            "cost_usd": _sum_optional_cost(state.get("cost_usd"), resp.cost_usd),
         }
 
     async def answer_node(state: PolicyBrainState) -> dict[str, Any]:
@@ -971,7 +1005,7 @@ def build_policy_brain_graph(
                 int(state.get("completion_tokens") or 0) + resp.usage.completion_tokens
             ),
             "total_tokens": int(state.get("total_tokens") or 0) + resp.usage.total_tokens,
-            "cost_usd": resp.cost_usd,
+            "cost_usd": _sum_optional_cost(state.get("cost_usd"), resp.cost_usd),
         }
 
     async def verify_node(state: PolicyBrainState) -> dict[str, Any]:

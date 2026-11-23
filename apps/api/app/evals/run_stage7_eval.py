@@ -21,6 +21,7 @@ import argparse
 import asyncio
 import json
 import math
+import sys
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -34,6 +35,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
+from app.core.model_gateway import (
+    ModelProviderError,
+    ModelRateLimitError,
+    ModelRoute,
+    ModelRouteUnavailableError,
+    ModelTimeoutError,
+    estimate_model_cost_usd,
+    model_gateway,
+)
 from app.core.security import AuthenticatedUserContext
 from app.core.timezones import to_karachi
 from app.models.approval import Approval
@@ -120,27 +130,112 @@ def _default_dataset_path() -> Path:
     return Path(__file__).with_name("stage7_eval_18.json")
 
 
-def _validate_real_mode_keys() -> None:
-    has_chat_key = any(
-        bool(v and str(v).strip())
-        for v in (
-            settings.STRONG_MODEL_API_KEY,
-            settings.CHEAP_MODEL_API_KEY,
-            settings.GOOGLE_API_KEY,
-            settings.GROQ_API_KEY,
-            settings.OPENROUTER_API_KEY,
+def _resolve_and_validate_routes(mode: Literal["fake", "real"]) -> dict[str, str]:
+    missing: list[str] = []
+    cheap_label = "unconfigured"
+    strong_label = "unconfigured"
+
+    try:
+        cheap_prov, cheap_id, cheap_key, _ = model_gateway.resolve_route(ModelRoute.CHEAP)
+        cheap_label = f"{cheap_prov}/{cheap_id}"
+    except ModelRouteUnavailableError:
+        cheap_key = None
+        missing.append("CHEAP_MODEL_PROVIDER & CHEAP_MODEL_ID")
+
+    try:
+        strong_prov, strong_id, strong_key, _ = model_gateway.resolve_route(ModelRoute.STRONG)
+        strong_label = f"{strong_prov}/{strong_id}"
+    except ModelRouteUnavailableError:
+        strong_key = None
+        missing.append("STRONG_MODEL_PROVIDER & STRONG_MODEL_ID")
+
+    if mode == "real":
+        has_fallback_chat_key = any(
+            bool(v and str(v).strip())
+            for v in (
+                settings.GOOGLE_API_KEY,
+                settings.GROQ_API_KEY,
+                settings.OPENROUTER_API_KEY,
+            )
         )
-    )
-    has_embed_key = bool(
-        (settings.EMBEDDING_MODEL_API_KEY and settings.EMBEDDING_MODEL_API_KEY.strip())
-        or (settings.GOOGLE_API_KEY and settings.GOOGLE_API_KEY.strip())
-    )
-    if not (has_chat_key and has_embed_key):
-        raise RuntimeError(
-            "Stage 7 --mode real requires configured live LLM and embedding API keys "
-            "(e.g. GOOGLE_API_KEY / STRONG_MODEL_API_KEY / CHEAP_MODEL_API_KEY / "
-            "EMBEDDING_MODEL_API_KEY)."
+        if not missing and not ((cheap_key and str(cheap_key).strip()) or has_fallback_chat_key):
+            missing.append("CHEAP_MODEL_API_KEY (or provider API key e.g. GOOGLE_API_KEY)")
+        if not missing and not ((strong_key and str(strong_key).strip()) or has_fallback_chat_key):
+            missing.append("STRONG_MODEL_API_KEY (or provider API key e.g. GOOGLE_API_KEY)")
+
+        has_embed_key = bool(
+            (settings.EMBEDDING_MODEL_API_KEY and settings.EMBEDDING_MODEL_API_KEY.strip())
+            or (settings.GOOGLE_API_KEY and settings.GOOGLE_API_KEY.strip())
         )
+        if not has_embed_key:
+            missing.append("EMBEDDING_MODEL_API_KEY (or GOOGLE_API_KEY)")
+
+        if missing:
+            raise RuntimeError(
+                "Stage 7 --mode real requires configured live ModelGateway routes and API keys. "
+                f"Missing in .env: {', '.join(missing)}"
+            )
+
+    return {
+        "cheap": cheap_label,
+        "strong": strong_label,
+        "embedding": settings.EMBEDDING_MODEL,
+    }
+
+
+_REAL_MODE_RETRY_BACKOFFS: tuple[int, ...] = (5, 10, 20, 30)
+_TRANSIENT_PROVIDER_MARKERS: tuple[str, ...] = (
+    "503",
+    "unavailable",
+    "429",
+    "resource_exhausted",
+    "high demand",
+    "timeout",
+    "timed out",
+    "overloaded",
+    "rate limit",
+)
+
+
+def _is_transient_model_error(exc: BaseException) -> bool:
+    """Returns True for transient LLM provider/timeout/rate-limit failures safe to retry in real mode."""
+    if isinstance(exc, (ModelTimeoutError, ModelRateLimitError)):
+        return True
+    if isinstance(exc, ModelProviderError):
+        msg = str(exc).lower()
+        return any(marker in msg for marker in _TRANSIENT_PROVIDER_MARKERS)
+    return False
+
+
+async def _cleanup_failed_chat_turn(
+    app_db: AsyncSession,
+    *,
+    tenant_id: UUID,
+    actor: AuthenticatedUserContext,
+    session_id: UUID,
+    question: str,
+) -> None:
+    """Removes any orphaned unanswered user turn left by a transient failure before retrying."""
+    await app_db.rollback()
+    await set_tenant_context(app_db, str(tenant_id), actor.clerk_user_id)
+    latest_msg = (
+        await app_db.execute(
+            select(ChatMessage)
+            .where(
+                ChatMessage.tenant_id == tenant_id,
+                ChatMessage.session_id == session_id,
+            )
+            .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if (
+        latest_msg is not None
+        and latest_msg.role == "user"
+        and latest_msg.content.strip() == question.strip()
+    ):
+        await app_db.delete(latest_msg)
+        await app_db.commit()
 
 
 def _percentile(values: list[float], pct: float) -> float:
@@ -506,18 +601,21 @@ async def run_stage7_eval(
     mode: Literal["fake", "real"] = "fake",
     output_path: Path | str | None = None,
     dataset_path: Path | str | None = None,
+    delay_seconds: float | None = None,
 ) -> dict[str, Any]:
     """
     Runs the 18-question Stage 7 Policy Brain + Helpdesk evaluation benchmark and returns
     structured summary metrics and per-question outcomes.
     """
-    if mode == "real":
-        _validate_real_mode_keys()
-
     ds_path = Path(dataset_path) if dataset_path else _default_dataset_path()
     dataset = json.loads(ds_path.read_text(encoding="utf-8"))
     corpus: list[dict[str, Any]] = list(dataset["corpus"])
     cases: list[dict[str, Any]] = list(dataset["cases"])
+    effective_delay = (
+        (1.5 if mode == "real" else 0.0)
+        if delay_seconds is None
+        else max(0.0, float(delay_seconds))
+    )
 
     orig_fake = settings.USE_FAKE_INTEGRATIONS
     orig_inline = settings.INGEST_INLINE
@@ -539,83 +637,136 @@ async def run_stage7_eval(
 
     sandbox: EvalSandboxActors | None = None
     results: list[dict[str, Any]] = []
+    resolved_models: dict[str, str] = {}
 
     try:
+        resolved_models = _resolve_and_validate_routes(mode)
         async with mig_factory() as mig_db:
             sandbox = await _provision_eval_sandbox(mig_db, corpus)
 
         sessions_by_group: dict[str, UUID] = {}
+        total_cases = len(cases)
+        max_retries = len(_REAL_MODE_RETRY_BACKOFFS) if mode == "real" else 0
 
         async with app_factory() as app_db:
-            for case in cases:
+            for idx, case in enumerate(cases, start=1):
                 role_key = str(case.get("actor_role") or "employee")
                 actor = sandbox.actors[role_key]
                 can_hr = actor.role == "owner" or actor.is_hr_head
                 endpoint = str(case.get("endpoint") or "chat")
-                t0 = time.perf_counter()
+                sg = str(case.get("session_group") or case["id"])
 
-                if endpoint == "helpdesk":
-                    await set_tenant_context(app_db, str(sandbox.tenant_id), actor.clerk_user_id)
-                    hd_resp = await HelpdeskAgentService.ask(
-                        app_db,
-                        actor=actor,
-                        payload=HelpdeskAskRequest(
-                            question=case["question"],
-                            start_workflow=False,
-                        ),
-                    )
-                    elapsed_ms = (time.perf_counter() - t0) * 1000.0
-                    cits = [c.model_dump(mode="json") for c in hd_resp.citations]
-                    abstained = not hd_resp.answered
-                    answer_text = hd_resp.answer
-                    ticket_id = str(hd_resp.ticket.id) if hd_resp.ticket else None
-                    tool_calls: list[dict[str, Any]] = []
-                    handoff_payload = None
-                    prompt_tokens = 0
-                    completion_tokens = 0
-                    total_tokens = 0
-                    cost_usd = 0.0
-                else:
-                    sg = str(case.get("session_group") or case["id"])
-                    if sg not in sessions_by_group:
-                        await set_tenant_context(
-                            app_db, str(sandbox.tenant_id), actor.clerk_user_id
-                        )
-                        sess = await ChatService.create_session(
-                            app_db,
-                            actor=actor,
-                            payload=ChatSessionCreateRequest(title=f"Eval {sg}"),
-                        )
-                        sessions_by_group[sg] = sess.id
+                attempt = 0
+                while True:
+                    t0 = time.perf_counter()
+                    try:
+                        if endpoint == "helpdesk":
+                            await set_tenant_context(
+                                app_db, str(sandbox.tenant_id), actor.clerk_user_id
+                            )
+                            hd_resp = await HelpdeskAgentService.ask(
+                                app_db,
+                                actor=actor,
+                                payload=HelpdeskAskRequest(
+                                    question=case["question"],
+                                    start_workflow=False,
+                                ),
+                            )
+                            elapsed_ms = (time.perf_counter() - t0) * 1000.0
+                            cits = [c.model_dump(mode="json") for c in hd_resp.citations]
+                            abstained = not hd_resp.answered
+                            answer_text = hd_resp.answer
+                            ticket_id = str(hd_resp.ticket.id) if hd_resp.ticket else None
+                            tool_calls: list[dict[str, Any]] = []
+                            handoff_payload = None
+                            prompt_tokens = 0
+                            completion_tokens = 0
+                            total_tokens = 0
+                            cost_usd = 0.0
+                        else:
+                            if sg not in sessions_by_group:
+                                await set_tenant_context(
+                                    app_db, str(sandbox.tenant_id), actor.clerk_user_id
+                                )
+                                sess = await ChatService.create_session(
+                                    app_db,
+                                    actor=actor,
+                                    payload=ChatSessionCreateRequest(title=f"Eval {sg}"),
+                                )
+                                sessions_by_group[sg] = sess.id
 
-                    await set_tenant_context(app_db, str(sandbox.tenant_id), actor.clerk_user_id)
-                    turn = await ChatService.send_message(
-                        app_db,
-                        actor=actor,
-                        session_id=sessions_by_group[sg],
-                        payload=ChatTurnRequest(
-                            message=case["question"],
-                            language=None,
-                            start_workflow=False,
-                        ),
-                    )
-                    asst = turn.assistant_message
-                    elapsed_ms = float(
-                        asst.latency_ms
-                        if asst.latency_ms is not None
-                        else (time.perf_counter() - t0) * 1000.0
-                    )
-                    cits = [c.model_dump(mode="json") for c in asst.citations]
-                    abstained = bool(asst.abstained)
-                    answer_text = asst.content
-                    ticket_id = str(asst.ticket_id) if asst.ticket_id else None
-                    tool_calls = [t.model_dump(mode="json") for t in asst.tool_calls]
-                    handoff_payload = asst.handoff_payload
-                    token_usage = asst.token_usage or {}
-                    prompt_tokens = int(token_usage.get("prompt_tokens") or 0)
-                    completion_tokens = int(token_usage.get("completion_tokens") or 0)
-                    total_tokens = int(token_usage.get("total_tokens") or 0)
-                    cost_usd = float(asst.cost_usd or 0.0)
+                            await set_tenant_context(
+                                app_db, str(sandbox.tenant_id), actor.clerk_user_id
+                            )
+                            turn = await ChatService.send_message(
+                                app_db,
+                                actor=actor,
+                                session_id=sessions_by_group[sg],
+                                payload=ChatTurnRequest(
+                                    message=case["question"],
+                                    language=None,
+                                    start_workflow=False,
+                                ),
+                            )
+                            asst = turn.assistant_message
+                            elapsed_ms = float(
+                                asst.latency_ms
+                                if asst.latency_ms is not None
+                                else (time.perf_counter() - t0) * 1000.0
+                            )
+                            cits = [c.model_dump(mode="json") for c in asst.citations]
+                            abstained = bool(asst.abstained)
+                            answer_text = asst.content
+                            ticket_id = str(asst.ticket_id) if asst.ticket_id else None
+                            tool_calls = [t.model_dump(mode="json") for t in asst.tool_calls]
+                            handoff_payload = asst.handoff_payload
+                            token_usage = asst.token_usage or {}
+                            prompt_tokens = int(token_usage.get("prompt_tokens") or 0)
+                            completion_tokens = int(token_usage.get("completion_tokens") or 0)
+                            total_tokens = int(token_usage.get("total_tokens") or 0)
+                            cost_usd = float(asst.cost_usd or 0.0)
+                            if mode == "real" and cost_usd == 0.0 and total_tokens > 0:
+                                est_prompt = (
+                                    prompt_tokens
+                                    if (prompt_tokens + completion_tokens) == total_tokens
+                                    else max(0, total_tokens - completion_tokens)
+                                )
+                                fallback = estimate_model_cost_usd(
+                                    resolved_models.get("strong", ""),
+                                    est_prompt,
+                                    completion_tokens,
+                                )
+                                if fallback is not None:
+                                    cost_usd = fallback
+                        break
+                    except Exception as exc:
+                        if (
+                            mode == "real"
+                            and attempt < max_retries
+                            and _is_transient_model_error(exc)
+                        ):
+                            wait_s = _REAL_MODE_RETRY_BACKOFFS[attempt]
+                            attempt += 1
+                            if endpoint != "helpdesk" and sg in sessions_by_group:
+                                await _cleanup_failed_chat_turn(
+                                    app_db,
+                                    tenant_id=sandbox.tenant_id,
+                                    actor=actor,
+                                    session_id=sessions_by_group[sg],
+                                    question=case["question"],
+                                )
+                            else:
+                                await app_db.rollback()
+                            print(
+                                f"[{idx:02d}/{total_cases:02d}] {case['id']} transient "
+                                f"{type(exc).__name__} — retry {attempt}/{max_retries} "
+                                f"in {wait_s}s...",
+                                file=sys.stderr,
+                                flush=True,
+                            )
+                            await asyncio.sleep(wait_s)
+                            continue
+                        raise
 
                 await set_tenant_context(app_db, str(sandbox.tenant_id), actor.clerk_user_id)
                 cit_db_ok, cit_err = await _verify_citations_against_db(
@@ -654,6 +805,19 @@ async def run_stage7_eval(
                         "failures": failures,
                     }
                 )
+
+                if mode == "real":
+                    status_label = "PASS" if passed else "FAIL"
+                    fail_suffix = f" | {'; '.join(failures)}" if failures else ""
+                    print(
+                        f"[{idx:02d}/{total_cases:02d}] {case['id']} ({case['category']}) -> "
+                        f"{status_label} | {elapsed_ms:.0f}ms | {total_tokens} tokens | "
+                        f"${cost_usd:.6f}{fail_suffix}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                    if idx < total_cases and effective_delay > 0:
+                        await asyncio.sleep(effective_delay)
     finally:
         settings.USE_FAKE_INTEGRATIONS = orig_fake
         settings.INGEST_INLINE = orig_inline
@@ -672,11 +836,7 @@ async def run_stage7_eval(
     report = {
         "mode": mode,
         "timestamp_pkt": to_karachi(datetime.now(UTC)).isoformat(),
-        "models": {
-            "cheap": settings.CHEAP_MODEL_ID or settings.CHEAP_MODEL,
-            "strong": settings.STRONG_MODEL_ID or settings.STRONG_MODEL,
-            "embedding": settings.EMBEDDING_MODEL,
-        },
+        "models": resolved_models,
         "summary": {
             "total": total,
             "passed": passed_count,
@@ -724,6 +884,12 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help="Optional path to benchmark JSON dataset.",
     )
+    parser.add_argument(
+        "--delay-seconds",
+        type=float,
+        default=None,
+        help="Pause in seconds between questions (defaults to 1.5 in real mode, 0.0 in fake mode).",
+    )
     return parser.parse_args()
 
 
@@ -734,6 +900,7 @@ def main() -> None:
             mode=args.mode,
             output_path=args.output,
             dataset_path=args.dataset,
+            delay_seconds=args.delay_seconds,
         )
     )
     print(_render_markdown_report(report))

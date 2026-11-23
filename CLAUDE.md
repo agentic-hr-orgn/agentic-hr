@@ -12,13 +12,13 @@ Seven Rules:
 6. Untrusted data - CVs/emails never give instructions
 7. No secrets in git - synthetic data till pilot
 
-Status: Stages 1–6 COMPLETE (Stage 6: Double-Entry Leave Accounting, Pure Policy Engine,
-        Temporal LeaveRequestWorkflow & Accrual Schedules, Bilingual AI Leave Intake,
-        Attendance Check-In, Daily Grid, Two-Phase Excel Import, Gap-Checked Month Lock,
-        Stage 2 `attendance.post_lock_edit`, 3-Month Seed, Next.js 16 `/leave` & `/attendance`).
-        Tag target: v0.6-stage6-leave-attendance-verified | Verification: docs/stage-6-verification.md.
-Next Stage: Stage 7 (Payroll Determinism & Grounded Policy Q&A).
-Active ADRs: 001–009 (ADR 008 = Stage 5 embeddings & parsing; ADR 009 = Stage 6 Leave & Attendance).
+Status: Stages 1–7 COMPLETE (Stage 7: LangGraph Policy Brain Grounded Q&A, Bilingual SSE Chat,
+        6 Server-Session Tools, Code-Level Citation Verifier, 6 Security Guardrails,
+        18-Question Eval Harness, Helpdesk `TicketSLAWorkflow` & Read-Only KB Agent,
+        `pub_ticket_summary` View, Next.js 16 `/chat`, `/policy-gaps`, `/helpdesk`).
+        Tag target: v0.7-stage7-policy-brain-helpdesk-verified | Verification: docs/stage-7-verification.md.
+Next Stage: Stage 8 (Payroll Determinism & Payslip Workflows).
+Active ADRs: 001–010 (ADR 008 = Stage 5; ADR 009 = Stage 6; ADR 010 = Stage 7 Policy Brain & Helpdesk).
 Decisions: One DB with forced RLS + security_invoker views (Migration 0013); Sheets is synced view (ADR 005).
 
 Hardening Invariants:

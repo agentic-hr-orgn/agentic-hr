@@ -168,7 +168,7 @@ test.describe("Stage 6 Leave Management & Attendance E2E", () => {
     await page.setExtraHTTPHeaders({ "x-e2e-test": "true" });
     await page.goto("/leave");
 
-    await expect(page.getByText("Stage 6 ✓ · Stage 7 next").first()).toBeVisible();
+    await expect(page.getByText("Stage 7 ✓ · Stage 8 next").first()).toBeVisible();
     await expect(page.getByText("Annual Leave")).toBeVisible();
     await expect(page.getByText("18")).toBeVisible();
 
@@ -343,7 +343,7 @@ test.describe("Stage 6 Leave Management & Attendance E2E", () => {
     await page.setExtraHTTPHeaders({ "x-e2e-test": "true" });
     await page.goto("/attendance");
 
-    await expect(page.getByText("Stage 6 ✓ · Stage 7 next").first()).toBeVisible();
+    await expect(page.getByText("Stage 7 ✓ · Stage 8 next").first()).toBeVisible();
     await expect(page.getByRole("button", { name: /Check In/i })).toBeVisible();
     await expect(page.getByText(/Manager Daily Attendance Grid/i)).toBeVisible();
 

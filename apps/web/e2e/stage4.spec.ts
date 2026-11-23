@@ -20,7 +20,7 @@ test.describe("Stage 4 (Milestone B) E2E Smoke & Navigation Tests", () => {
     await page.setExtraHTTPHeaders({ "x-e2e-test": "true" });
     await page.goto("/");
 
-    await expect(page.getByText("Stage 6 ✓ · Stage 7 next").first()).toBeVisible();
+    await expect(page.getByText("Stage 7 ✓ · Stage 8 next").first()).toBeVisible();
     await page.click('a[href="/onboarding"]');
     await expect(page).toHaveURL(/.*\/onboarding/);
     await expect(page.getByRole("heading", { name: /Workspace Onboarding Wizard/i })).toBeVisible();
